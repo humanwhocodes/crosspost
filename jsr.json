@@ -1,0 +1,14 @@
+{
+  "name": "@humanwhocodes/crosspost",
+  "version": "0.0.0",
+  "exports": "./dist/index.js",
+  "publish": {
+    "include": [
+      "jsr.json",
+      "LICENSE",
+      "README.md",
+      "dist/index.js",
+      "dist/index.d.ts"
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+name: Bun CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest, macOS-latest, ubuntu-latest]
+        bun: [latest]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Bun ${{ matrix.bun }}
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ matrix.bun }}
+    - name: bun install, build, and test
+      run: |
+        bun install
+        bun run build
+        bun run --bun test:unit
+      env:
+        CI: true

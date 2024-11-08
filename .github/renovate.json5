@@ -1,0 +1,19 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  // see https://docs.renovatebot.com/presets-config/
+  extends: [
+    'config:base',
+    // automatically rebase onto main branch
+    ':rebaseStalePrs',
+    // groups all ESLint-related dependency upgrades into a single PR
+    'group:linters'
+  ],
+  packageRules: [
+    // only send upgrade for deps (from the npm registry) after they've been
+    // published for 30 days
+    {
+      matchDatasources: ['npm'],
+      minimumReleaseAge: '30 days',
+    },
+  ],
+}
