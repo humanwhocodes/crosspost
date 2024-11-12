@@ -7,24 +7,15 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import sinon from "sinon";
 import { MastodonStrategy } from "../../src/strategies/mastodon.js";
 import assert from "node:assert";
+import fetchMock from "fetch-mock";
 
 //-----------------------------------------------------------------------------
 // Tests
 //-----------------------------------------------------------------------------
 
 describe("MastodonStrategy", () => {
-    let fetchStub;
-
-    beforeEach(() => {
-        fetchStub = sinon.stub(globalThis, "fetch");
-    });
-
-    afterEach(() => {
-        fetchStub.restore();
-    });
 
     describe("constructor", () => {
         it("should throw an error if accessToken is missing", () => {
@@ -43,6 +34,12 @@ describe("MastodonStrategy", () => {
     });
 
     describe("post", () => {
+
+        afterEach(() => {
+            fetchMock.unmockGlobal();
+            fetchMock.removeRoutes();
+        });
+
         it("should throw an error if message is missing", async () => {
             const options = { accessToken: "token", host: "mastodon.social" };
             const instance = new MastodonStrategy(options);
@@ -56,15 +53,20 @@ describe("MastodonStrategy", () => {
             const options = { accessToken: "token", host: "mastodon.social" };
             const instance = new MastodonStrategy(options);
             const message = "Hello, Mastodon!";
-            const response = { json: sinon.stub().resolves({ id: "12345" }) };
-            fetchStub.resolves(response);
+            const response = { id: "12345" };
+
+            fetchMock.mockGlobal().route(({ url, options }) => {
+                return url === "https://mastodon.social/api/v1/statuses"
+                    && options.method === "post"
+                    && options.headers.authorization === "Bearer token"
+                    && options.body.get("status") === message;
+            }, {
+                body: response,
+                status: 200
+            });
+
 
             const result = await instance.post(message);
-
-            assert.strictEqual(fetchStub.calledOnce, true);
-            assert.strictEqual(fetchStub.calledWith("https://mastodon.social/api/v1/statuses"), true);
-            assert.strictEqual(fetchStub.args[0][1].method, "POST");
-            assert.strictEqual(fetchStub.args[0][1].headers.Authorization, "Bearer token");
             assert.deepStrictEqual(result, { id: "12345" });
         });
 
@@ -72,7 +74,16 @@ describe("MastodonStrategy", () => {
             const options = { accessToken: "token", host: "mastodon.social" };
             const instance = new MastodonStrategy(options);
             const message = "Hello, Mastodon!";
-            fetchStub.rejects(new Error("Network error"));
+
+            fetchMock.mockGlobal().route(({ url, options }) => {
+                return url === "https://mastodon.social/api/v1/statuses"
+                    && options.method === "post"
+                    && options.headers.authorization === "Bearer token"
+                    && options.body.get("status") === message;
+            }, {
+                throws: new Error("Network error"),
+                status: 401
+            });
 
             await assert.rejects(instance.post(message), {
                 name: "Error",
