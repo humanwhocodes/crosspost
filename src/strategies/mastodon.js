@@ -1,5 +1,5 @@
 /**
- * @fileoverview Mastodon strategy for posting toots.
+ * @fileoverview Mastodon strategy for posting messages.
  * @author Nicholas C. Zakas
  */
 
@@ -20,7 +20,7 @@
 //-----------------------------------------------------------------------------
 
 /**
- * A strategy for posting toots to Mastodon.
+ * A strategy for posting messages to Mastodon.
  */
 export class MastodonStrategy {
 
