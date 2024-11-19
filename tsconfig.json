@@ -1,18 +1,16 @@
 {
-    "files": [
-        "src/index.js"
-    ],
-    "compilerOptions": {
-        "declaration": true,
-        "emitDeclarationOnly": true,
-        "allowJs": true,
-        "checkJs": true,
-        "strict": true,
-        "target": "ES2022",
-        "lib": ["ESNext"],
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "outDir": "dist",
-        "types": ["node"]
-    }
+  "files": ["src/index.js"],
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "target": "ES2022",
+    "lib": ["ESNext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "types": ["node"]
+  }
 }

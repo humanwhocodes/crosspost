@@ -29,75 +29,75 @@ import { TwitterApi } from "twitter-api-v2";
  * A strategy for posting to Twitter.
  */
 export class TwitterStrategy {
-  /**
-   * The name of the strategy.
-   * @type {string}
-   * @readonly
-   */
-  name = "twitter";
+	/**
+	 * The name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "twitter";
 
-  /**
-   * Options for this instance.
-   * @type {TwitterOptions}
-   */
-  #options;
+	/**
+	 * Options for this instance.
+	 * @type {TwitterOptions}
+	 */
+	#options;
 
-  /**
-   * Creates a new instance.
-   * @param {TwitterOptions} options Options for the instance.
-   * @throws {Error} When options are missing.
-   */
-  constructor(options) {
-    const {
-      accessTokenKey,
-      accessTokenSecret,
-      apiConsumerKey,
-      apiConsumerSecret,
-    } = options;
+	/**
+	 * Creates a new instance.
+	 * @param {TwitterOptions} options Options for the instance.
+	 * @throws {Error} When options are missing.
+	 */
+	constructor(options) {
+		const {
+			accessTokenKey,
+			accessTokenSecret,
+			apiConsumerKey,
+			apiConsumerSecret,
+		} = options;
 
-    if (!accessTokenKey) {
-      throw new TypeError("Missing Twitter access token key.");
-    }
+		if (!accessTokenKey) {
+			throw new TypeError("Missing Twitter access token key.");
+		}
 
-    if (!accessTokenSecret) {
-      throw new TypeError("Missing Twitter access token secret.");
-    }
+		if (!accessTokenSecret) {
+			throw new TypeError("Missing Twitter access token secret.");
+		}
 
-    if (!apiConsumerKey) {
-      throw new TypeError("Missing Twitter consumer key.");
-    }
+		if (!apiConsumerKey) {
+			throw new TypeError("Missing Twitter consumer key.");
+		}
 
-    if (!apiConsumerSecret) {
-      throw new TypeError("Missing Twitter consumer secret.");
-    }
+		if (!apiConsumerSecret) {
+			throw new TypeError("Missing Twitter consumer secret.");
+		}
 
-    this.#options = options;
-  }
+		this.#options = options;
+	}
 
-  /**
-   * Posts a message to Twitter.
-   * @param {string} message The message to tweet.
-   * @returns {Promise<object>} A promise that resolves with the tweet data.
-   */
-  async post(message) {
-    if (!message) {
-      throw new Error("Missing message to tweet.");
-    }
+	/**
+	 * Posts a message to Twitter.
+	 * @param {string} message The message to tweet.
+	 * @returns {Promise<object>} A promise that resolves with the tweet data.
+	 */
+	async post(message) {
+		if (!message) {
+			throw new Error("Missing message to tweet.");
+		}
 
-    const {
-      accessTokenKey,
-      accessTokenSecret,
-      apiConsumerKey,
-      apiConsumerSecret,
-    } = this.#options;
+		const {
+			accessTokenKey,
+			accessTokenSecret,
+			apiConsumerKey,
+			apiConsumerSecret,
+		} = this.#options;
 
-    const client = new TwitterApi({
-      appKey: apiConsumerKey,
-      appSecret: apiConsumerSecret,
-      accessToken: accessTokenKey,
-      accessSecret: accessTokenSecret,
-    });
+		const client = new TwitterApi({
+			appKey: apiConsumerKey,
+			appSecret: apiConsumerSecret,
+			accessToken: accessTokenKey,
+			accessSecret: accessTokenSecret,
+		});
 
-    return client.v2.tweet(message);
-  }
+		return client.v2.tweet(message);
+	}
 }
