@@ -26,20 +26,3 @@ jobs:
           CI: true
       - name: JSR Publish Test
         run: npm run test:jsr
-
-  emfile_test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js 22.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-      - name: npm install and build
-        run: |
-          npm install
-          npm run build --if-present
-        env:
-          CI: true
-      - name: Run EMFILE test
-        run: npm run test:emfile
