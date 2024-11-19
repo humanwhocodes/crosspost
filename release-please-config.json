@@ -1,4 +1,5 @@
 {
+  "bootstrap-sha": "0173a800a2b064be78158efd5112fc3074487c30",
   "bump-minor-pre-major": true,
   "packages": {
     ".": {
