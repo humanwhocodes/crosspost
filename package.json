@@ -34,7 +34,7 @@
       "prettier --write"
     ],
     "!(*.js)": [
-      "prettier --write"
+      "prettier --write --ignore-unknown"
     ]
   },
   "funding": {
@@ -42,7 +42,7 @@
     "url": "https://github.com/sponsors/nzakas"
   },
   "scripts": {
-    "build:cts-types": "node -e \"fs.copyFileSync('dist/index.d.ts', 'dist/index.d.cts')\"",
+    "build:cts-types": "node -e \"fs.copyFileSync('dist/esm/index.d.ts', 'dist/cjs/index.d.cts')\"",
     "build": "rollup -c && tsc -p tsconfig.esm.json && npm run build:cts-types",
     "lint": "eslint src/ tests/",
     "fmt": "prettier --write .",
