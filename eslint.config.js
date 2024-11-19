@@ -13,12 +13,6 @@ export default [
 				console: false,
 			},
 		},
-		rules: {
-			indent: ["error", 4],
-			"linebreak-style": ["error", "unix"],
-			quotes: ["error", "double"],
-			semi: ["error", "always"],
-		},
 	},
 	{
 		files: ["tests/**/*.js"],
