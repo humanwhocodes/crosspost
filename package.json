@@ -1,6 +1,6 @@
 {
   "name": "@humanwhocodes/crosspost",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A utility to retry failed async methods.",
   "type": "module",
   "main": "dist/cjs/index.cjs",
