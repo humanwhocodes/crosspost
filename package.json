@@ -3,17 +3,17 @@
   "version": "0.0.0",
   "description": "A utility to retry failed async methods.",
   "type": "module",
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/cjs/index.cjs",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
   "exports": {
     "require": {
-      "types": "./dist/index.d.cts",
-      "default": "./dist/index.cjs"
+      "types": "./dist/cjs/index.d.cts",
+      "default": "./dist/cjs/index.cjs"
     },
     "import": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/esm/index.d.ts",
+      "default": "./dist/esm/index.js"
     }
   },
   "files": [
@@ -39,10 +39,10 @@
   },
   "scripts": {
     "build:cts-types": "node -e \"fs.copyFileSync('dist/index.d.ts', 'dist/index.d.cts')\"",
-    "build": "rollup -c && tsc && npm run build:cts-types",
+    "build": "rollup -c && tsc -p tsconfig.esm.json && npm run build:cts-types",
     "lint": "eslint src/ tests/",
     "pretest": "npm run build",
-    "test:unit": "mocha tests/index.test.js",
+    "test:unit": "mocha tests/**/*.*",
     "test:build": "node tests/pkg.test.cjs && node tests/pkg.test.mjs",
     "test:jsr": "npx jsr@latest publish --dry-run",
     "test:emfile": "node tools/check-emfile-handling.js",
@@ -77,7 +77,6 @@
     "yorkie": "2.0.0"
   },
   "dependencies": {
-    "@atproto/api": "^0.13.15",
     "twitter-api-v2": "^1.18.1"
   }
 }

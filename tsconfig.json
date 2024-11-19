@@ -7,6 +7,7 @@
         "emitDeclarationOnly": true,
         "allowJs": true,
         "checkJs": true,
+        "strict": true,
         "target": "ES2022",
         "lib": ["ESNext"],
         "module": "NodeNext",

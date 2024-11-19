@@ -9,7 +9,7 @@
 
 /**
  * @typedef {Object} ClientOptions
- * @property {Array} strategies An array of strategies to use.
+ * @property {Array<Strategy>} strategies An array of strategies to use.
  */
 
 /**
@@ -59,6 +59,7 @@ export class Client {
         const results = await Promise.allSettled(this.#strategies.map(strategy => strategy.post(message)));
 
         // find any failed results
+        /** @type {Array<number>} */
         const failedIndices = [];
         const failed = /** @type {Array<PromiseRejectedResult>} */ (results.filter((result, i) => {
             if (result.status === "rejected") {
@@ -79,6 +80,6 @@ export class Client {
         }
 
         // otherwise return the response payloads keyed by strategy name
-        return Object.fromEntries(results.map((result, i) => [this.#strategies[i].name, /** @type {PromiseFulfilledResult} */ (result).value]));
+        return Object.fromEntries(results.map((result, i) => [this.#strategies[i].name, /** @type {PromiseFulfilledResult<Object>} */ (result).value]));
     }
 }

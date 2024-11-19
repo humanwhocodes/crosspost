@@ -111,7 +111,16 @@ describe("BlueskyStrategy", function() {
 
         it("should successfully post a message", async function () {
 
-            fetchMock.mockGlobal().post(CREATE_SESSION_URL, {
+            fetchMock.mockGlobal().post({
+                url: CREATE_SESSION_URL,
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: {
+                    identifier: options.identifier,
+                    password: options.password
+                },
+            }, {
                 status: 200,
                 headers: {
                     "content-type": "application/json"
@@ -119,7 +128,22 @@ describe("BlueskyStrategy", function() {
                 body: CREATE_SESSION_RESPONSE
             });
 
-            fetchMock.mockGlobal().post(CREATE_RECORD_URL, {
+            fetchMock.mockGlobal().post({
+                url: CREATE_RECORD_URL,
+                headers: {
+                    "content-type": "application/json",
+                    "authorization": `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`
+                },
+                body : {
+                    repo: CREATE_SESSION_RESPONSE.did,
+                    collection: "app.bsky.feed.post",
+                    record: {
+                        $type: "app.bsky.feed.post",
+                        text: "Hello, world!"
+                    }
+                },
+                matchPartialBody: true
+            }, {
                 status: 200,
                 headers: {
                     "content-type": "application/json"
