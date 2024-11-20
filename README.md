@@ -76,6 +76,8 @@ To enable posting on Twitter, you'll need to create a free developer account and
 
 Generally speaking, if you are creating an app to automate your own posts, you'll be able to use it for free so long as you're not posting a large number of times per day.
 
+**Note:** The post uses the terms "app key" and "app secret" whereas the Twitter strategy here uses "API consumer key" and "API consumer secret". They are the same values.
+
 ### Mastodon
 
 To enable posting to Mastodon, you'll need to create a new application:
