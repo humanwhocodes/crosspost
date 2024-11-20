@@ -1,7 +1,7 @@
 {
   "name": "@humanwhocodes/crosspost",
   "version": "0.1.0",
-  "description": "A utility to retry failed async methods.",
+  "description": "A utility to post across multiple social networks.",
   "type": "module",
   "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.js",
