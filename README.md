@@ -40,7 +40,7 @@ import {
 const bluesky = new BlueskyStrategy({
 	identifier: "me.you.social",
 	password: "your-app-password",
-	host: "you.social",
+	host: "you.social", // "bsky.social" for most people
 });
 
 // Note: Personal access token is required
@@ -65,6 +65,44 @@ const client = new Client({
 // post to all three
 await client.post("Hello world!");
 ```
+
+## Setting up Strategies
+
+Each strategy uses the service's preferred way of posting messages, so you'll need to follow specific steps in order to enable API access.
+
+### Twitter
+
+To enable posting on Twitter, you'll need to create a free developer account and an OAuth application. Follow [these instructions](https://humanwhocodes.com/blog/2023/04/automating-tweets-v2-api/).
+
+Generally speaking, if you are creating an app to automate your own posts, you'll be able to use it for free so long as you're not posting a large number of times per day.
+
+### Mastodon
+
+To enable posting to Mastodon, you'll need to create a new application:
+
+1. Log in to your Mastodon server.
+1. Click on "Edit Profile".
+1. Click on "Development".
+1. Click "New Application".
+1. Give your application a name.
+1. Check off `write:statuses` for your scope.
+1. Click "Submit".
+
+This will generate a client key, client secret, and access token. You only need to use the access token when posting via the API.
+
+### Bluesky
+
+Bluesky doesn't require an application for automated posts, only your identifier and an app password. To generate an app password:
+
+1. Log in to your Bluesky account.
+1. Click "Settings".
+1. Click "Privacy and Security."
+1. Click "App Passwords".
+1. Click "Add App Password".
+1. Name your app password and click "Next".
+1. Copy the generated password and click "Done".
+
+**Important:** Do not use your login password with the API.
 
 ## License
 
