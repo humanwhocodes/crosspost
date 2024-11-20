@@ -3,7 +3,6 @@
   "bump-minor-pre-major": true,
   "packages": {
     ".": {
-      "release-as": "0.1.0",
       "release-type": "node",
       "extra-files": [
         {
