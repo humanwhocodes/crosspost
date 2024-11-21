@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.1.0...crosspost-v0.1.1) (2024-11-21)
+
+
+### Bug Fixes
+
+* Ensure package is built before publish ([892ce01](https://github.com/humanwhocodes/crosspost/commit/892ce016966d30829188530104782c7c15478a2b))
+* Update package.json description ([1fec773](https://github.com/humanwhocodes/crosspost/commit/1fec77334b8d881c65abdf958abd48fe95045a6e))
+
 ## 0.1.0 (2024-11-19)
 
 
