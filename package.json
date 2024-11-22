@@ -6,6 +6,9 @@
   "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
+  "bin": {
+    "crosspost": "dist/esm/bin.js"
+  },
   "exports": {
     "require": {
       "types": "./dist/cjs/index.d.cts",

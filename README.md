@@ -66,6 +66,47 @@ const client = new Client({
 await client.post("Hello world!");
 ```
 
+### CLI Usage
+
+Crosspost also has a command line interface to allow for incorporation into CI systems.
+
+```
+Usage: crosspost [options] "Message to post."
+--twitter, -t   Post to Twitter.
+--mastodon, -m  Post to Mastodon.
+--bluesky, -b   Post to Bluesky.
+--help, -h      Show this message.
+```
+
+Example:
+
+```
+npx crosspost -t -m -b "Hello world!"
+
+# or
+
+npx @humanwhocodes/crosspost -t -m -b "Hello world!"
+```
+
+This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky. You can choose to post to any combination by specifying the appropriate command line options.
+
+Each strategy requires a set of environment variables in order to execute:
+
+-   Twitter
+    -   `TWITTER_ACCESS_TOKEN_KEY`
+    -   `TWITTER_ACCESS_TOKEN_SECRET`
+    -   `TWITTER_API_CONSUMER_KEY`
+    -   `TWITTER_API_CONSUMER_SECRET`
+-   Mastodon
+    -   `MASTODON_ACCESS_TOKEN`
+    -   `MASTODON_HOST`
+-   Bluesky
+    -   `BLUESKY_HOST`
+    -   `BLUESKY_IDENTIFIER`
+    -   `BLUESKY_PASSWORD`
+
+Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
+
 ## Setting up Strategies
 
 Each strategy uses the service's preferred way of posting messages, so you'll need to follow specific steps in order to enable API access.
@@ -108,4 +149,16 @@ Bluesky doesn't require an application for automated posts, only your identifier
 
 ## License
 
-Apache 2.0
+Copyright 2024 Nicholas C. Zakas
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

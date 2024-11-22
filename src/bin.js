@@ -27,6 +27,7 @@ const options = {
 	twitter: { type: "boolean", short: "t" },
 	mastodon: { type: "boolean", short: "m" },
 	bluesky: { type: "boolean", short: "b" },
+	help: { type: "boolean", short: "h" },
 };
 
 const { values: flags, positionals } = parseArgs({
@@ -35,13 +36,15 @@ const { values: flags, positionals } = parseArgs({
 });
 
 if (
+	flags.help ||
 	positionals.length === 0 ||
 	(!flags.twitter && !flags.mastodon && !flags.bluesky)
 ) {
-	console.error('Usage: crosspost [options] "Message to post."');
-	console.error("--twitter, -t: Post to Twitter.");
-	console.error("--mastodon, -m: Post to Mastodon.");
-	console.error("--bluesky, -b: Post to Bluesky.");
+	console.log('Usage: crosspost [options] "Message to post."');
+	console.log("--twitter, -t	Post to Twitter.");
+	console.log("--mastodon, -m	Post to Mastodon.");
+	console.log("--bluesky, -b	Post to Bluesky.");
+	console.log("--help, -h	Show this message.");
 	process.exit(1);
 }
 
@@ -71,9 +74,9 @@ const strategies = [];
 if (flags.twitter) {
 	strategies.push(
 		new TwitterStrategy({
-			apiConsumerKey: env.require("TWITTER_CONSUMER_KEY"),
-			apiConsumerSecret: env.require("TWITTER_CONSUMER_SECRET"),
-			accessToken: env.require("TWITTER_ACCESS_TOKEN"),
+			apiConsumerKey: env.require("TWITTER_API_CONSUMER_KEY"),
+			apiConsumerSecret: env.require("TWITTER_API_CONSUMER_SECRET"),
+			accessTokenKey: env.require("TWITTER_ACCESS_TOKEN_KEY"),
 			accessTokenSecret: env.require("TWITTER_ACCESS_TOKEN_SECRET"),
 		}),
 	);
@@ -102,7 +105,7 @@ if (flags.bluesky) {
 // Main
 //-----------------------------------------------------------------------------
 
-const client = new Client(strategies);
+const client = new Client({ strategies });
 const response = await client.post(message);
 
 for (const [service, result] of Object.entries(response)) {
