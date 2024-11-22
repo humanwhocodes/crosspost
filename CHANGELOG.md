@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.1.1...crosspost-v0.2.0) (2024-11-22)
+
+
+### Features
+
+* Add CLI ([#12](https://github.com/humanwhocodes/crosspost/issues/12)) ([fda0ccb](https://github.com/humanwhocodes/crosspost/commit/fda0ccb4b4dad803f4f4666b2cc212d85129ba9a))
+
 ## [0.1.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.1.0...crosspost-v0.1.1) (2024-11-21)
 
 
