@@ -13,4 +13,14 @@ export default [
 			},
 		],
 	},
+	{
+		input: "src/bin.js",
+		output: [
+			{
+				file: "dist/esm/bin.js",
+				format: "esm",
+				banner: "#!/usr/bin/env node\n",
+			},
+		],
+	},
 ];

@@ -6,6 +6,9 @@
   "main": "dist/cjs/index.cjs",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
+  "bin": {
+    "crosspost": "dist/esm/bin.js"
+  },
   "exports": {
     "require": {
       "types": "./dist/cjs/index.d.cts",
@@ -84,6 +87,8 @@
     "yorkie": "2.0.0"
   },
   "dependencies": {
+    "@humanwhocodes/env": "^3.0.5",
+    "dotenv": "^16.4.5",
     "twitter-api-v2": "^1.18.1"
   }
 }
