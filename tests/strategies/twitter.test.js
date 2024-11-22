@@ -65,7 +65,7 @@ describe("TwitterStrategy", () => {
 	});
 
 	// this test fails in Bun for some reason -- investigate later
-	if (globalThis.process?.versions?.node) {
+	if (!globalThis.Bun) {
 		it("should send a tweet when there's a message and tokens", async () => {
 			nock("https://api.x.com", {
 				reqheaders: {
