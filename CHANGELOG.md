@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.2.0...crosspost-v0.2.1) (2024-12-13)
+
+
+### Bug Fixes
+
+* Detect URLs in posts ([#20](https://github.com/humanwhocodes/crosspost/issues/20)) ([eabc46a](https://github.com/humanwhocodes/crosspost/commit/eabc46a32c451be513cb9ee9d238aa50d2e407e6))
+
 ## [0.2.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.1.1...crosspost-v0.2.0) (2024-11-22)
 
 
