@@ -126,6 +126,8 @@ describe("BlueskyStrategy", function () {
 		});
 
 		it("should successfully post a message", async function () {
+			const text = "Hello, world! https://example.com";
+
 			fetchMock.mockGlobal().post(
 				{
 					url: CREATE_SESSION_URL,
@@ -158,7 +160,21 @@ describe("BlueskyStrategy", function () {
 						collection: "app.bsky.feed.post",
 						record: {
 							$type: "app.bsky.feed.post",
-							text: "Hello, world!",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 14,
+										byteEnd: 33,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: "https://example.com",
+										},
+									],
+								},
+							],
 						},
 					},
 					matchPartialBody: true,
@@ -172,7 +188,7 @@ describe("BlueskyStrategy", function () {
 				},
 			);
 
-			const response = await strategy.post("Hello, world!");
+			const response = await strategy.post(text);
 			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
 		});
 

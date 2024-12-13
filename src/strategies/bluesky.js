@@ -6,6 +6,12 @@
 /* global fetch */
 
 //-----------------------------------------------------------------------------
+// Imports
+//-----------------------------------------------------------------------------
+
+import { detectFacets } from "../util/bluesky-facets.js";
+
+//-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
@@ -93,6 +99,7 @@ function createSession(options) {
  */
 function postMessage(options, session, message) {
 	const url = getPostMessageUrl(options);
+	const facets = detectFacets(message);
 
 	return fetch(url, {
 		method: "POST",
@@ -106,6 +113,7 @@ function postMessage(options, session, message) {
 			record: {
 				$type: "app.bsky.feed.post",
 				text: message,
+				facets,
 				createdAt: new Date().toISOString(),
 			},
 		}),
