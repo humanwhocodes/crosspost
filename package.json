@@ -89,6 +89,7 @@
   "dependencies": {
     "@humanwhocodes/env": "^3.0.5",
     "dotenv": "^16.4.5",
+    "tlds": "^1.255.0",
     "twitter-api-v2": "^1.18.1"
   }
 }
