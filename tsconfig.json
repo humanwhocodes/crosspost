@@ -1,5 +1,5 @@
 {
-  "files": ["src/index.js"],
+  "files": ["src/index.js", "src/bin.js"],
   "compilerOptions": {
     "declaration": true,
     "emitDeclarationOnly": true,
