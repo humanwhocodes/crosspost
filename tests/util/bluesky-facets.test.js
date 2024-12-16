@@ -54,6 +54,7 @@ function normalizeProtocol(uri) {
 describe("detectFacets()", () => {
 	[
 		"https://example.com",
+		"https://example.co.uk/path",
 		"http://test.org/path",
 		"https://subdomain.example.net/path/to/resource",
 		"http://example.com?query=string",
