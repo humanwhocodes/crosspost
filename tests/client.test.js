@@ -8,7 +8,7 @@
 //-----------------------------------------------------------------------------
 
 import { strict as assert } from "node:assert";
-import { Client } from "../src/client.js";
+import { Client, SuccessResponse, FailureResponse } from "../src/client.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -62,13 +62,13 @@ describe("Client", function () {
 			const client = new Client({ strategies });
 			const response = await client.post("Hello, world!");
 
-			assert.deepStrictEqual(response, {
-				test1: "test1",
-				test2: "test2",
-			});
+			assert.deepStrictEqual(response, [
+				new SuccessResponse("test1"),
+				new SuccessResponse("test2"),
+			]);
 		});
 
-		it("should throw an error when one strategy fails", async function () {
+		it("should return failure response one strategy fails", async function () {
 			const strategies = [
 				{
 					name: "test1",
@@ -85,14 +85,15 @@ describe("Client", function () {
 			];
 
 			const client = new Client({ strategies });
+			const results = await client.post("Hello, world!");
 
-			await assert.rejects(client.post("Hello, world!"), {
-				name: "AggregateError",
-				message: "Failed to post to strategies: test2",
-			});
+			assert.deepStrictEqual(results, [
+				new SuccessResponse("test1"),
+				new FailureResponse(new Error("test2")),
+			]);
 		});
 
-		it("should throw an error when multiple strategies fail", async function () {
+		it("should return failure responses when all strategies fail", async function () {
 			const strategies = [
 				{
 					name: "test1",
@@ -109,11 +110,12 @@ describe("Client", function () {
 			];
 
 			const client = new Client({ strategies });
+			const results = await client.post("Hello, world!");
 
-			await assert.rejects(client.post("Hello, world!"), {
-				name: "AggregateError",
-				message: "Failed to post to strategies: test1, test2",
-			});
+			assert.deepStrictEqual(results, [
+				new FailureResponse(new Error("test1")),
+				new FailureResponse(new Error("test2")),
+			]);
 		});
 	});
 });
