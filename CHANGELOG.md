@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.2.1...crosspost-v0.3.0) (2024-12-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* Client#post() always returns array of responses ([#23](https://github.com/humanwhocodes/crosspost/issues/23))
+
+### Features
+
+* Client#post() always returns array of responses ([#23](https://github.com/humanwhocodes/crosspost/issues/23)) ([976b500](https://github.com/humanwhocodes/crosspost/commit/976b500e1380de1e943839b86bd800469e0f771e))
+
+
+### Bug Fixes
+
+* **deps:** update dependency twitter-api-v2 to v1.18.2 ([#18](https://github.com/humanwhocodes/crosspost/issues/18)) ([18a60a3](https://github.com/humanwhocodes/crosspost/commit/18a60a3d1729ad06c59aaa34c00a0082885f8517))
+
 ## [0.2.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.2.0...crosspost-v0.2.1) (2024-12-13)
 
 
