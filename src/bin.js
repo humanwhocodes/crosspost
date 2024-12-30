@@ -3,8 +3,6 @@
  * @author Nicholas C. Zakas
  */
 
-/* eslint-disable no-console */
-
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -20,14 +18,36 @@ import {
 } from "./index.js";
 
 //-----------------------------------------------------------------------------
+// Type Definitions
+//-----------------------------------------------------------------------------
+
+/** @typedef {import("./client.js").SuccessResponse} SuccessResponse */
+
+//-----------------------------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------------------------
+
+/**
+ * Determines if a response is successful.
+ * @param {any} response The response to check.
+ * @returns {response is SuccessResponse} True if the response is successful, false if not.
+ */
+function isSuccessResponse(response) {
+	return response.ok;
+}
+
+//-----------------------------------------------------------------------------
 // Parse CLI Arguments
 //-----------------------------------------------------------------------------
 
+// appease TypeScript
+const booleanType = /** @type {const} */ ("boolean");
+
 const options = {
-	twitter: { type: "boolean", short: "t" },
-	mastodon: { type: "boolean", short: "m" },
-	bluesky: { type: "boolean", short: "b" },
-	help: { type: "boolean", short: "h" },
+	twitter: { type: booleanType, short: "t" },
+	mastodon: { type: booleanType, short: "m" },
+	bluesky: { type: booleanType, short: "b" },
+	help: { type: booleanType, short: "h" },
 };
 
 const { values: flags, positionals } = parseArgs({
@@ -69,6 +89,7 @@ const env = new Env();
 // Determine which strategies to use
 //-----------------------------------------------------------------------------
 
+/** @type {Array<TwitterStrategy|MastodonStrategy|BlueskyStrategy>} */
 const strategies = [];
 
 if (flags.twitter) {
@@ -106,10 +127,14 @@ if (flags.bluesky) {
 //-----------------------------------------------------------------------------
 
 const client = new Client({ strategies });
-const response = await client.post(message);
+const responses = await client.post(message);
 
-for (const [service, result] of Object.entries(response)) {
-	console.log(`${service} result`);
-	console.log(JSON.stringify(result, null, 2));
-	console.log("");
-}
+responses.forEach((response, index) => {
+	if (isSuccessResponse(response)) {
+		console.log(`✅ ${strategies[index].name} succeeded.`);
+		console.log(response.response);
+	} else {
+		console.log(`❌ ${strategies[index].name} failed.`);
+		console.error(response.reason);
+	}
+});
