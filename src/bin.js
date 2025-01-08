@@ -128,13 +128,17 @@ if (flags.bluesky) {
 
 const client = new Client({ strategies });
 const responses = await client.post(message);
+let exitCode = 0;
 
 responses.forEach((response, index) => {
 	if (isSuccessResponse(response)) {
 		console.log(`✅ ${strategies[index].name} succeeded.`);
 		console.log(response.response);
 	} else {
+		exitCode = 1;
 		console.log(`❌ ${strategies[index].name} failed.`);
 		console.error(response.reason);
 	}
 });
+
+process.exit(exitCode);
