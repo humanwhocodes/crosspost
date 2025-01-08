@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.3.0...crosspost-v0.3.1) (2025-01-08)
+
+
+### Bug Fixes
+
+* CLI should exit with non-zero code when a strategy fails ([37e48e7](https://github.com/humanwhocodes/crosspost/commit/37e48e7caacda09cc9a5f4bfea9615811ec7c8a7))
+* **deps:** update dependency dotenv to v16.4.7 ([#27](https://github.com/humanwhocodes/crosspost/issues/27)) ([44b5942](https://github.com/humanwhocodes/crosspost/commit/44b59420e28606cabb34465ba955afa1ba9c8af7))
+
 ## [0.3.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.2.1...crosspost-v0.3.0) (2024-12-30)
 
 
