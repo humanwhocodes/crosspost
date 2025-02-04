@@ -9,15 +9,15 @@
 
 import assert from "node:assert";
 import { BlueskyStrategy } from "../../src/strategies/bluesky.js";
-import fetchMock from "fetch-mock";
+import { MockServer, FetchMocker } from "mentoss";
 
 //-----------------------------------------------------------------------------
 // Data
 //-----------------------------------------------------------------------------
 
 const HOST = "test.social";
-const CREATE_SESSION_URL = `https://${HOST}/xrpc/com.atproto.server.createSession`;
-const CREATE_RECORD_URL = `https://${HOST}/xrpc/com.atproto.repo.createRecord`;
+const CREATE_SESSION_URL = `/xrpc/com.atproto.server.createSession`;
+const CREATE_RECORD_URL = `/xrpc/com.atproto.repo.createRecord`;
 
 const CREATE_SESSION_RESPONSE = {
 	did: "did:plc:rzf7l6olyl67yfy2jwufdq7f",
@@ -50,6 +50,11 @@ const CREATE_RECORD_RESPONSE = {
 	},
 	validationStatus: "valid",
 };
+
+const server = new MockServer(`https://${HOST}`);
+const fetchMocker = new FetchMocker({
+	servers: [server],
+});
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -108,11 +113,12 @@ describe("BlueskyStrategy", function () {
 
 		beforeEach(function () {
 			strategy = new BlueskyStrategy(options);
+			fetchMocker.mockGlobal();
 		});
 
 		afterEach(() => {
-			fetchMock.unmockGlobal();
-			fetchMock.removeRoutes();
+			fetchMocker.unmockGlobal();
+			server.clear();
 		});
 
 		it("should throw an Error if message is missing", async function () {
@@ -128,7 +134,7 @@ describe("BlueskyStrategy", function () {
 		it("should successfully post a message", async function () {
 			const text = "Hello, world! https://example.com";
 
-			fetchMock.mockGlobal().post(
+			server.post(
 				{
 					url: CREATE_SESSION_URL,
 					headers: {
@@ -148,7 +154,7 @@ describe("BlueskyStrategy", function () {
 				},
 			);
 
-			fetchMock.mockGlobal().post(
+			server.post(
 				{
 					url: CREATE_RECORD_URL,
 					headers: {
@@ -193,7 +199,7 @@ describe("BlueskyStrategy", function () {
 		});
 
 		it("should handle post request failure", async function () {
-			fetchMock.mockGlobal().post(CREATE_SESSION_URL, 403);
+			server.post(CREATE_SESSION_URL, 403);
 
 			await assert.rejects(async () => {
 				await strategy.post("Hello, world!");
