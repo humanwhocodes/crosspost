@@ -9,7 +9,7 @@
 
 import { MastodonStrategy } from "../../src/strategies/mastodon.js";
 import assert from "node:assert";
-import fetchMock from "fetch-mock";
+import { FetchMocker, MockServer } from "mentoss";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -41,9 +41,18 @@ describe("MastodonStrategy", () => {
 	});
 
 	describe("post", () => {
+		const server = new MockServer("https://mastodon.social");
+		const fetchMocker = new FetchMocker({
+			servers: [server],
+		});
+
+		beforeEach(() => {
+			fetchMocker.mockGlobal(fetchMocker.fetch);
+		});
+
 		afterEach(() => {
-			fetchMock.unmockGlobal();
-			fetchMock.removeRoutes();
+			fetchMocker.unmockGlobal();
+			server.clear();
 		});
 
 		it("should throw an error if message is missing", async () => {
@@ -61,18 +70,24 @@ describe("MastodonStrategy", () => {
 			const message = "Hello, Mastodon!";
 			const response = { id: "12345" };
 
-			fetchMock.mockGlobal().route(
-				({ url, options }) => {
-					return (
-						url === "https://mastodon.social/api/v1/statuses" &&
-						options.method === "post" &&
-						options.headers.authorization === "Bearer token" &&
-						options.body.get("status") === message
-					);
+			server.post(
+				{
+					url: "/api/v1/statuses",
+					request: {
+						headers: {
+							authorization: "Bearer token",
+						},
+						body: {
+							status: message,
+						},
+					},
 				},
 				{
-					body: response,
 					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: response,
 				},
 			);
 
@@ -85,24 +100,24 @@ describe("MastodonStrategy", () => {
 			const instance = new MastodonStrategy(options);
 			const message = "Hello, Mastodon!";
 
-			fetchMock.mockGlobal().route(
-				({ url, options }) => {
-					return (
-						url === "https://mastodon.social/api/v1/statuses" &&
-						options.method === "post" &&
-						options.headers.authorization === "Bearer token" &&
-						options.body.get("status") === message
-					);
-				},
+			server.post(
 				{
-					throws: new Error("Network error"),
-					status: 401,
+					url: "/api/v1/statuses",
+					request: {
+						headers: {
+							authorization: "Bearer token",
+						},
+						body: {
+							status: message,
+						},
+					},
 				},
+				401,
 			);
 
 			await assert.rejects(instance.post(message), {
 				name: "Error",
-				message: "Network error",
+				message: "Failed to post message: 401 Unauthorized",
 			});
 		});
 	});
