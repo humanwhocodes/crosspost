@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.3.1...crosspost-v0.3.2) (2025-02-07)
+
+
+### Bug Fixes
+
+* **deps:** update dependency twitter-api-v2 to v1.19.0 ([#29](https://github.com/humanwhocodes/crosspost/issues/29)) ([ef0241e](https://github.com/humanwhocodes/crosspost/commit/ef0241e06063ddd3f902c4cf6f872efcaaca19cb))
+
 ## [0.3.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.3.0...crosspost-v0.3.1) (2025-01-08)
 
 
