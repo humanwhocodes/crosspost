@@ -16,6 +16,7 @@ import {
 	MastodonStrategy,
 	BlueskyStrategy,
 } from "./index.js";
+import fs from "node:fs";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -42,11 +43,13 @@ function isSuccessResponse(response) {
 
 // appease TypeScript
 const booleanType = /** @type {const} */ ("boolean");
+const stringType = /** @type {const} */ ("string");
 
 const options = {
 	twitter: { type: booleanType, short: "t" },
 	mastodon: { type: booleanType, short: "m" },
 	bluesky: { type: booleanType, short: "b" },
+	file: { type: stringType, short: "f" },
 	help: { type: booleanType, short: "h" },
 };
 
@@ -57,13 +60,14 @@ const { values: flags, positionals } = parseArgs({
 
 if (
 	flags.help ||
-	positionals.length === 0 ||
+	(positionals.length === 0 && !flags.file) ||
 	(!flags.twitter && !flags.mastodon && !flags.bluesky)
 ) {
-	console.log('Usage: crosspost [options] "Message to post."');
+	console.log('Usage: crosspost [options] ["Message to post."]');
 	console.log("--twitter, -t	Post to Twitter.");
 	console.log("--mastodon, -m	Post to Mastodon.");
 	console.log("--bluesky, -b	Post to Bluesky.");
+	console.log("--file, -f	The file to read the message from.");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
 }
@@ -72,7 +76,9 @@ if (
  * Command line arguments will escape \n as \\n, which isn't what we want.
  * Remove the extra escapes so newlines can be entered on the command line.
  */
-const message = positionals[0].replace(/\\n/g, "\n");
+const message = flags.file
+	? fs.readFileSync(flags.file, "utf8")
+	: positionals[0].replace(/\\n/g, "\n");
 
 //-----------------------------------------------------------------------------
 // Load environment variables

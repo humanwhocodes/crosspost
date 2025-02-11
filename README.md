@@ -71,10 +71,11 @@ await client.post("Hello world!");
 Crosspost also has a command line interface to allow for incorporation into CI systems.
 
 ```
-Usage: crosspost [options] "Message to post."
+Usage: crosspost [options] ["Message to post."]
 --twitter, -t   Post to Twitter.
 --mastodon, -m  Post to Mastodon.
 --bluesky, -b   Post to Bluesky.
+--file, -f	The file to read the message from.
 --help, -h      Show this message.
 ```
 
@@ -89,6 +90,16 @@ npx @humanwhocodes/crosspost -t -m -b "Hello world!"
 ```
 
 This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky. You can choose to post to any combination by specifying the appropriate command line options.
+
+You can also read the message from a file instead of from the command line:
+
+```
+npx crosspost -t -m -b -f message.txt
+
+# or
+
+npx @humanwhocodes/crosspost -t -m -b -f message.txt
+```
 
 Each strategy requires a set of environment variables in order to execute:
 
