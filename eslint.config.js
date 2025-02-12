@@ -15,6 +15,12 @@ export default [
 		},
 	},
 	{
+		files: ["src/*/*.js", "src/client.js"],
+		rules: {
+			"no-console": "error",
+		},
+	},
+	{
 		files: ["tests/**/*.js"],
 		languageOptions: {
 			globals: {
