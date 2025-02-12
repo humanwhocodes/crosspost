@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.3.1...crosspost-v0.4.0) (2025-02-11)
+
+
+### Features
+
+* Allow file input for CLI ([#36](https://github.com/humanwhocodes/crosspost/issues/36)) ([67ce231](https://github.com/humanwhocodes/crosspost/commit/67ce23187d0a5c064cacc963bf46c39b66e25e60))
+
+
+### Bug Fixes
+
+* **deps:** update dependency twitter-api-v2 to v1.19.0 ([#29](https://github.com/humanwhocodes/crosspost/issues/29)) ([ef0241e](https://github.com/humanwhocodes/crosspost/commit/ef0241e06063ddd3f902c4cf6f872efcaaca19cb))
+
 ## [0.3.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.3.0...crosspost-v0.3.1) (2025-01-08)
 
 
