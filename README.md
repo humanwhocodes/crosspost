@@ -25,6 +25,7 @@ The API is split into two parts:
     - `BlueskyStrategy`
     - `MastodonStrategy`
     - `TwitterStrategy`
+    - `LinkedInStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -57,9 +58,14 @@ const twitter = new TwitterStrategy({
 	apiConsumerSecret: "api-consumer-secret",
 });
 
+// Note: OAuth access token is required
+const linkedin = new LinkedInStrategy({
+	accessToken: "your-access-token",
+});
+
 // create a client that will post to all three
 const client = new Client({
-	strategies: [bluesky, mastodon, twitter],
+	strategies: [bluesky, mastodon, twitter, linkedin],
 });
 
 // post to all three
@@ -75,7 +81,8 @@ Usage: crosspost [options] ["Message to post."]
 --twitter, -t   Post to Twitter.
 --mastodon, -m  Post to Mastodon.
 --bluesky, -b   Post to Bluesky.
---file, -f	The file to read the message from.
+--linkedin, -l  Post to LinkedIn.
+--file, -f      The file to read the message from.
 --help, -h      Show this message.
 ```
 
@@ -115,6 +122,8 @@ Each strategy requires a set of environment variables in order to execute:
     -   `BLUESKY_HOST`
     -   `BLUESKY_IDENTIFIER`
     -   `BLUESKY_PASSWORD`
+-   LinkedIn
+    -   `LINKEDIN_ACCESS_TOKEN`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
@@ -158,9 +167,29 @@ Bluesky doesn't require an application for automated posts, only your identifier
 
 **Important:** Do not use your login password with the API.
 
+### LinkedIn
+
+To enable posting to LinkedIn, follow these steps:
+
+1. Go to [LinkedIn Developers](https://www.linkedin.com/developers/).
+2. Click "Create app".
+3. Fill in your application details.
+4. Click "Create App" (yes, again).
+5. Click on the "Settings" tab.
+6. Next to "LinkedIn Page" click "Verify".
+7. Go to the generated URL to link your page to your app.
+8. Under "Available Products", request access to "Share on LinkedIn" and "Sign in with LinkedIn using OpenID Connect".
+9. Go to [OAuth 2.0 Tools](https://www.linkedin.com/developers/tools/oauth) and click "Create Token".
+10. Select your app from the dropdown.
+11. Check the box next to `openid`, `profile` and `w_member_social` scopes.
+12. Click "Request Access Token".
+13. Use your profile to grant access to your app by clicking "Allow".
+
+**Important:** Tokens automatically expire after two months.
+
 ## License
 
-Copyright 2024 Nicholas C. Zakas
+Copyright 2024-2025 Nicholas C. Zakas
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
