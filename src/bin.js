@@ -51,7 +51,7 @@ const options = {
 	mastodon: { type: booleanType, short: "m" },
 	bluesky: { type: booleanType, short: "b" },
 	linkedin: { type: booleanType, short: "l" },
-	file: { type: stringType, short: "f" },
+	file: { type: stringType },
 	help: { type: booleanType, short: "h" },
 };
 
@@ -70,7 +70,7 @@ if (
 	console.log("--mastodon, -m	Post to Mastodon.");
 	console.log("--bluesky, -b	Post to Bluesky.");
 	console.log("--linkedin, -l	Post to LinkedIn.");
-	console.log("--file, -f	The file to read the message from.");
+	console.log("--file		The file to read the message from.");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
 }
