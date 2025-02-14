@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.4.0...crosspost-v0.5.0) (2025-02-14)
+
+
+### Features
+
+* Add strategy to post to LinkedIn ([#38](https://github.com/humanwhocodes/crosspost/issues/38)) ([401c06d](https://github.com/humanwhocodes/crosspost/commit/401c06df7db13d6447f3765b452b7e2df718eb53))
+
+
+### Bug Fixes
+
+* Include error details in Bluesky failures ([25e79b4](https://github.com/humanwhocodes/crosspost/commit/25e79b4cfcfe2226636abc4d07f92cea6c245267))
+* Remove -f shortcut for --file option ([#39](https://github.com/humanwhocodes/crosspost/issues/39)) ([e01d384](https://github.com/humanwhocodes/crosspost/commit/e01d3846967c77ffc8e33467a460aba9248a6476))
+
 ## [0.4.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.3.1...crosspost-v0.4.0) (2025-02-11)
 
 
