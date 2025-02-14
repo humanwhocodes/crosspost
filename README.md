@@ -26,6 +26,7 @@ The API is split into two parts:
     - `MastodonStrategy`
     - `TwitterStrategy`
     - `LinkedInStrategy`
+    - `FacebookStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -35,6 +36,8 @@ import {
 	TwitterStrategy,
 	MastodonStrategy,
 	BlueskyStrategy,
+	LinkedInStrategy,
+	FacebookStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -63,12 +66,18 @@ const linkedin = new LinkedInStrategy({
 	accessToken: "your-access-token",
 });
 
-// create a client that will post to all three
-const client = new Client({
-	strategies: [bluesky, mastodon, twitter, linkedin],
+// Note: OAuth access token is required
+const facebook = new FacebookStrategy({
+    accessToken: "your-access-token",
+    pageId: "optional-page-id"  // only if posting to a page
 });
 
-// post to all three
+// create a client that will post to all services
+const client = new Client({
+    strategies: [bluesky, mastodon, twitter, linkedin, facebook]
+});
+
+// post to all services
 await client.post("Hello world!");
 ```
 
@@ -82,6 +91,7 @@ Usage: crosspost [options] ["Message to post."]
 --mastodon, -m  Post to Mastodon.
 --bluesky, -b   Post to Bluesky.
 --linkedin, -l  Post to LinkedIn.
+--facebook, -f  Post to Facebook.
 --file, -f      The file to read the message from.
 --help, -h      Show this message.
 ```
@@ -124,6 +134,9 @@ Each strategy requires a set of environment variables in order to execute:
     -   `BLUESKY_PASSWORD`
 -   LinkedIn
     -   `LINKEDIN_ACCESS_TOKEN`
+-   Facebook
+    -   `FACEBOOK_ACCESS_TOKEN`
+    -   `FACEBOOK_PAGE_ID` (optional - only if posting to a page)
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
@@ -186,6 +199,27 @@ To enable posting to LinkedIn, follow these steps:
 13. Use your profile to grant access to your app by clicking "Allow".
 
 **Important:** Tokens automatically expire after two months.
+
+### Facebook
+
+You'll need to be a registered for a Meta for Developers account. To do that, go to [Meta for Developers](https://developers.facebook.com/) and click "Get Started."
+
+Once you're registered, follow these steps:
+
+1. Go to [Meta for Developers](https://developers.facebook.com/)
+2. Click "My Apps"
+3. Create a new app or select an existing one - for app type select "consumer", click "Create App".
+4. "Add product to your app", Add the "Facebook Login" product to your app
+5. Under Facebook Login settings, add "pages_manage_posts" to your permissions
+6. Generate a test user access token for development
+7. For production:
+   - Submit your app for review with the required permissions
+   - Once approved, users can authenticate with your app to get access tokens
+   - For page posts, request the "pages_manage_posts" permission
+
+**Note:** Access tokens expire. For longer-lasting tokens:
+- Use long-lived user access tokens (60 days)
+- Or convert to never-expiring page access tokens if posting to a page
 
 ## License
 
