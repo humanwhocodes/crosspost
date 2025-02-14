@@ -40,6 +40,12 @@ import { detectFacets } from "../util/bluesky-facets.js";
  * @property {string} validationStatus The validation status of the post.
  */
 
+/**
+ * @typedef {Object} BlueskyErrorResponse
+ * @property {string} error The type of error.
+ * @property {string} message The error message.
+ */
+
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
@@ -67,10 +73,10 @@ function getPostMessageUrl(options) {
  * @param {BlueskyOptions} options The options for the strategy.
  * @returns {Promise<BlueskySession>} A promise that resolves with the session data.
  */
-function createSession(options) {
+async function createSession(options) {
 	const url = getCreateSessionUrl(options);
 
-	return fetch(url, {
+	const response = await fetch(url, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -79,15 +85,19 @@ function createSession(options) {
 			identifier: options.identifier,
 			password: options.password,
 		}),
-	}).then(response => {
-		if (response.ok) {
-			return /** @type {Promise<BlueskySession>} */ (response.json());
-		}
-
-		throw new Error(
-			`${response.status} Failed to create session: ${response.statusText}`,
-		);
 	});
+
+	if (response.ok) {
+		return /** @type {Promise<BlueskySession>} */ (response.json());
+	}
+
+	const errorBody = /** @type {BlueskyErrorResponse} */ (
+		await response.json()
+	);
+
+	throw new Error(
+		`${response.status} ${response.statusText}: Failed to create session:\n${errorBody.error} - ${errorBody.message}`,
+	);
 }
 
 /**
@@ -97,11 +107,11 @@ function createSession(options) {
  * @param {string} message The message to post.
  * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
  */
-function postMessage(options, session, message) {
+async function postMessage(options, session, message) {
 	const url = getPostMessageUrl(options);
 	const facets = detectFacets(message);
 
-	return fetch(url, {
+	const response = await fetch(url, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -117,17 +127,19 @@ function postMessage(options, session, message) {
 				createdAt: new Date().toISOString(),
 			},
 		}),
-	}).then(response => {
-		if (response.ok) {
-			return /** @type {Promise<CreateRecordResponse>} */ (
-				response.json()
-			);
-		}
-
-		throw new Error(
-			`${response.status} Failed to create session: ${response.statusText}`,
-		);
 	});
+
+	if (response.ok) {
+		return /** @type {Promise<CreateRecordResponse>} */ (response.json());
+	}
+
+	const errorBody = /** @type {BlueskyErrorResponse} */ (
+		await response.json()
+	);
+
+	throw new Error(
+		`${response.status} ${response.statusText}: Failed to post message:\n${errorBody.error} - ${errorBody.message}`,
+	);
 }
 
 //-----------------------------------------------------------------------------

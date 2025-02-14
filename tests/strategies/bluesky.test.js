@@ -198,12 +198,54 @@ describe("BlueskyStrategy", function () {
 			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
 		});
 
-		it("should handle post request failure", async function () {
-			server.post(CREATE_SESSION_URL, 403);
+		it("should handle create session request failure", async function () {
+			server.post(CREATE_SESSION_URL, {
+				status: 400,
+				body: {
+					error: "Invalid credentials",
+					message: "The credentials provided are invalid.",
+				},
+			});
 
 			await assert.rejects(async () => {
 				await strategy.post("Hello, world!");
-			}, /Forbidden/);
+			}, /The credentials provided are invalid/);
+		});
+
+		it("should handle post message request failure", async function () {
+			const text = "Hello, world! https://example.com";
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(CREATE_RECORD_URL, {
+				status: 400,
+				body: {
+					error: "InvalidToken",
+					message: "The token is invalid.",
+				},
+			});
+
+			await assert.rejects(async () => {
+				await strategy.post(text);
+			}, /The token is invalid/);
 		});
 	});
 });
