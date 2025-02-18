@@ -247,5 +247,59 @@ describe("BlueskyStrategy", function () {
 				await strategy.post(text);
 			}, /The token is invalid/);
 		});
+
+		it("should successfully post a message with emojis", async function () {
+			const text = "Hello, world! 🌍 ✨";
+			const encodedText = "Hello, world! \\ud83c\\udf0d \\u2728";
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text: encodedText,
+						},
+					},
+					matchPartialBody: true,
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
 	});
 });
