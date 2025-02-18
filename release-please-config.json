@@ -9,7 +9,8 @@
           "type": "json",
           "path": "jsr.json",
           "jsonpath": "$.version"
-        }
+        },
+        "src/strategies/discord.js"
       ]
     }
   }

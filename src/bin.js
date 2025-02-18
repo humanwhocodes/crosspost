@@ -16,6 +16,7 @@ import {
 	MastodonStrategy,
 	BlueskyStrategy,
 	LinkedInStrategy,
+	DiscordStrategy,
 } from "./index.js";
 import fs from "node:fs";
 
@@ -51,6 +52,7 @@ const options = {
 	mastodon: { type: booleanType, short: "m" },
 	bluesky: { type: booleanType, short: "b" },
 	linkedin: { type: booleanType, short: "l" },
+	discord: { type: booleanType, short: "d" },
 	file: { type: stringType },
 	help: { type: booleanType, short: "h" },
 };
@@ -63,13 +65,18 @@ const { values: flags, positionals } = parseArgs({
 if (
 	flags.help ||
 	(positionals.length === 0 && !flags.file) ||
-	(!flags.twitter && !flags.mastodon && !flags.bluesky && !flags.linkedin)
+	(!flags.twitter &&
+		!flags.mastodon &&
+		!flags.bluesky &&
+		!flags.linkedin &&
+		!flags.discord)
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
 	console.log("--twitter, -t	Post to Twitter.");
 	console.log("--mastodon, -m	Post to Mastodon.");
 	console.log("--bluesky, -b	Post to Bluesky.");
 	console.log("--linkedin, -l	Post to LinkedIn.");
+	console.log("--discord, -d	Post to Discord.");
 	console.log("--file		The file to read the message from.");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
@@ -98,7 +105,7 @@ const env = new Env();
 // Determine which strategies to use
 //-----------------------------------------------------------------------------
 
-/** @type {Array<TwitterStrategy|MastodonStrategy|BlueskyStrategy|LinkedInStrategy>} */
+/** @type {Array<TwitterStrategy|MastodonStrategy|BlueskyStrategy|LinkedInStrategy|DiscordStrategy>} */
 const strategies = [];
 
 if (flags.twitter) {
@@ -135,6 +142,15 @@ if (flags.linkedin) {
 	strategies.push(
 		new LinkedInStrategy({
 			accessToken: env.require("LINKEDIN_ACCESS_TOKEN"),
+		}),
+	);
+}
+
+if (flags.discord) {
+	strategies.push(
+		new DiscordStrategy({
+			botToken: env.require("DISCORD_BOT_TOKEN"),
+			channelId: env.require("DISCORD_CHANNEL_ID"),
 		}),
 	);
 }

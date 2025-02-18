@@ -26,6 +26,7 @@ The API is split into two parts:
     - `MastodonStrategy`
     - `TwitterStrategy`
     - `LinkedInStrategy`
+    - `DiscordStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -35,6 +36,8 @@ import {
 	TwitterStrategy,
 	MastodonStrategy,
 	BlueskyStrategy,
+	LinkedInStrategy,
+	DiscordStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -63,9 +66,15 @@ const linkedin = new LinkedInStrategy({
 	accessToken: "your-access-token",
 });
 
-// create a client that will post to all three
+// Note: Bot token and channel ID required
+const discord = new DiscordStrategy({
+	botToken: "your-bot-token",
+	channelId: "your-channel-id",
+});
+
+// create a client that will post to all services
 const client = new Client({
-	strategies: [bluesky, mastodon, twitter, linkedin],
+	strategies: [bluesky, mastodon, twitter, linkedin, discord],
 });
 
 // post to all three
@@ -82,6 +91,7 @@ Usage: crosspost [options] ["Message to post."]
 --mastodon, -m  Post to Mastodon.
 --bluesky, -b   Post to Bluesky.
 --linkedin, -l  Post to LinkedIn.
+--discord, -d   Post to Discord.
 --file, -f      The file to read the message from.
 --help, -h      Show this message.
 ```
@@ -124,6 +134,9 @@ Each strategy requires a set of environment variables in order to execute:
     -   `BLUESKY_PASSWORD`
 -   LinkedIn
     -   `LINKEDIN_ACCESS_TOKEN`
+-   Discord
+    -   `DISCORD_BOT_TOKEN`
+    -   `DISCORD_CHANNEL_ID`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
@@ -186,6 +199,38 @@ To enable posting to LinkedIn, follow these steps:
 13. Use your profile to grant access to your app by clicking "Allow".
 
 **Important:** Tokens automatically expire after two months.
+
+### Discord
+
+To enable posting to Discord, you'll need to create a bot and get its token:
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Click "New Application".
+3. Give your application a name and click "Create".
+4. Click "Installation" in the left sidebar.
+5. Under "Install Link" select "None".
+6. Click "Save Changes".
+7. Click on "Bot" in the left sidebar.
+8. Uncheck "Public Bot" to ensure no one else can add this bot.
+9. Under "Text Permissions" check "Send Messages".
+10. Click "Save Changes".
+11. Click "Reset Token" and copy the bot token that appears.
+
+To add the bot to your server:
+
+1. In the Developer Portal, click on "OAuth2" in the left sidebar.
+2. Under "OAuth2 URL Generator", check "bot".
+3. Under "Bot Permissions", check "Send Messages" under "Text Permissions".
+4. Copy the generated URL and open it in your browser.
+5. Select your server and authorize the bot.
+
+To get your channel ID:
+
+1. Enable Developer Mode in Discord (User Settings > Advanced > Developer Mode).
+2. Right-click the channel you want to post to.
+3. Click "Copy Channel ID".
+
+**Note:** By default your application will only be able to send messages to public channels. To send messages to private channels, you'll have to give your application the necessary permissions.
 
 ## License
 
