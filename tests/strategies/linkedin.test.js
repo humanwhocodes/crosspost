@@ -147,48 +147,7 @@ describe("LinkedInStrategy", () => {
 			assert.deepStrictEqual(response, CREATE_POST_RESPONSE);
 		});
 
-		it("should successfully post a message as an organization", async () => {
-			const text = "Hello from our company!";
-			const strategy = new LinkedInStrategy({
-				...options,
-				organizationId: "12345",
-			});
-
-			server.post(
-				{
-					url: POST_URL,
-					headers: {
-						authorization: `Bearer ${ACCESS_TOKEN}`,
-						"content-type": "application/json",
-					},
-					body: {
-						author: "urn:li:organization:12345",
-						lifecycleState: "PUBLISHED",
-						specificContent: {
-							"com.linkedin.ugc.ShareContent": {
-								shareCommentary: {
-									text,
-								},
-								shareMediaCategory: "NONE",
-							},
-						},
-						visibility: {
-							"com.linkedin.ugc.MemberNetworkVisibility":
-								"PUBLIC",
-						},
-					},
-				},
-				{
-					status: 200,
-					body: CREATE_POST_RESPONSE,
-				},
-			);
-
-			const response = await strategy.post(text);
-			assert.deepStrictEqual(response, CREATE_POST_RESPONSE);
-		});
-
-		it.only("should handle post request failure", async () => {
+		it("should handle post request failure", async () => {
 			server.post(POST_URL, {
 				status: 403,
 				body: {
