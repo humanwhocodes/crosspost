@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.0...crosspost-v0.6.1) (2025-02-18)
+
+
+### Bug Fixes
+
+* Ensure Emojis are properly encoded for Bluesky ([#44](https://github.com/humanwhocodes/crosspost/issues/44)) ([8be367d](https://github.com/humanwhocodes/crosspost/commit/8be367d16a18e06e5de7f00338523bd1f32f57a9))
+
 ## [0.6.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.5.0...crosspost-v0.6.0) (2025-02-18)
 
 
