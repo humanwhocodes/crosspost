@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.5.0...crosspost-v0.6.0) (2025-02-18)
+
+
+### Features
+
+* Add strategy to post to Discord ([#43](https://github.com/humanwhocodes/crosspost/issues/43)) ([81168c7](https://github.com/humanwhocodes/crosspost/commit/81168c7bab230b55988f1a73f35abdeee7d82c0a))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @humanwhocodes/env to v4 ([#32](https://github.com/humanwhocodes/crosspost/issues/32)) ([7a2f838](https://github.com/humanwhocodes/crosspost/commit/7a2f83814f5b8e5936e5facd0b0dd3140451f3e4))
+
 ## [0.5.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.4.0...crosspost-v0.5.0) (2025-02-14)
 
 
