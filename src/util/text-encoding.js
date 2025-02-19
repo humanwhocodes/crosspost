@@ -10,8 +10,9 @@
  */
 export function encodeToUnicode(text) {
 	// eslint-disable-next-line no-control-regex
-	return text
-		.replace(/[\ud800-\udbff][\udc00-\udfff]|[^\u0000-\u007f]/g, match => {
+	return text.replace(
+		/[\ud800-\udbff][\udc00-\udfff]|[^\u0000-\u007f]/g,
+		match => {
 			if (match.length === 2) {
 				// This is a surrogate pair
 				const high = match.charCodeAt(0);
@@ -22,6 +23,6 @@ export function encodeToUnicode(text) {
 			// Single unicode character
 			const code = match.charCodeAt(0);
 			return `\\u${code.toString(16).padStart(4, "0")}`;
-		})
-		.replace(/\n/g, "\\n");
+		},
+	);
 }
