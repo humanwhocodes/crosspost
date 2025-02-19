@@ -92,7 +92,7 @@ export class DiscordStrategy {
 				Authorization: `Bot ${this.#options.botToken}`,
 				"Content-Type": "application/json",
 				"User-Agent":
-					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.6.2)", // x-release-please-version
+					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.6.3)", // x-release-please-version
 			},
 			body: JSON.stringify({
 				content: message,

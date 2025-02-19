@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.2...crosspost-v0.6.3) (2025-02-19)
+
+
+### Bug Fixes
+
+* Proper encoding of Bluesky messages ([#48](https://github.com/humanwhocodes/crosspost/issues/48)) ([d79333f](https://github.com/humanwhocodes/crosspost/commit/d79333fc82f8b2d8be35a6cd17e13c85b67f509f))
+
 ## [0.6.2](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.1...crosspost-v0.6.2) (2025-02-19)
 
 
