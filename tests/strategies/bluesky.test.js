@@ -250,7 +250,6 @@ describe("BlueskyStrategy", function () {
 
 		it("should successfully post a message with emojis", async function () {
 			const text = "Hello, world! 🌍 ✨";
-			const encodedText = "Hello, world! \\ud83c\\udf0d \\u2728";
 
 			server.post(
 				{
@@ -284,7 +283,7 @@ describe("BlueskyStrategy", function () {
 						collection: "app.bsky.feed.post",
 						record: {
 							$type: "app.bsky.feed.post",
-							text: encodedText,
+							text,
 						},
 					},
 					matchPartialBody: true,
