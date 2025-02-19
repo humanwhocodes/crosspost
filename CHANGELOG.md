@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.1...crosspost-v0.6.2) (2025-02-19)
+
+
+### Bug Fixes
+
+* Ensure newlines are not escaped in Bluesky messages ([#46](https://github.com/humanwhocodes/crosspost/issues/46)) ([1a2dd0a](https://github.com/humanwhocodes/crosspost/commit/1a2dd0a2fcfa8c8907b861ce656e540e04721922))
+
 ## [0.6.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.0...crosspost-v0.6.1) (2025-02-18)
 
 
