@@ -10,7 +10,6 @@
 //-----------------------------------------------------------------------------
 
 import { detectFacets } from "../util/bluesky-facets.js";
-import { encodeToUnicode } from "../util/text-encoding.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -110,8 +109,7 @@ async function createSession(options) {
  */
 async function postMessage(options, session, message) {
 	const url = getPostMessageUrl(options);
-	const encodedMessage = encodeToUnicode(message);
-	const facets = detectFacets(encodedMessage);
+	const facets = detectFacets(message);
 
 	const response = await fetch(url, {
 		method: "POST",
@@ -124,7 +122,7 @@ async function postMessage(options, session, message) {
 			collection: "app.bsky.feed.post",
 			record: {
 				$type: "app.bsky.feed.post",
-				text: encodedMessage,
+				text: message,
 				facets,
 				createdAt: new Date().toISOString(),
 			},
