@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.3...crosspost-v0.7.0) (2025-02-26)
+
+
+### Features
+
+* Post to Discord via webhook ([#52](https://github.com/humanwhocodes/crosspost/issues/52)) ([820aefe](https://github.com/humanwhocodes/crosspost/commit/820aefe6ca8e05d64a8ce9be8cab3368c6156e33))
+
 ## [0.6.3](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.2...crosspost-v0.6.3) (2025-02-19)
 
 
