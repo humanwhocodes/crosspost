@@ -17,6 +17,7 @@ import {
 	BlueskyStrategy,
 	LinkedInStrategy,
 	DiscordStrategy,
+	DiscordWebhookStrategy,
 } from "./index.js";
 import fs from "node:fs";
 
@@ -25,6 +26,7 @@ import fs from "node:fs";
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("./client.js").SuccessResponse} SuccessResponse */
+/** @typedef {import("./client.js").Strategy} Strategy */
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -53,6 +55,7 @@ const options = {
 	bluesky: { type: booleanType, short: "b" },
 	linkedin: { type: booleanType, short: "l" },
 	discord: { type: booleanType, short: "d" },
+	"discord-webhook": { type: booleanType },
 	file: { type: stringType },
 	help: { type: booleanType, short: "h" },
 };
@@ -69,14 +72,16 @@ if (
 		!flags.mastodon &&
 		!flags.bluesky &&
 		!flags.linkedin &&
-		!flags.discord)
+		!flags.discord &&
+		!flags["discord-webhook"])
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
 	console.log("--twitter, -t	Post to Twitter.");
 	console.log("--mastodon, -m	Post to Mastodon.");
 	console.log("--bluesky, -b	Post to Bluesky.");
 	console.log("--linkedin, -l	Post to LinkedIn.");
-	console.log("--discord, -d	Post to Discord.");
+	console.log("--discord, -d	Post to Discord via bot.");
+	console.log("--discord-webhook	Post to Discord via webhook.");
 	console.log("--file		The file to read the message from.");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
@@ -105,7 +110,7 @@ const env = new Env();
 // Determine which strategies to use
 //-----------------------------------------------------------------------------
 
-/** @type {Array<TwitterStrategy|MastodonStrategy|BlueskyStrategy|LinkedInStrategy|DiscordStrategy>} */
+/** @type {Array<Strategy>} */
 const strategies = [];
 
 if (flags.twitter) {
@@ -151,6 +156,14 @@ if (flags.discord) {
 		new DiscordStrategy({
 			botToken: env.require("DISCORD_BOT_TOKEN"),
 			channelId: env.require("DISCORD_CHANNEL_ID"),
+		}),
+	);
+}
+
+if (flags["discord-webhook"]) {
+	strategies.push(
+		new DiscordWebhookStrategy({
+			webhookUrl: env.require("DISCORD_WEBHOOK_URL"),
 		}),
 	);
 }
