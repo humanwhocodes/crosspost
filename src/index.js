@@ -8,4 +8,5 @@ export * from "./strategies/mastodon.js";
 export * from "./strategies/twitter.js";
 export * from "./strategies/linkedin.js";
 export * from "./strategies/discord.js";
+export * from "./strategies/discord-webhook.js";
 export * from "./client.js";

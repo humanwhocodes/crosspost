@@ -27,6 +27,7 @@ The API is split into two parts:
     - `TwitterStrategy`
     - `LinkedInStrategy`
     - `DiscordStrategy`
+    - `DiscordWebhookStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -38,6 +39,7 @@ import {
 	BlueskyStrategy,
 	LinkedInStrategy,
 	DiscordStrategy,
+	DiscordWebhookStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -72,9 +74,14 @@ const discord = new DiscordStrategy({
 	channelId: "your-channel-id",
 });
 
+// Note: Webhook URL required
+const discordWebhook = new DiscordWebhookStrategy({
+	webhookUrl: "your-webhook-url",
+});
+
 // create a client that will post to all services
 const client = new Client({
-	strategies: [bluesky, mastodon, twitter, linkedin, discord],
+	strategies: [bluesky, mastodon, twitter, linkedin, discord, discordWebhook],
 });
 
 // post to all three
@@ -91,7 +98,8 @@ Usage: crosspost [options] ["Message to post."]
 --mastodon, -m  Post to Mastodon.
 --bluesky, -b   Post to Bluesky.
 --linkedin, -l  Post to LinkedIn.
---discord, -d   Post to Discord.
+--discord, -d   Post to Discord via bot.
+--discord-webhook  Post to Discord via webhook.
 --file, -f      The file to read the message from.
 --help, -h      Show this message.
 ```
@@ -137,6 +145,8 @@ Each strategy requires a set of environment variables in order to execute:
 -   Discord
     -   `DISCORD_BOT_TOKEN`
     -   `DISCORD_CHANNEL_ID`
+-   Discord Webhook
+    -   `DISCORD_WEBHOOK_URL`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
@@ -200,9 +210,9 @@ To enable posting to LinkedIn, follow these steps:
 
 **Important:** Tokens automatically expire after two months.
 
-### Discord
+### Discord Bot
 
-To enable posting to Discord, you'll need to create a bot and get its token:
+To enable posting to Discord using a bot, you'll need to create a bot and get its token:
 
 1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
 2. Click "New Application".
@@ -231,6 +241,21 @@ To get your channel ID:
 3. Click "Copy Channel ID".
 
 **Note:** By default your application will only be able to send messages to public channels. To send messages to private channels, you'll have to give your application the necessary permissions.
+
+### Discord Webhook
+
+To enable posting to Discord using a webhook, you'll need to create a webhook and get its URL:
+
+1. Open Discord and navigate to the server you want to create the webhook for.
+2. Click on the server name at the top of the channel list to open the server settings.
+3. In the server settings, click on "Integrations" in the left sidebar.
+4. Click on "Webhooks".
+5. Click the "New Webhook" button.
+6. Give your webhook a name and select the channel you want to post to.
+7. Click the "Copy Webhook URL" button to copy the webhook URL.
+8. Click "Save Changes".
+
+Use the copied webhook URL as the `webhookUrl` parameter in the `DiscordWebhookStrategy` configuration.
 
 ## License
 
