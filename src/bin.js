@@ -18,6 +18,7 @@ import {
 	LinkedInStrategy,
 	DiscordStrategy,
 	DiscordWebhookStrategy,
+	ThreadsStrategy,
 } from "./index.js";
 import fs from "node:fs";
 
@@ -56,6 +57,7 @@ const options = {
 	linkedin: { type: booleanType, short: "l" },
 	discord: { type: booleanType, short: "d" },
 	"discord-webhook": { type: booleanType },
+	threads: { type: booleanType },
 	file: { type: stringType },
 	help: { type: booleanType, short: "h" },
 };
@@ -73,7 +75,8 @@ if (
 		!flags.bluesky &&
 		!flags.linkedin &&
 		!flags.discord &&
-		!flags["discord-webhook"])
+		!flags["discord-webhook"] &&
+		!flags.threads)
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
 	console.log("--twitter, -t	Post to Twitter.");
@@ -82,6 +85,7 @@ if (
 	console.log("--linkedin, -l	Post to LinkedIn.");
 	console.log("--discord, -d	Post to Discord via bot.");
 	console.log("--discord-webhook	Post to Discord via webhook.");
+	console.log("--threads		Post to Threads.");
 	console.log("--file		The file to read the message from.");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
@@ -164,6 +168,15 @@ if (flags["discord-webhook"]) {
 	strategies.push(
 		new DiscordWebhookStrategy({
 			webhookUrl: env.require("DISCORD_WEBHOOK_URL"),
+		}),
+	);
+}
+
+if (flags.threads) {
+	strategies.push(
+		new ThreadsStrategy({
+			accessToken: env.require("THREADS_ACCESS_TOKEN"),
+			instagramId: env.require("THREADS_INSTAGRAM_ID"),
 		}),
 	);
 }

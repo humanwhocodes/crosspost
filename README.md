@@ -28,6 +28,7 @@ The API is split into two parts:
     - `LinkedInStrategy`
     - `DiscordStrategy`
     - `DiscordWebhookStrategy`
+    - `ThreadsStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -40,6 +41,7 @@ import {
 	LinkedInStrategy,
 	DiscordStrategy,
 	DiscordWebhookStrategy,
+	ThreadsStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -79,9 +81,23 @@ const discordWebhook = new DiscordWebhookStrategy({
 	webhookUrl: "your-webhook-url",
 });
 
+// Note: Access token and Instagram ID required
+const threads = new ThreadsStrategy({
+	accessToken: "your-access-token",
+	instagramId: "your-instagram-id",
+});
+
 // create a client that will post to all services
 const client = new Client({
-	strategies: [bluesky, mastodon, twitter, linkedin, discord, discordWebhook],
+	strategies: [
+		bluesky,
+		mastodon,
+		twitter,
+		linkedin,
+		discord,
+		discordWebhook,
+		threads,
+	],
 });
 
 // post to all three
@@ -100,6 +116,7 @@ Usage: crosspost [options] ["Message to post."]
 --linkedin, -l  Post to LinkedIn.
 --discord, -d   Post to Discord via bot.
 --discord-webhook  Post to Discord via webhook.
+--threads       Post to Threads.
 --file, -f      The file to read the message from.
 --help, -h      Show this message.
 ```
@@ -147,6 +164,9 @@ Each strategy requires a set of environment variables in order to execute:
     -   `DISCORD_CHANNEL_ID`
 -   Discord Webhook
     -   `DISCORD_WEBHOOK_URL`
+-   Threads
+    -   `THREADS_ACCESS_TOKEN`
+    -   `THREADS_INSTAGRAM_ID`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
@@ -256,6 +276,20 @@ To enable posting to Discord using a webhook, you'll need to create a webhook an
 8. Click "Save Changes".
 
 Use the copied webhook URL as the `webhookUrl` parameter in the `DiscordWebhookStrategy` configuration.
+
+### Threads
+
+Follow these steps:
+
+1. Go to [Meta for Developers](https://developers.facebook.com/).
+2. Click "Create App".
+3. Enter the app's name and click "Next".
+4. Select "Access the Threads API" and click "Next".
+5. Select the business portfolio to add the app to and click "Next".
+6. Click "Go to Dashboard".
+7. Click "Access the Threads API".
+8. Add the `threads_content_publish` scope.
+9. Click "App Roles", then "Test Users".
 
 ## License
 
