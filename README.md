@@ -100,6 +100,7 @@ Usage: crosspost [options] ["Message to post."]
 --linkedin, -l  Post to LinkedIn.
 --discord, -d   Post to Discord via bot.
 --discord-webhook  Post to Discord via webhook.
+--devto         Post to dev.to.
 --file, -f      The file to read the message from.
 --help, -h      Show this message.
 ```
@@ -147,6 +148,8 @@ Each strategy requires a set of environment variables in order to execute:
     -   `DISCORD_CHANNEL_ID`
 -   Discord Webhook
     -   `DISCORD_WEBHOOK_URL`
+-   dev.to
+    -   `DEVTO_API_KEY`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
@@ -256,6 +259,22 @@ To enable posting to Discord using a webhook, you'll need to create a webhook an
 8. Click "Save Changes".
 
 Use the copied webhook URL as the `webhookUrl` parameter in the `DiscordWebhookStrategy` configuration.
+
+### Dev.to
+
+To enable posting to Dev.to:
+
+1. Log in to your [Dev.to](https://dev.to) account.
+2. Click on your profile picture in the top right.
+3. Click "Settings".
+4. Click "Extensions" in the left sidebar.
+5. Scroll down to "DEV Community API Keys".
+6. Enter a description for your API key and click "Generate API Key".
+7. Copy the generated API key.
+
+Use this API key as the value for the `DEVTO_API_KEY` environment variable when using the CLI.
+
+The first line of your post will be used as the article title on Dev.to.
 
 ## License
 
