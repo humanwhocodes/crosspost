@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.7.0...crosspost-v0.8.0) (2025-03-03)
+
+
+### Features
+
+* Add strategy to post to dev.to ([#55](https://github.com/humanwhocodes/crosspost/issues/55)) ([0b30203](https://github.com/humanwhocodes/crosspost/commit/0b3020378124c5328b94c27364b0a71b73ae60b8))
+
 ## [0.7.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.3...crosspost-v0.7.0) (2025-02-26)
 
 
