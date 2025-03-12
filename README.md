@@ -84,8 +84,13 @@ const client = new Client({
 	strategies: [bluesky, mastodon, twitter, linkedin, discord, discordWebhook],
 });
 
-// post to all three
-await client.post("Hello world!");
+// post to all services with an image
+await client.post("Hello world!", {
+	images: [{
+		data: imageData, // Uint8Array of image data
+		alt: "Description of the image"
+	}]
+});
 ```
 
 ### CLI Usage
@@ -101,30 +106,32 @@ Usage: crosspost [options] ["Message to post."]
 --discord, -d   Post to Discord via bot.
 --discord-webhook  Post to Discord via webhook.
 --devto         Post to dev.to.
---file, -f      The file to read the message from.
+--file          The file to read the message from.
+--image         The image file to upload with the message.
+--image-alt     Alt text for the image (defaults: filename).
 --help, -h      Show this message.
 ```
 
-Example:
+Examples:
 
+```shell
+# Post a message to multiple services
+npx crosspost -t -m -b "Check out this beach!"
+
+# Post a message with an image to multiple services
+npx crosspost -t -m -b --image ./photo.jpg --image-alt "A beautiful sunset" "Check out this beach!"
 ```
-npx crosspost -t -m -b "Hello world!"
 
-# or
-
-npx @humanwhocodes/crosspost -t -m -b "Hello world!"
-```
-
-This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky. You can choose to post to any combination by specifying the appropriate command line options.
+This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky with an attached image. You can choose to post to any combination by specifying the appropriate command line options.
 
 You can also read the message from a file instead of from the command line:
 
-```
+```shell
+# Post a message to multiple services
 npx crosspost -t -m -b -f message.txt
 
-# or
-
-npx @humanwhocodes/crosspost -t -m -b -f message.txt
+# Post a message with an image to multiple services
+npx crosspost -t -m -b -f message.txt -i path/to/image.jpg
 ```
 
 Each strategy requires a set of environment variables in order to execute:

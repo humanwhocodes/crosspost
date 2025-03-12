@@ -7,15 +7,11 @@
 // Type Definitions
 //-----------------------------------------------------------------------------
 
+/** @typedef {import("./types.js").Strategy} Strategy */
+/** @typedef {import("./types.js").PostOptions} PostOptions */
 /**
  * @typedef {Object} ClientOptions
  * @property {Array<Strategy>} strategies An array of strategies to use.
- */
-
-/**
- * @typedef {Object} Strategy
- * @property {string} name The name of the strategy.
- * @property {(message: string) => Promise<any>} post A function that posts a message.
  */
 
 //-----------------------------------------------------------------------------
@@ -108,12 +104,13 @@ export class Client {
 	/**
 	 * Posts a message using all strategies.
 	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<Array<SuccessResponse|FailureResponse>>} A promise that resolves with an array of results.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		return (
 			await Promise.allSettled(
-				this.#strategies.map(strategy => strategy.post(message)),
+				this.#strategies.map(strategy => strategy.post(message, postOptions)),
 			)
 		).map(result => {
 			if (result.status === "fulfilled") {

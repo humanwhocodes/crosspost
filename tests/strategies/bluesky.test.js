@@ -18,6 +18,7 @@ import { MockServer, FetchMocker } from "mentoss";
 const HOST = "test.social";
 const CREATE_SESSION_URL = `/xrpc/com.atproto.server.createSession`;
 const CREATE_RECORD_URL = `/xrpc/com.atproto.repo.createRecord`;
+const UPLOAD_BLOB_URL = `/xrpc/com.atproto.repo.uploadBlob`;
 
 const CREATE_SESSION_RESPONSE = {
 	did: "did:plc:rzf7l6olyl67yfy2jwufdq7f",
@@ -49,6 +50,17 @@ const CREATE_RECORD_RESPONSE = {
 		rev: "3lawmuwiktf2w",
 	},
 	validationStatus: "valid",
+};
+
+const UPLOAD_BLOB_RESPONSE = {
+	blob: {
+		$type: "blob",
+		ref: {
+			$link: "bafkreihankqxww2ue7f2uqgnexvww2ue7f2uq",
+		},
+		mimeType: "image/jpeg",
+		size: 1234,
+	},
 };
 
 const server = new MockServer(`https://${HOST}`);
@@ -299,6 +311,134 @@ describe("BlueskyStrategy", function () {
 
 			const response = await strategy.post(text);
 			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should successfully post a message with an image", async function () {
+			const text = "Hello, world!";
+			const imageData = new Uint8Array([1, 2, 3, 4]);
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: UPLOAD_BLOB_URL,
+					headers: {
+						"content-type": "image/jpeg",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: imageData,
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: UPLOAD_BLOB_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							embed: {
+								$type: "app.bsky.embed.images",
+								images: [{
+									alt: "test image",
+									image: UPLOAD_BLOB_RESPONSE.blob
+								}]
+							}
+						},
+					},
+					matchPartialBody: true,
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text, {
+				embeds: [{
+					type: "image",
+					alt: "test image",
+					data: imageData
+				}]
+			});
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should handle image upload failure", async function () {
+			const text = "Hello, world!";
+			const imageData = new Uint8Array([1, 2, 3, 4]);
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(UPLOAD_BLOB_URL, {
+				status: 400,
+				body: {
+					error: "InvalidBlob",
+					message: "The blob is invalid.",
+				},
+			});
+
+			await assert.rejects(async () => {
+				await strategy.post(text, {
+					embeds: [{
+						type: "image",
+						alt: "test image",
+						data: imageData
+					}]
+				});
+			}, /The blob is invalid/);
 		});
 	});
 });
