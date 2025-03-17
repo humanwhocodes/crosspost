@@ -86,10 +86,12 @@ const client = new Client({
 
 // post to all services with an image
 await client.post("Hello world!", {
-	images: [{
-		data: imageData, // Uint8Array of image data
-		alt: "Description of the image"
-	}]
+	images: [
+		{
+			data: imageData, // Uint8Array of image data
+			alt: "Description of the image",
+		},
+	],
 });
 ```
 
@@ -181,7 +183,7 @@ To enable posting to Mastodon, you'll need to create a new application:
 1. Click on "Development".
 1. Click "New Application".
 1. Give your application a name.
-1. Check off `write:statuses` for your scope.
+1. Check off `write:statuses` for your scope. If you want to upload images, check off `write:media` too.
 1. Click "Submit".
 
 This will generate a client key, client secret, and access token. You only need to use the access token when posting via the API.

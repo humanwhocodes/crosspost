@@ -10,12 +10,13 @@
 //-----------------------------------------------------------------------------
 
 import { detectFacets } from "../util/bluesky-facets.js";
+import { validatePostOptions } from "../util/options.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
-/** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostOptions} BlueskyPostOptions */
 
 /**
  * @typedef {Object} BlueskyOptions
@@ -55,7 +56,7 @@ import { detectFacets } from "../util/bluesky-facets.js";
  * @property {Object} [record.embed] The embedded content in the post.
  * @property {string} record.embed.$type The type of embedded content.
  * @property {Array<Object>} [record.embed.images] The images to embed.
- * 
+ *
  */
 
 /**
@@ -77,7 +78,7 @@ import { detectFacets } from "../util/bluesky-facets.js";
 /**
  * @typedef {Object} UploadBlobResponse
  * @property {Object} blob The blob data
- * @property {string} blob.$type The type of blob
+ * @property {"blob"} blob.$type The type of blob
  * @property {Object} blob.ref The reference to the blob
  * @property {string} blob.ref.$link The link to the blob
  * @property {string} blob.mimeType The MIME type of the blob
@@ -112,7 +113,7 @@ function getPostMessageUrl(options) {
  * @returns {string} The URL for uploading a blob.
  */
 function getUploadBlobUrl(options) {
-    return `https://${options.host}/xrpc/com.atproto.repo.uploadBlob`;
+	return `https://${options.host}/xrpc/com.atproto.repo.uploadBlob`;
 }
 
 /**
@@ -123,28 +124,28 @@ function getUploadBlobUrl(options) {
  * @returns {Promise<UploadBlobResponse>} A promise that resolves with the blob data.
  */
 async function uploadImage(options, session, imageData) {
-    const url = getUploadBlobUrl(options);
+	const url = getUploadBlobUrl(options);
 
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "*/*",
-            Authorization: `Bearer ${session.accessJwt}`,
-        },
-        body: imageData,
-    });
+	const response = await fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "*/*",
+			Authorization: `Bearer ${session.accessJwt}`,
+		},
+		body: imageData,
+	});
 
-    if (response.ok) {
-        return /** @type {Promise<UploadBlobResponse>} */ (response.json());
-    }
+	if (response.ok) {
+		return /** @type {Promise<UploadBlobResponse>} */ (response.json());
+	}
 
-    const errorBody = /** @type {BlueskyErrorResponse} */ (
-        await response.json()
-    );
+	const errorBody = /** @type {BlueskyErrorResponse} */ (
+		await response.json()
+	);
 
-    throw new Error(
-        `${response.status} ${response.statusText}: Failed to upload image:\n${errorBody.error} - ${errorBody.message}`,
-    );
+	throw new Error(
+		`${response.status} ${response.statusText}: Failed to upload image:\n${errorBody.error} - ${errorBody.message}`,
+	);
 }
 
 /**
@@ -184,12 +185,12 @@ async function createSession(options) {
  * @param {BlueskyOptions} options The options for the strategy.
  * @param {BlueskySession} session The session data.
  * @param {string} message The message to post.
- * @param {PostOptions} [postOptions] Additional options for the post.
+ * @param {BlueskyPostOptions} [postOptions] Additional options for the post.
  * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
  */
 async function postMessage(options, session, message, postOptions) {
-    const url = getPostMessageUrl(options);
-    const facets = detectFacets(message);
+	const url = getPostMessageUrl(options);
+	const facets = detectFacets(message);
 
 	/** @type {BlueskyPostBody} */
 	const body = {
@@ -203,47 +204,47 @@ async function postMessage(options, session, message, postOptions) {
 		},
 	};
 
-    // add image embeds if present
-    if (postOptions?.images?.length) {
-        const images = [];
-        
-        for (const image of postOptions.images) {
+	// add image embeds if present
+	if (postOptions?.images?.length) {
+		const images = [];
+
+		for (const image of postOptions.images) {
 			const result = await uploadImage(options, session, image.data);
-			console.log(result);
+
 			images.push({
 				alt: image.alt || "",
 				image: result.blob,
 			});
-        }
+		}
 
-        if (images.length) {
-            body.record.embed = {
-                $type: "app.bsky.embed.images",
-                images
-            };
-        }
-    }
+		if (images.length) {
+			body.record.embed = {
+				$type: "app.bsky.embed.images",
+				images,
+			};
+		}
+	}
 
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessJwt}`,
-        },
-        body: JSON.stringify(body),
-    });
+	const response = await fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${session.accessJwt}`,
+		},
+		body: JSON.stringify(body),
+	});
 
-    if (response.ok) {
-        return /** @type {Promise<CreateRecordResponse>} */ (response.json());
-    }
+	if (response.ok) {
+		return /** @type {Promise<CreateRecordResponse>} */ (response.json());
+	}
 
-    const errorBody = /** @type {BlueskyErrorResponse} */ (
-        await response.json()
-    );
+	const errorBody = /** @type {BlueskyErrorResponse} */ (
+		await response.json()
+	);
 
-    throw new Error(
-        `${response.status} ${response.statusText}: Failed to post message:\n${errorBody.error} - ${errorBody.message}`,
-    );
+	throw new Error(
+		`${response.status} ${response.statusText}: Failed to post message:\n${errorBody.error} - ${errorBody.message}`,
+	);
 }
 
 //-----------------------------------------------------------------------------
@@ -293,13 +294,15 @@ export class BlueskyStrategy {
 	/**
 	 * Posts a message to Bluesky.
 	 * @param {string} message The message to post.
-	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {BlueskyPostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
 	 */
 	async post(message, postOptions) {
 		if (!message) {
 			throw new TypeError("Missing message to post.");
 		}
+
+		validatePostOptions(postOptions);
 
 		const session = await createSession(this.#options);
 		return postMessage(this.#options, session, message, postOptions);

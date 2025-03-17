@@ -195,7 +195,6 @@ describe("BlueskyStrategy", function () {
 							],
 						},
 					},
-					matchPartialBody: true,
 				},
 				{
 					status: 200,
@@ -298,7 +297,6 @@ describe("BlueskyStrategy", function () {
 							text,
 						},
 					},
-					matchPartialBody: true,
 				},
 				{
 					status: 200,
@@ -311,6 +309,47 @@ describe("BlueskyStrategy", function () {
 
 			const response = await strategy.post(text);
 			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should throw a TypeError if images is not an array", async function () {
+			await assert.rejects(
+				async () => {
+					await strategy.post("Hello world", {
+						images: "not an array",
+					});
+				},
+				TypeError,
+				"images must be an array.",
+			);
+		});
+
+		it("should throw a TypeError if image is missing data", async function () {
+			await assert.rejects(
+				async () => {
+					await strategy.post("Hello world", {
+						images: [{ alt: "test" }],
+					});
+				},
+				TypeError,
+				"Image must have data.",
+			);
+		});
+
+		it("should throw a TypeError if image data is not a Uint8Array", async function () {
+			await assert.rejects(
+				async () => {
+					await strategy.post("Hello world", {
+						images: [
+							{
+								alt: "test",
+								data: "not a Uint8Array",
+							},
+						],
+					});
+				},
+				TypeError,
+				"Image data must be a Uint8Array.",
+			);
 		});
 
 		it("should successfully post a message with an image", async function () {
@@ -341,7 +380,7 @@ describe("BlueskyStrategy", function () {
 				{
 					url: UPLOAD_BLOB_URL,
 					headers: {
-						"content-type": "image/jpeg",
+						"content-type": "*/*",
 						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
 					},
 					body: imageData,
@@ -370,14 +409,15 @@ describe("BlueskyStrategy", function () {
 							text,
 							embed: {
 								$type: "app.bsky.embed.images",
-								images: [{
-									alt: "test image",
-									image: UPLOAD_BLOB_RESPONSE.blob
-								}]
-							}
+								images: [
+									{
+										alt: "test image",
+										image: UPLOAD_BLOB_RESPONSE.blob,
+									},
+								],
+							},
 						},
 					},
-					matchPartialBody: true,
 				},
 				{
 					status: 200,
@@ -389,11 +429,12 @@ describe("BlueskyStrategy", function () {
 			);
 
 			const response = await strategy.post(text, {
-				embeds: [{
-					type: "image",
-					alt: "test image",
-					data: imageData
-				}]
+				images: [
+					{
+						alt: "test image",
+						data: imageData,
+					},
+				],
 			});
 			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
 		});
@@ -432,11 +473,12 @@ describe("BlueskyStrategy", function () {
 
 			await assert.rejects(async () => {
 				await strategy.post(text, {
-					embeds: [{
-						type: "image",
-						alt: "test image",
-						data: imageData
-					}]
+					images: [
+						{
+							alt: "test image",
+							data: imageData,
+						},
+					],
 				});
 			}, /The blob is invalid/);
 		});
