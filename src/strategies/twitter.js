@@ -2,12 +2,15 @@
  * @fileoverview Twitter strategy for posting tweets.
  * @author Nicholas C. Zakas
  */
+/* global Buffer */
 
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
 
 import { TwitterApi } from "twitter-api-v2";
+import { validatePostOptions } from "../util/options.js";
+import { getImageMimeType } from "../util/images.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -20,6 +23,10 @@ import { TwitterApi } from "twitter-api-v2";
  * @property {string} apiConsumerKey The app (consumer) key for the Twitter app.
  * @property {string} apiConsumerSecret The app (consumer) secret for the Twitter app.
  */
+
+/** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
+
+/** @typedef {import("../types.js").PostOptions} PostOptions */
 
 //-----------------------------------------------------------------------------
 // Exports
@@ -77,12 +84,15 @@ export class TwitterStrategy {
 	/**
 	 * Posts a message to Twitter.
 	 * @param {string} message The message to tweet.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<object>} A promise that resolves with the tweet data.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		if (!message) {
-			throw new Error("Missing message to tweet.");
+			throw new TypeError("Missing message to tweet.");
 		}
+
+		validatePostOptions(postOptions);
 
 		const {
 			accessTokenKey,
@@ -97,6 +107,41 @@ export class TwitterStrategy {
 			accessToken: accessTokenKey,
 			accessSecret: accessTokenSecret,
 		});
+
+		// if there are images, upload them first
+		if (postOptions?.images?.length) {
+			const mediaIds = await Promise.all(
+				postOptions.images.map(image =>
+					client.v2
+						.uploadMedia(Buffer.from(image.data), {
+							media_type: getImageMimeType(image.data),
+						})
+						.then(mediaId => {
+							if (image.alt) {
+								// https://docs.x.com/x-api/media/metadata-create
+								return client.v2
+									.post("media/metadata", {
+										id: mediaId,
+										metadata: {
+											alt_text: {
+												text: image.alt,
+											},
+										},
+									})
+									.then(() => mediaId);
+							}
+
+							return mediaId;
+						}),
+				),
+			);
+
+			return client.v2.tweet(message, {
+				media: {
+					media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
+				},
+			});
+		}
 
 		return client.v2.tweet(message);
 	}

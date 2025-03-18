@@ -85,5 +85,83 @@ describe("TwitterStrategy", () => {
 			const response = await strategy.post(message);
 			assert.strictEqual(response.result, "Success!");
 		});
+
+		it.only("should send a tweet with images when there's a message and images", async () => {
+			const imageData = new Uint8Array([1, 2, 3, 4]);
+
+			// takes three calls to upload a small image
+
+			nock("https://api.x.com")
+				.post("/2/media/upload")
+				.reply(200, { data: { id: "12345" } });
+
+			nock("https://api.x.com")
+				.post("/2/media/upload")
+				.reply(200, { data: { id: "12345" } });
+
+			nock("https://api.x.com")
+				.post("/2/media/upload")
+				.reply(200, { data: { id: "12345" } });
+
+			nock("https://api.x.com")
+				.post("/2/media/metadata")
+				.reply((uri, body) => {
+					assert.deepStrictEqual(body, {
+						id: "12345",
+						metadata: {
+							alt_text: {
+								text: "Test image",
+							},
+						},
+					});
+					return [200, { data: { id: "12345" } }];
+				});
+
+			nock("https://api.x.com", {
+				reqheaders: {
+					authorization: /OAuth oauth_consumer_key="baz"/,
+				},
+			})
+				.post("/2/tweets")
+				.reply((uri, body) => {
+					assert.deepStrictEqual(body, {
+						text: message,
+						media: {
+							media_ids: ["12345"],
+						},
+					});
+
+					return [
+						200,
+						{
+							data: {
+								id: "12345",
+								text: message,
+							},
+						},
+					];
+				});
+
+			const strategy = new TwitterStrategy({
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "bar",
+			});
+
+			const response = await strategy.post(message, {
+				images: [
+					{
+						data: imageData,
+						alt: "Test image",
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response.data, {
+				id: "12345",
+				text: message,
+			});
+		});
 	}
 });
