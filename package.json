@@ -49,7 +49,8 @@
     "test:unit": "mocha tests/**/*.*",
     "test:build": "node tests/pkg.test.mjs",
     "test:jsr": "npx jsr@latest publish --dry-run",
-    "test": "npm run test:unit && npm run test:build"
+    "test:attw": "attw --pack --profile esm-only",
+    "test": "npm run test:unit && npm run test:build && npm run test:attw"
   },
   "repository": {
     "type": "git",
@@ -71,6 +72,7 @@
   "author": "Nicholas C. Zaks",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.4",
     "@eslint/js": "^9.0.0",
     "@tsconfig/node16": "^16.1.1",
     "@types/mocha": "^10.0.3",
