@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * @fileoverview A CLI for tooting out updates.
  * @author Nicholas C. Zakas

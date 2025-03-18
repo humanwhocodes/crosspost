@@ -3,20 +3,16 @@
   "version": "0.7.0",
   "description": "A utility to post across multiple social networks.",
   "type": "module",
-  "main": "dist/cjs/index.cjs",
-  "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
-    "crosspost": "dist/esm/bin.js"
+    "crosspost": "dist/bin.js"
   },
   "exports": {
-    "require": {
-      "types": "./dist/cjs/index.d.cts",
-      "default": "./dist/cjs/index.cjs"
-    },
     "import": {
-      "types": "./dist/esm/index.d.ts",
-      "default": "./dist/esm/index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -45,17 +41,16 @@
     "url": "https://github.com/sponsors/nzakas"
   },
   "scripts": {
-    "build:cts-types": "node -e \"fs.copyFileSync('dist/esm/index.d.ts', 'dist/cjs/index.d.cts')\"",
-    "build": "rollup -c && tsc -p tsconfig.esm.json && npm run build:cts-types",
+    "build": "tsc",
     "lint": "eslint src/ tests/",
     "fmt": "prettier --write .",
     "prepublishOnly": "npm run build",
     "pretest": "npm run build",
     "test:unit": "mocha tests/**/*.*",
-    "test:build": "node tests/pkg.test.cjs && node tests/pkg.test.mjs",
+    "test:build": "node tests/pkg.test.mjs",
     "test:jsr": "npx jsr@latest publish --dry-run",
-    "test:emfile": "node tools/check-emfile-handling.js",
-    "test": "npm run test:unit && npm run test:build"
+    "test:attw": "attw --pack --profile esm-only",
+    "test": "npm run test:unit && npm run test:build && npm run test:attw"
   },
   "repository": {
     "type": "git",
@@ -65,11 +60,19 @@
     "nodejs",
     "twitter",
     "bluesky",
-    "mastodon"
+    "mastodon",
+    "discord",
+    "linkedin",
+    "social",
+    "social media",
+    "social networks",
+    "crosspost",
+    "devto"
   ],
   "author": "Nicholas C. Zaks",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.4",
     "@eslint/js": "^9.0.0",
     "@tsconfig/node16": "^16.1.1",
     "@types/mocha": "^10.0.3",
@@ -81,7 +84,6 @@
     "mocha": "^11.0.0",
     "nock": "^13.5.5",
     "prettier": "^3.3.3",
-    "rollup": "3.29.5",
     "sinon": "^19.0.2",
     "typescript": "^5.6.3",
     "yorkie": "2.0.0"

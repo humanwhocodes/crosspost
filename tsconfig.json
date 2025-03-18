@@ -2,7 +2,6 @@
   "files": ["src/index.js", "src/bin.js"],
   "compilerOptions": {
     "declaration": true,
-    "emitDeclarationOnly": true,
     "allowJs": true,
     "checkJs": true,
     "strict": true,
@@ -10,7 +9,7 @@
     "lib": ["ESNext"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist/esm",
+    "outDir": "dist",
     "types": ["node"]
   }
 }
