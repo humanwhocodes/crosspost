@@ -16,7 +16,7 @@ import { validatePostOptions } from "../util/options.js";
 // Type Definitions
 //-----------------------------------------------------------------------------
 
-/** @typedef {import("../types.js").PostOptions} BlueskyPostOptions */
+/** @typedef {import("../types.js").PostOptions} PostOptions */
 
 /**
  * @typedef {Object} BlueskyOptions
@@ -60,7 +60,7 @@ import { validatePostOptions } from "../util/options.js";
  */
 
 /**
- * @typedef {Object} CreateRecordResponse
+ * @typedef {Object} BlueskyCreateRecordResponse
  * @property {string} cid The CID of the post.
  * @property {Object} commit The commit information.
  * @property {string} commit.cid The CID of the commit.
@@ -76,7 +76,7 @@ import { validatePostOptions } from "../util/options.js";
  */
 
 /**
- * @typedef {Object} UploadBlobResponse
+ * @typedef {Object} BlueskyUploadBlobResponse
  * @property {Object} blob The blob data
  * @property {"blob"} blob.$type The type of blob
  * @property {Object} blob.ref The reference to the blob
@@ -121,7 +121,7 @@ function getUploadBlobUrl(options) {
  * @param {BlueskyOptions} options The options for the strategy.
  * @param {BlueskySession} session The session data.
  * @param {Uint8Array} imageData The image data to upload.
- * @returns {Promise<UploadBlobResponse>} A promise that resolves with the blob data.
+ * @returns {Promise<BlueskyUploadBlobResponse>} A promise that resolves with the blob data.
  */
 async function uploadImage(options, session, imageData) {
 	const url = getUploadBlobUrl(options);
@@ -136,7 +136,9 @@ async function uploadImage(options, session, imageData) {
 	});
 
 	if (response.ok) {
-		return /** @type {Promise<UploadBlobResponse>} */ (response.json());
+		return /** @type {Promise<BlueskyUploadBlobResponse>} */ (
+			response.json()
+		);
 	}
 
 	const errorBody = /** @type {BlueskyErrorResponse} */ (
@@ -185,8 +187,8 @@ async function createSession(options) {
  * @param {BlueskyOptions} options The options for the strategy.
  * @param {BlueskySession} session The session data.
  * @param {string} message The message to post.
- * @param {BlueskyPostOptions} [postOptions] Additional options for the post.
- * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
+ * @param {PostOptions} [postOptions] Additional options for the post.
+ * @returns {Promise<BlueskyCreateRecordResponse>} A promise that resolves with the post data.
  */
 async function postMessage(options, session, message, postOptions) {
 	const url = getPostMessageUrl(options);
@@ -235,7 +237,9 @@ async function postMessage(options, session, message, postOptions) {
 	});
 
 	if (response.ok) {
-		return /** @type {Promise<CreateRecordResponse>} */ (response.json());
+		return /** @type {Promise<BlueskyCreateRecordResponse>} */ (
+			response.json()
+		);
 	}
 
 	const errorBody = /** @type {BlueskyErrorResponse} */ (
@@ -294,8 +298,8 @@ export class BlueskyStrategy {
 	/**
 	 * Posts a message to Bluesky.
 	 * @param {string} message The message to post.
-	 * @param {BlueskyPostOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<BlueskyCreateRecordResponse>} A promise that resolves with the post data.
 	 */
 	async post(message, postOptions) {
 		if (!message) {

@@ -383,7 +383,7 @@ describe("BlueskyStrategy", function () {
 						"content-type": "*/*",
 						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
 					},
-					body: imageData,
+					body: imageData.buffer,
 				},
 				{
 					status: 200,

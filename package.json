@@ -46,7 +46,7 @@
     "fmt": "prettier --write .",
     "prepublishOnly": "npm run build",
     "pretest": "npm run build",
-    "test:unit": "mocha tests/**/*.*",
+    "test:unit": "mocha tests/**/*.{js,mjs}",
     "test:build": "node tests/pkg.test.mjs",
     "test:jsr": "npx jsr@latest publish --dry-run",
     "test:attw": "attw --pack --profile esm-only",

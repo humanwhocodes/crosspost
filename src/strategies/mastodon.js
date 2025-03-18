@@ -16,7 +16,7 @@ import { getImageMimeType } from "../util/images.js";
 //-----------------------------------------------------------------------------
 
 /**
- * @typedef {import("../types.js").PostOptions} MastodonPostOptions
+ * @typedef {import("../types.js").PostOptions} PostOptions
  */
 
 /**
@@ -167,7 +167,7 @@ export class MastodonStrategy {
 	/**
 	 * Posts a message to Mastodon.
 	 * @param {string} message The message to post.
-	 * @param {MastodonPostOptions} [postOptions] Additional options for the post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<Object>} A promise that resolves with the post data.
 	 */
 	async post(message, postOptions) {
