@@ -60,6 +60,8 @@ const options = {
 	"discord-webhook": { type: booleanType },
 	devto: { type: booleanType },
 	file: { type: stringType },
+	image: { type: stringType },
+	"image-alt": { type: stringType },
 	help: { type: booleanType, short: "h" },
 };
 
@@ -88,6 +90,8 @@ if (
 	console.log("--discord-webhook	Post to Discord via webhook.");
 	console.log("--devto		Post to Dev.to.");
 	console.log("--file		The file to read the message from.");
+	console.log("--image		The image file to upload with the message.");
+	console.log("--image-alt	Alt text for the image (default: filename).");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
 }
@@ -185,8 +189,28 @@ if (flags.devto) {
 // Main
 //-----------------------------------------------------------------------------
 
+/** @type {import("./types.js").PostOptions} */
+const postOptions = {};
+
+// if an image is specified, read it and add to options
+if (flags.image) {
+	try {
+		const imageData = fs.readFileSync(flags.image);
+		const basename = flags.image.split(/[\\/]/).pop() || flags.image;
+		
+		postOptions.images = [{
+			data: new Uint8Array(imageData),
+			alt: flags["image-alt"] || basename
+		}];
+	} catch (error) {
+		const fileError = /** @type {Error} */ (error);
+		console.error(`Error reading image file: ${fileError.message}`);
+		process.exit(1);
+	}
+}
+
 const client = new Client({ strategies });
-const responses = await client.post(message);
+const responses = await client.post(message, postOptions);
 let exitCode = 0;
 
 responses.forEach((response, index) => {

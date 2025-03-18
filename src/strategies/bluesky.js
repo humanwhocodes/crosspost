@@ -10,10 +10,13 @@
 //-----------------------------------------------------------------------------
 
 import { detectFacets } from "../util/bluesky-facets.js";
+import { validatePostOptions } from "../util/options.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
+
+/** @typedef {import("../types.js").PostOptions} PostOptions */
 
 /**
  * @typedef {Object} BlueskyOptions
@@ -31,7 +34,33 @@ import { detectFacets } from "../util/bluesky-facets.js";
  */
 
 /**
- * @typedef {Object} CreateRecordResponse
+ * @typedef {Object} BlueskyImage
+ * @property {string} alt The alt text for the image.
+ * @property {Object} image The image data.
+ * @property {string} image.$type The type of the image.
+ * @property {Object} image.ref The reference to the image.
+ * @property {string} image.ref.$link The link to the image.
+ * @property {string} image.mimeType The MIME type of the image.
+ * @property {number} image.size The size of the image in bytes.
+ */
+
+/**
+ * @typedef {Object} BlueskyPostBody
+ * @property {string} repo The DID of the user.
+ * @property {string} collection The collection type (always "app.bsky.feed.post").
+ * @property {Object} record The post record.
+ * @property {string} record.$type The type of record (always "app.bsky.feed.post").
+ * @property {string} record.text The text content of the post.
+ * @property {Array<Object>} record.facets The facets/entities in the post.
+ * @property {string} record.createdAt The ISO timestamp of post creation.
+ * @property {Object} [record.embed] The embedded content in the post.
+ * @property {string} record.embed.$type The type of embedded content.
+ * @property {Array<Object>} [record.embed.images] The images to embed.
+ *
+ */
+
+/**
+ * @typedef {Object} BlueskyCreateRecordResponse
  * @property {string} cid The CID of the post.
  * @property {Object} commit The commit information.
  * @property {string} commit.cid The CID of the commit.
@@ -44,6 +73,16 @@ import { detectFacets } from "../util/bluesky-facets.js";
  * @typedef {Object} BlueskyErrorResponse
  * @property {string} error The type of error.
  * @property {string} message The error message.
+ */
+
+/**
+ * @typedef {Object} BlueskyUploadBlobResponse
+ * @property {Object} blob The blob data
+ * @property {"blob"} blob.$type The type of blob
+ * @property {Object} blob.ref The reference to the blob
+ * @property {string} blob.ref.$link The link to the blob
+ * @property {string} blob.mimeType The MIME type of the blob
+ * @property {number} blob.size The size of the blob in bytes
  */
 
 //-----------------------------------------------------------------------------
@@ -66,6 +105,49 @@ function getCreateSessionUrl(options) {
  */
 function getPostMessageUrl(options) {
 	return `https://${options.host}/xrpc/com.atproto.repo.createRecord`;
+}
+
+/**
+ * Gets the URL for uploading a blob.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @returns {string} The URL for uploading a blob.
+ */
+function getUploadBlobUrl(options) {
+	return `https://${options.host}/xrpc/com.atproto.repo.uploadBlob`;
+}
+
+/**
+ * Uploads an image to Bluesky.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @param {BlueskySession} session The session data.
+ * @param {Uint8Array} imageData The image data to upload.
+ * @returns {Promise<BlueskyUploadBlobResponse>} A promise that resolves with the blob data.
+ */
+async function uploadImage(options, session, imageData) {
+	const url = getUploadBlobUrl(options);
+
+	const response = await fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "*/*",
+			Authorization: `Bearer ${session.accessJwt}`,
+		},
+		body: imageData,
+	});
+
+	if (response.ok) {
+		return /** @type {Promise<BlueskyUploadBlobResponse>} */ (
+			response.json()
+		);
+	}
+
+	const errorBody = /** @type {BlueskyErrorResponse} */ (
+		await response.json()
+	);
+
+	throw new Error(
+		`${response.status} ${response.statusText}: Failed to upload image:\n${errorBody.error} - ${errorBody.message}`,
+	);
 }
 
 /**
@@ -105,11 +187,45 @@ async function createSession(options) {
  * @param {BlueskyOptions} options The options for the strategy.
  * @param {BlueskySession} session The session data.
  * @param {string} message The message to post.
- * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
+ * @param {PostOptions} [postOptions] Additional options for the post.
+ * @returns {Promise<BlueskyCreateRecordResponse>} A promise that resolves with the post data.
  */
-async function postMessage(options, session, message) {
+async function postMessage(options, session, message, postOptions) {
 	const url = getPostMessageUrl(options);
 	const facets = detectFacets(message);
+
+	/** @type {BlueskyPostBody} */
+	const body = {
+		repo: session.did,
+		collection: "app.bsky.feed.post",
+		record: {
+			$type: "app.bsky.feed.post",
+			text: message,
+			facets,
+			createdAt: new Date().toISOString(),
+		},
+	};
+
+	// add image embeds if present
+	if (postOptions?.images?.length) {
+		const images = [];
+
+		for (const image of postOptions.images) {
+			const result = await uploadImage(options, session, image.data);
+
+			images.push({
+				alt: image.alt || "",
+				image: result.blob,
+			});
+		}
+
+		if (images.length) {
+			body.record.embed = {
+				$type: "app.bsky.embed.images",
+				images,
+			};
+		}
+	}
 
 	const response = await fetch(url, {
 		method: "POST",
@@ -117,20 +233,13 @@ async function postMessage(options, session, message) {
 			"Content-Type": "application/json",
 			Authorization: `Bearer ${session.accessJwt}`,
 		},
-		body: JSON.stringify({
-			repo: session.did,
-			collection: "app.bsky.feed.post",
-			record: {
-				$type: "app.bsky.feed.post",
-				text: message,
-				facets,
-				createdAt: new Date().toISOString(),
-			},
-		}),
+		body: JSON.stringify(body),
 	});
 
 	if (response.ok) {
-		return /** @type {Promise<CreateRecordResponse>} */ (response.json());
+		return /** @type {Promise<BlueskyCreateRecordResponse>} */ (
+			response.json()
+		);
 	}
 
 	const errorBody = /** @type {BlueskyErrorResponse} */ (
@@ -189,15 +298,17 @@ export class BlueskyStrategy {
 	/**
 	 * Posts a message to Bluesky.
 	 * @param {string} message The message to post.
-	 * @returns {Promise<CreateRecordResponse>} A promise that resolves with the post data.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<BlueskyCreateRecordResponse>} A promise that resolves with the post data.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		if (!message) {
 			throw new TypeError("Missing message to post.");
 		}
 
-		const session = await createSession(this.#options);
+		validatePostOptions(postOptions);
 
-		return postMessage(this.#options, session, message);
+		const session = await createSession(this.#options);
+		return postMessage(this.#options, session, message, postOptions);
 	}
 }
