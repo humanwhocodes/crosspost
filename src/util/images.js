@@ -5,12 +5,13 @@
 
 /**
  * Determines the MIME type of an image from its binary data.
- * @param {Uint8Array} bytes The image data to examine
- * @returns {string} The MIME type of the image
+ * @param {Uint8Array} bytes The image data to examine.
+ * @returns {"image/png"|"image/jpeg"|"image/gif"} The MIME type of the image.
+ * @throws {TypeError} If the image type cannot be determined.
  */
 export function getImageMimeType(bytes) {
 	if (bytes.length < 4) {
-		return "";
+		throw new TypeError("Unable to determine image type.");
 	}
 
 	// Check magic numbers at the start of the buffer
@@ -31,5 +32,5 @@ export function getImageMimeType(bytes) {
 		return "image/gif";
 	}
 
-	return "";
+	throw new TypeError("Unable to determine image type.");
 }

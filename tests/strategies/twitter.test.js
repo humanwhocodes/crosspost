@@ -10,12 +10,18 @@
 import { TwitterStrategy } from "../../src/strategies/twitter.js";
 import nock from "nock";
 import assert from "node:assert";
+import path from "node:path";
+import fs from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
 
 const message = "Tweet!";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "images");
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -86,8 +92,9 @@ describe("TwitterStrategy", () => {
 			assert.strictEqual(response.result, "Success!");
 		});
 
-		it.only("should send a tweet with images when there's a message and images", async () => {
-			const imageData = new Uint8Array([1, 2, 3, 4]);
+		it("should send a tweet with images when there's a message and images", async () => {
+			const imagePath = path.join(FIXTURES_DIR, "smiley.png");
+			const imageData = new Uint8Array(await fs.readFile(imagePath));
 
 			// takes three calls to upload a small image
 
