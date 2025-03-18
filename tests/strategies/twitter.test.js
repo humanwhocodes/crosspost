@@ -10,12 +10,18 @@
 import { TwitterStrategy } from "../../src/strategies/twitter.js";
 import nock from "nock";
 import assert from "node:assert";
+import path from "node:path";
+import fs from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
 
 const message = "Tweet!";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "images");
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -84,6 +90,85 @@ describe("TwitterStrategy", () => {
 
 			const response = await strategy.post(message);
 			assert.strictEqual(response.result, "Success!");
+		});
+
+		it("should send a tweet with images when there's a message and images", async () => {
+			const imagePath = path.join(FIXTURES_DIR, "smiley.png");
+			const imageData = new Uint8Array(await fs.readFile(imagePath));
+
+			// takes three calls to upload a small image
+
+			nock("https://api.x.com")
+				.post("/2/media/upload")
+				.reply(200, { data: { id: "12345" } });
+
+			nock("https://api.x.com")
+				.post("/2/media/upload")
+				.reply(200, { data: { id: "12345" } });
+
+			nock("https://api.x.com")
+				.post("/2/media/upload")
+				.reply(200, { data: { id: "12345" } });
+
+			nock("https://api.x.com")
+				.post("/2/media/metadata")
+				.reply((uri, body) => {
+					assert.deepStrictEqual(body, {
+						id: "12345",
+						metadata: {
+							alt_text: {
+								text: "Test image",
+							},
+						},
+					});
+					return [200, { data: { id: "12345" } }];
+				});
+
+			nock("https://api.x.com", {
+				reqheaders: {
+					authorization: /OAuth oauth_consumer_key="baz"/,
+				},
+			})
+				.post("/2/tweets")
+				.reply((uri, body) => {
+					assert.deepStrictEqual(body, {
+						text: message,
+						media: {
+							media_ids: ["12345"],
+						},
+					});
+
+					return [
+						200,
+						{
+							data: {
+								id: "12345",
+								text: message,
+							},
+						},
+					];
+				});
+
+			const strategy = new TwitterStrategy({
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "bar",
+			});
+
+			const response = await strategy.post(message, {
+				images: [
+					{
+						data: imageData,
+						alt: "Test image",
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response.data, {
+				id: "12345",
+				text: message,
+			});
 		});
 	}
 });

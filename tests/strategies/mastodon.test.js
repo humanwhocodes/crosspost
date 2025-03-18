@@ -188,7 +188,7 @@ describe("MastodonStrategy", () => {
 						},
 					],
 				});
-			}, /Unsupported image type/);
+			}, /Unable to determine image type/);
 		});
 
 		it("should successfully post a message with an image", async () => {

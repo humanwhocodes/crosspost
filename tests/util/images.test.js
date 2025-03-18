@@ -49,14 +49,17 @@ describe("getImageMimeType()", () => {
 		);
 	});
 
-	it("should return empty string for files with insufficient data", () => {
-		assert.strictEqual(getImageMimeType(new Uint8Array([0x89, 0x50])), "");
-		assert.strictEqual(getImageMimeType(new Uint8Array([])), "");
+	it("should throw TypeError for files with insufficient data", () => {
+		assert.throws(
+			() => getImageMimeType(new Uint8Array([0x89, 0x50])),
+			TypeError,
+		);
+		assert.throws(() => getImageMimeType(new Uint8Array([])), TypeError);
 	});
 
-	it("should return empty string for unsupported image types", () => {
+	it("should throw TypeError for unsupported image types", () => {
 		const fakeData = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-		assert.strictEqual(getImageMimeType(fakeData), "");
+		assert.throws(() => getImageMimeType(fakeData), TypeError);
 	});
 
 	it("should handle null or undefined input gracefully", () => {
