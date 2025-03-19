@@ -67,6 +67,8 @@ describe("LinkedInStrategy", () => {
 
 	describe("post", () => {
 		const options = { accessToken: ACCESS_TOKEN };
+		const UPLOAD_REGISTER_URL = "/v2/assets?action=registerUpload";
+		const UPLOAD_URL = "https://example.com/upload";
 
 		beforeEach(() => {
 			fetchMocker.mockGlobal();
@@ -144,6 +146,106 @@ describe("LinkedInStrategy", () => {
 			);
 
 			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_POST_RESPONSE);
+		});
+
+		it("should successfully post a message with an image", async () => {
+			const text = "Hello, LinkedIn world!";
+			const imageData = new Uint8Array([1, 2, 3, 4]);
+			const strategy = new LinkedInStrategy(options);
+
+			// Mock image upload registration endpoint
+			server.post(
+				{
+					url: UPLOAD_REGISTER_URL,
+					headers: {
+						authorization: `Bearer ${ACCESS_TOKEN}`,
+						"content-type": "application/json",
+					},
+				},
+				{
+					status: 200,
+					body: {
+						value: {
+							asset: "urn:li:image:123456789",
+							uploadMechanism: {
+								"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest":
+									{
+										uploadUrl: UPLOAD_URL,
+									},
+							},
+						},
+					},
+				},
+			);
+
+			// Mock image upload endpoint
+			server.post(
+				{
+					url: UPLOAD_URL,
+					headers: {
+						authorization: `Bearer ${ACCESS_TOKEN}`,
+						"content-type": "image/*",
+					},
+					body: imageData.buffer,
+				},
+				{
+					status: 200,
+				},
+			);
+
+			server.post(
+				{
+					url: POST_URL,
+					headers: {
+						authorization: `Bearer ${ACCESS_TOKEN}`,
+						"content-type": "application/json",
+						"x-restli-protocol-version": "2.0.0",
+					},
+					body: {
+						author: `urn:li:person:${USER_INFO_RESPONSE.sub}`,
+						lifecycleState: "PUBLISHED",
+						specificContent: {
+							"com.linkedin.ugc.ShareContent": {
+								shareCommentary: {
+									text,
+								},
+								shareMediaCategory: "IMAGE",
+								media: [
+									{
+										status: "READY",
+										description: {
+											text: "Test image",
+										},
+										media: "urn:li:image:123456789",
+										title: {
+											text: "",
+										},
+									},
+								],
+							},
+						},
+						visibility: {
+							"com.linkedin.ugc.MemberNetworkVisibility":
+								"PUBLIC",
+						},
+					},
+				},
+				{
+					status: 200,
+					body: CREATE_POST_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text, {
+				images: [
+					{
+						alt: "Test image",
+						data: imageData,
+					},
+				],
+			});
+
 			assert.deepStrictEqual(response, CREATE_POST_RESPONSE);
 		});
 

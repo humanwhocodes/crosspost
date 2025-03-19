@@ -84,7 +84,7 @@ const client = new Client({
 	strategies: [bluesky, mastodon, twitter, linkedin, discord, discordWebhook],
 });
 
-// post to all services with an image
+// post to all services with up to 4 images (must be PNG, JPEG, or GIF)
 await client.post("Hello world!", {
 	images: [
 		{
@@ -138,27 +138,27 @@ npx crosspost -t -m -b -f message.txt -i path/to/image.jpg
 
 Each strategy requires a set of environment variables in order to execute:
 
--   Twitter
-    -   `TWITTER_ACCESS_TOKEN_KEY`
-    -   `TWITTER_ACCESS_TOKEN_SECRET`
-    -   `TWITTER_API_CONSUMER_KEY`
-    -   `TWITTER_API_CONSUMER_SECRET`
--   Mastodon
-    -   `MASTODON_ACCESS_TOKEN`
-    -   `MASTODON_HOST`
--   Bluesky
-    -   `BLUESKY_HOST`
-    -   `BLUESKY_IDENTIFIER`
-    -   `BLUESKY_PASSWORD`
--   LinkedIn
-    -   `LINKEDIN_ACCESS_TOKEN`
--   Discord
-    -   `DISCORD_BOT_TOKEN`
-    -   `DISCORD_CHANNEL_ID`
--   Discord Webhook
-    -   `DISCORD_WEBHOOK_URL`
--   dev.to
-    -   `DEVTO_API_KEY`
+- Twitter
+    - `TWITTER_ACCESS_TOKEN_KEY`
+    - `TWITTER_ACCESS_TOKEN_SECRET`
+    - `TWITTER_API_CONSUMER_KEY`
+    - `TWITTER_API_CONSUMER_SECRET`
+- Mastodon
+    - `MASTODON_ACCESS_TOKEN`
+    - `MASTODON_HOST`
+- Bluesky
+    - `BLUESKY_HOST`
+    - `BLUESKY_IDENTIFIER`
+    - `BLUESKY_PASSWORD`
+- LinkedIn
+    - `LINKEDIN_ACCESS_TOKEN`
+- Discord
+    - `DISCORD_BOT_TOKEN`
+    - `DISCORD_CHANNEL_ID`
+- Discord Webhook
+    - `DISCORD_WEBHOOK_URL`
+- dev.to
+    - `DEVTO_API_KEY`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
 
