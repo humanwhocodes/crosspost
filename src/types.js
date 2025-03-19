@@ -14,8 +14,12 @@
  */
 
 /**
+ * @typedef {[ImageEmbed]|[ImageEmbed, ImageEmbed]|[ImageEmbed, ImageEmbed, ImageEmbed]|[ImageEmbed, ImageEmbed, ImageEmbed,ImageEmbed]} ImageEmbedArray
+ */
+
+/**
  * @typedef {Object} PostOptions
- * @property {Array<ImageEmbed>} images An array of images to include.
+ * @property {ImageEmbedArray} images An array of images to include.
  */
 
 /**

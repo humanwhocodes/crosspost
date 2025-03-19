@@ -44,6 +44,32 @@ orDetails":{"inputErrors":[{"description
 */
 
 /**
+ * @typedef {Object} LinkedInMedia
+ * @property {string} media - The URN of the media asset
+ * @property {string} status - The status of the media (e.g., "READY")
+ * @property {Object} title - The title of the media
+ * @property {Array<Object>} [title.attributes] - Attributes for the title
+ * @property {string} title.text - The text of the media title
+ */
+
+/**
+ * @typedef {Object} LinkedInShareContent
+ * @property {LinkedInMedia[]} [media] - Array of media attachments
+ * @property {Object} shareCommentary - The main text content of the post
+ * @property {Array<Object>} [shareCommentary.attributes] - Attributes for the text
+ * @property {string} shareCommentary.text - The text content
+ * @property {string} shareMediaCategory - The type of media being shared (e.g., "VIDEO", "IMAGE", "NONE")
+ */
+
+/**
+ * @typedef {Object} LinkedInPostBody
+ * @property {string} author - The URN identifier of the post author (person or organization)
+ * @property {string} lifecycleState - The state of the post (e.g., "PUBLISHED")
+ * @property {Record<"com.linkedin.ugc.ShareContent",LinkedInShareContent>} specificContent - The content-specific details of the post
+ * @property {Record<string,string>} visibility - Visibility settings for the post
+ */
+
+/**
  * @typedef {Object} LinkedInErrorResponse
  * @property {string} errorDetailType The type of error detail.
  * @property {string} message The error message.
@@ -53,6 +79,35 @@ orDetails":{"inputErrors":[{"description
  * @property {Object} errorDetails.inputErrors[].input The input object.
  * @property {string} errorDetails.inputErrors[].code The error code.
  * @property {number} status The HTTP status code.
+ */
+
+/**
+ * @typedef {Object} LinkedInServiceRelationship
+ * @property {string} identifier The service identifier URN
+ * @property {string} relationshipType The type of relationship (e.g. "OWNER")
+ */
+
+/**
+ * @typedef {Object} LinkedInRequestUploadRequestBody
+ * @property {string} owner The URN identifier of the owner (organization or person)
+ * @property {string[]} recipes Array of recipe URNs for the upload (e.g. "urn:li:digitalmediaRecipe:feedshare-image")
+ * @property {LinkedInServiceRelationship[]} serviceRelationships Array of service relationship objects
+ * @property {string[]} supportedUploadMechanism Array of supported upload mechanisms (e.g. "SYNCHRONOUS_UPLOAD")
+ */
+
+/**
+ * @typedef {Object} LinkedInUploadMechanism
+ * @property {string} uploadUrl The URL to upload the media to.
+ * @property {Record<string,string>} headers The headers for the upload request.
+ */
+
+/**
+ * @typedef {Object} LinkedInRequestUploadResponse
+ * @property {Object} value The response value object
+ * @property {string} value.mediaArtifact The URN of the media artifact
+ * @property {Record<string, LinkedInUploadMechanism>} value.uploadMechanism The upload mechanism details
+ * @property {string} value.asset The URN of the digital media asset
+ * @property {string} value.assetRealTimeTopic The real-time topic URN for asset updates
  */
 
 //-----------------------------------------------------------------------------
@@ -91,13 +146,119 @@ async function fetchPersonUrn(accessToken) {
 }
 
 /**
+ * Uploads an image to LinkedIn.
+ * @param {string} accessToken The access token for the LinkedIn API.
+ * @param {string} personUrn The person URN to use for the upload.
+ * @param {Uint8Array} imageData The image data to upload.
+ * @returns {Promise<string>} A promise that resolves with the asset URN.
+ * @throws {Error} When the request fails.
+ */
+async function uploadImage(accessToken, personUrn, imageData) {
+	const response = await fetch(
+		"https://api.linkedin.com/v2/assets?action=registerUpload",
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				registerUploadRequest: {
+					recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+					owner: personUrn,
+					serviceRelationships: [
+						{
+							relationshipType: "OWNER",
+							identifier: "urn:li:userGeneratedContent",
+						},
+					],
+				},
+			}),
+		},
+	);
+
+	if (!response.ok) {
+		throw new Error(
+			`${response.status} Failed to register image upload: ${response.statusText}`,
+		);
+	}
+
+	const {
+		value: { asset, uploadMechanism },
+	} = /** @type {LinkedInRequestUploadResponse} */ (await response.json());
+
+	const uploadResponse = await fetch(
+		uploadMechanism[
+			"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+		].uploadUrl,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				"Content-Type": "image/*",
+			},
+			body: imageData,
+		},
+	);
+
+	if (!uploadResponse.ok) {
+		throw new Error(
+			`${uploadResponse.status} Failed to upload image: ${uploadResponse.statusText}`,
+		);
+	}
+
+	return asset;
+}
+
+/**
  * Creates a post on LinkedIn.
  * @param {LinkedInOptions} options The options for the strategy.
+ * @param {string} personUrn The person URN to use for the post.
  * @param {string} message The message to post.
+ * @param {import("../types.js").PostOptions} [postOptions] Additional options for the post.
  * @returns {Promise<LinkedInPostResponse>} A promise that resolves with the post data.
  */
-async function createPost(options, message) {
-	const author = await fetchPersonUrn(options.accessToken);
+async function createPost(options, personUrn, message, postOptions) {
+	/** @type {LinkedInPostBody} */
+	const body = {
+		author: personUrn,
+		lifecycleState: "PUBLISHED",
+		specificContent: {
+			"com.linkedin.ugc.ShareContent": {
+				shareCommentary: {
+					text: message,
+				},
+				shareMediaCategory: "NONE",
+			},
+		},
+		visibility: {
+			"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+		},
+	};
+
+	// handle image uploads if present
+	if (postOptions?.images?.length) {
+		const mediaAssets = await Promise.all(
+			postOptions.images.map(image =>
+				uploadImage(options.accessToken, personUrn, image.data),
+			),
+		);
+
+		body.specificContent[
+			"com.linkedin.ugc.ShareContent"
+		].shareMediaCategory = "IMAGE";
+		body.specificContent["com.linkedin.ugc.ShareContent"].media =
+			mediaAssets.map((asset, index) => ({
+				status: "READY",
+				description: {
+					text: postOptions.images[index].alt || "",
+				},
+				media: asset,
+				title: {
+					text: "",
+				},
+			}));
+	}
 
 	const response = await fetch(POST_URL, {
 		method: "POST",
@@ -106,21 +267,7 @@ async function createPost(options, message) {
 			"Content-Type": "application/json",
 			"X-Restli-Protocol-Version": "2.0.0",
 		},
-		body: JSON.stringify({
-			author,
-			lifecycleState: "PUBLISHED",
-			specificContent: {
-				"com.linkedin.ugc.ShareContent": {
-					shareCommentary: {
-						text: message,
-					},
-					shareMediaCategory: "NONE",
-				},
-			},
-			visibility: {
-				"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-			},
-		}),
+		body: JSON.stringify(body),
 	});
 
 	if (!response.ok) {
@@ -158,6 +305,12 @@ export class LinkedInStrategy {
 	#options;
 
 	/**
+	 * Cached person URN.
+	 * @type {Promise<string>|null}
+	 */
+	#personUrn = null;
+
+	/**
 	 * Creates a new instance.
 	 * @param {LinkedInOptions} options Options for the instance.
 	 * @throws {Error} When required options are missing.
@@ -173,16 +326,29 @@ export class LinkedInStrategy {
 	}
 
 	/**
+	 * Gets the person URN, fetching it if not already cached.
+	 * @returns {Promise<string>} A promise that resolves with the person URN.
+	 */
+	async #getPersonUrn() {
+		if (!this.#personUrn) {
+			this.#personUrn = fetchPersonUrn(this.#options.accessToken);
+		}
+		return this.#personUrn;
+	}
+
+	/**
 	 * Posts a message to LinkedIn.
 	 * @param {string} message The message to post.
+	 * @param {import("../types.js").PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<LinkedInPostResponse>} A promise that resolves with the post data.
 	 * @throws {TypeError} If message is missing.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		if (!message) {
 			throw new TypeError("Missing message to post.");
 		}
 
-		return createPost(this.#options, message);
+		const personUrn = await this.#getPersonUrn();
+		return createPost(this.#options, personUrn, message, postOptions);
 	}
 }
