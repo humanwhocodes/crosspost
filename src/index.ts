@@ -33,5 +33,10 @@ export {
 export * from "./strategies/linkedin.js";
 export { DiscordStrategy } from "./strategies/discord.js";
 export { DiscordWebhookStrategy } from "./strategies/discord-webhook.js";
-export * from "./strategies/devto.js";
+export {
+	DevtoStrategy,
+	DevtoArticle,
+	DevtoErrorResponse,
+	DevtoOptions,
+} from "./strategies/devto.js";
 export { Client, ClientOptions, Strategy } from "./client.js";

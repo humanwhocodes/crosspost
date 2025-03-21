@@ -3,7 +3,13 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch */
+/* global fetch, Buffer */
+
+//-----------------------------------------------------------------------------
+// Imports
+//-----------------------------------------------------------------------------
+
+import { getImageMimeType } from "../util/images.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -28,6 +34,10 @@
  * @property {string} status The error status.
  */
 
+/**
+ * @typedef {import("../types.js").PostOptions} PostOptions
+ */
+
 //-----------------------------------------------------------------------------
 // Constants
 //-----------------------------------------------------------------------------
@@ -42,9 +52,22 @@ const API_URL = "https://dev.to/api";
  * Posts an article to Dev.to.
  * @param {string} apiKey The Dev.to API key.
  * @param {string} content The content to post.
+ * @param {PostOptions} [postOptions] Additional options for the post.
  * @returns {Promise<DevtoArticle>} A promise that resolves with the article data.
  */
-async function postArticle(apiKey, content) {
+async function postArticle(apiKey, content, postOptions) {
+	let articleContent = content;
+
+	// if there are images, append them to the content
+	if (postOptions?.images?.length) {
+		articleContent += "\n\n";
+		for (const image of postOptions.images) {
+			const base64 = Buffer.from(image.data).toString("base64");
+			const mimeType = getImageMimeType(image.data);
+			articleContent += `![${image.alt || ""}](data:${mimeType};base64,${base64})\n\n`;
+		}
+	}
+
 	const response = await fetch(`${API_URL}/articles`, {
 		method: "POST",
 		headers: {
@@ -55,7 +78,7 @@ async function postArticle(apiKey, content) {
 		body: JSON.stringify({
 			article: {
 				title: content.split(/\r?\n/g)[0],
-				body_markdown: content,
+				body_markdown: articleContent,
 				published: true,
 			},
 		}),
@@ -111,13 +134,14 @@ export class DevtoStrategy {
 	/**
 	 * Posts an article to Dev.to.
 	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<DevtoArticle>} A promise that resolves with the article data.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		if (!message) {
 			throw new TypeError("Missing message to post.");
 		}
 
-		return postArticle(this.#apiKey, message);
+		return postArticle(this.#apiKey, message, postOptions);
 	}
 }

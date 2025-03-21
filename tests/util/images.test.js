@@ -41,6 +41,13 @@ describe("getImageMimeType()", () => {
 		);
 	});
 
+	it("should return image/jpeg for JPEG files", async () => {
+		assert.strictEqual(
+			getImageMimeType(new Uint8Array([0xff, 0xd8, 0xff])),
+			"image/jpeg",
+		);
+	});
+
 	it("should return image/gif for GIF files", async () => {
 		const gifData = await readFile(join(FIXTURES_DIR, "smiley.gif"));
 		assert.strictEqual(
