@@ -10,7 +10,7 @@
  * @throws {TypeError} If the image type cannot be determined.
  */
 export function getImageMimeType(bytes) {
-	if (bytes.length < 4) {
+	if (bytes.length < 3) {
 		throw new TypeError("Unable to determine image type.");
 	}
 
