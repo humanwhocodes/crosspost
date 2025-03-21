@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch, FormData, File */
+/* global fetch, FormData, Blob */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -148,8 +148,8 @@ export class DiscordWebhookStrategy {
 				const type = getImageMimeType(image.data);
 				const filename = `image${index + 1}.${type.split("/")[1]}`;
 				const description = image.alt || filename;
-				const file = new File([image.data], filename, { type });
-				formData.append(`files[${index}]`, file);
+				const file = new Blob([image.data], { type });
+				formData.append(`files[${index}]`, file, filename);
 
 				payload.attachments?.push({
 					id: index,
