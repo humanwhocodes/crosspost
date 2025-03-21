@@ -27,6 +27,78 @@ const fetchMocker = new FetchMocker({
 	servers: [server],
 });
 
+const pngImageData = new Uint8Array([
+	// PNG signature
+	0x89,
+	0x50,
+	0x4e,
+	0x47,
+	0x0d,
+	0x0a,
+	0x1a,
+	0x0a,
+	// IHDR chunk
+	0x00,
+	0x00,
+	0x00,
+	0x0d, // Length
+	0x49,
+	0x48,
+	0x44,
+	0x52, // "IHDR"
+	0x00,
+	0x00,
+	0x00,
+	0x01, // Width: 1
+	0x00,
+	0x00,
+	0x00,
+	0x01, // Height: 1
+	0x08, // Bit depth
+	0x06, // Color type: RGBA
+	0x00, // Compression
+	0x00, // Filter
+	0x00, // Interlace
+	0x1f,
+	0x15,
+	0xc4,
+	0x89, // IHDR CRC
+	// IDAT chunk
+	0x00,
+	0x00,
+	0x00,
+	0x0a, // Length
+	0x49,
+	0x44,
+	0x41,
+	0x54, // "IDAT"
+	0x78,
+	0x9c,
+	0x63,
+	0x00, // zlib header + data
+	0x00,
+	0x00,
+	0x00,
+	0xff, // zlib checksum
+	0xff,
+	0x00,
+	0x02,
+	0x00, // IDAT CRC
+	// IEND chunk
+	0x00,
+	0x00,
+	0x00,
+	0x00, // Length
+	0x49,
+	0x45,
+	0x4e,
+	0x44, // "IEND"
+	0xae,
+	0x42,
+	0x60,
+	0x82, // IEND CRC
+]);
+
 //-----------------------------------------------------------------------------
 // Tests
 //-----------------------------------------------------------------------------
@@ -116,77 +188,6 @@ describe("DiscordWebhookStrategy", () => {
 
 		it("should successfully post a message with images", async () => {
 			const message = "Hello Discord!";
-			const imageData = new Uint8Array([
-				// PNG signature
-				0x89,
-				0x50,
-				0x4e,
-				0x47,
-				0x0d,
-				0x0a,
-				0x1a,
-				0x0a,
-				// IHDR chunk
-				0x00,
-				0x00,
-				0x00,
-				0x0d, // Length
-				0x49,
-				0x48,
-				0x44,
-				0x52, // "IHDR"
-				0x00,
-				0x00,
-				0x00,
-				0x01, // Width: 1
-				0x00,
-				0x00,
-				0x00,
-				0x01, // Height: 1
-				0x08, // Bit depth
-				0x06, // Color type: RGBA
-				0x00, // Compression
-				0x00, // Filter
-				0x00, // Interlace
-				0x1f,
-				0x15,
-				0xc4,
-				0x89, // IHDR CRC
-				// IDAT chunk
-				0x00,
-				0x00,
-				0x00,
-				0x0a, // Length
-				0x49,
-				0x44,
-				0x41,
-				0x54, // "IDAT"
-				0x78,
-				0x9c,
-				0x63,
-				0x00, // zlib header + data
-				0x00,
-				0x00,
-				0x00,
-				0xff, // zlib checksum
-				0xff,
-				0x00,
-				0x02,
-				0x00, // IDAT CRC
-				// IEND chunk
-				0x00,
-				0x00,
-				0x00,
-				0x00, // Length
-				0x49,
-				0x45,
-				0x4e,
-				0x44, // "IEND"
-				0xae,
-				0x42,
-				0x60,
-				0x82, // IEND CRC
-			]);
 			const altText = "Test image";
 			const payload = {
 				content: message,
@@ -208,7 +209,6 @@ describe("DiscordWebhookStrategy", () => {
 			};
 			const formData = new FormData();
 			formData.append("payload_json", JSON.stringify(payload));
-			// formData.append("files[0]", new File([imageData], "image1.png", { type: "image/png" }));
 
 			server.post(
 				{
@@ -221,7 +221,10 @@ describe("DiscordWebhookStrategy", () => {
 
 					assert.strictEqual(file.type, "image/png");
 					assert.strictEqual(file.name, "image1.png");
-					assert.deepStrictEqual(await file.bytes(), imageData);
+					assert.deepStrictEqual(
+						await file.arrayBuffer(),
+						pngImageData.buffer,
+					);
 
 					return {
 						status: 200,
@@ -236,7 +239,7 @@ describe("DiscordWebhookStrategy", () => {
 			const result = await strategy.post(message, {
 				images: [
 					{
-						data: imageData,
+						data: pngImageData,
 						alt: altText,
 					},
 				],
@@ -246,77 +249,6 @@ describe("DiscordWebhookStrategy", () => {
 
 		it("should use generic alt text when none is provided", async () => {
 			const message = "Hello Discord!";
-			const imageData = new Uint8Array([
-				// PNG signature
-				0x89,
-				0x50,
-				0x4e,
-				0x47,
-				0x0d,
-				0x0a,
-				0x1a,
-				0x0a,
-				// IHDR chunk
-				0x00,
-				0x00,
-				0x00,
-				0x0d, // Length
-				0x49,
-				0x48,
-				0x44,
-				0x52, // "IHDR"
-				0x00,
-				0x00,
-				0x00,
-				0x01, // Width: 1
-				0x00,
-				0x00,
-				0x00,
-				0x01, // Height: 1
-				0x08, // Bit depth
-				0x06, // Color type: RGBA
-				0x00, // Compression
-				0x00, // Filter
-				0x00, // Interlace
-				0x1f,
-				0x15,
-				0xc4,
-				0x89, // IHDR CRC
-				// IDAT chunk
-				0x00,
-				0x00,
-				0x00,
-				0x0a, // Length
-				0x49,
-				0x44,
-				0x41,
-				0x54, // "IDAT"
-				0x78,
-				0x9c,
-				0x63,
-				0x00, // zlib header + data
-				0x00,
-				0x00,
-				0x00,
-				0xff, // zlib checksum
-				0xff,
-				0x00,
-				0x02,
-				0x00, // IDAT CRC
-				// IEND chunk
-				0x00,
-				0x00,
-				0x00,
-				0x00, // Length
-				0x49,
-				0x45,
-				0x4e,
-				0x44, // "IEND"
-				0xae,
-				0x42,
-				0x60,
-				0x82, // IEND CRC
-			]);
 			const payload = {
 				content: message,
 				embeds: [
@@ -349,7 +281,10 @@ describe("DiscordWebhookStrategy", () => {
 
 					assert.strictEqual(file.type, "image/png");
 					assert.strictEqual(file.name, "image1.png");
-					assert.deepStrictEqual(await file.bytes(), imageData);
+					assert.deepStrictEqual(
+						await file.arrayBuffer(),
+						pngImageData.buffer,
+					);
 
 					return {
 						status: 200,
@@ -364,7 +299,7 @@ describe("DiscordWebhookStrategy", () => {
 			const result = await strategy.post(message, {
 				images: [
 					{
-						data: imageData,
+						data: pngImageData,
 					},
 				],
 			});
