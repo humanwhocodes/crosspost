@@ -3,7 +3,14 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch */
+/* global fetch, FormData, Blob */
+
+//-----------------------------------------------------------------------------
+// Imports
+//-----------------------------------------------------------------------------
+
+import { validatePostOptions } from "../util/options.js";
+import { getImageMimeType } from "../util/images.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -28,6 +35,41 @@
  * @typedef {Object} DiscordWebhookErrorResponse
  * @property {number} code The error code.
  * @property {string} message The error message.
+ */
+
+/** @typedef {import("../types.js").PostOptions} PostOptions */
+
+/**
+ * @typedef {Object} DiscordPayload
+ * @property {string} content The text content of the message
+ * @property {DiscordEmbed[]} [embeds] Array of embedded messages
+ * @property {DiscordMessageReference} [message_reference] Reference to another message
+ * @property {DiscordAttachment[]} [attachments] Array of file attachments
+ */
+
+/**
+ * @typedef {Object} DiscordEmbedImage
+ * @property {string} url URL of the image
+ */
+
+/**
+ * @typedef {Object} DiscordEmbed
+ * @property {string} [title] The title of the embed
+ * @property {string} [description] The description of the embed
+ * @property {DiscordEmbedImage} [thumbnail] The thumbnail image
+ * @property {DiscordEmbedImage} [image] The main image
+ */
+
+/**
+ * @typedef {Object} DiscordMessageReference
+ * @property {string} message_id The ID of the message being referenced
+ */
+
+/**
+ * @typedef {Object} DiscordAttachment
+ * @property {number} id The unique identifier for the attachment
+ * @property {string} description A description of the attachment
+ * @property {string} filename The filename of the attachment
  */
 
 //-----------------------------------------------------------------------------
@@ -69,28 +111,71 @@ export class DiscordWebhookStrategy {
 	/**
 	 * Posts a message to Discord.
 	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<DiscordWebhookResponse>} A promise that resolves with the message data.
 	 * @throws {Error} When the message fails to post.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		if (!message) {
 			throw new TypeError("Missing message to post.");
 		}
+
+		validatePostOptions(postOptions);
 
 		// Tell Discord to wait until the message is posted to return a response
 		const url = new URL(this.#webhookUrl);
 		url.searchParams.set("wait", "true");
 
+		const formData = new FormData();
+
+		/** @type {DiscordPayload} */
+		const payload = {
+			content: message,
+		};
+
+		// Add images if present
+		if (postOptions?.images?.length) {
+			payload.embeds = [];
+			payload.attachments = [];
+
+			/*
+			 * Each image needs to be added in three places:
+			 * 1. As a file field in FormData
+			 * 2. As an embed image in the payload
+			 * 3. As an attachment in the payload
+			 */
+			postOptions.images.forEach((image, index) => {
+				const type = getImageMimeType(image.data);
+				const filename = `image${index + 1}.${type.split("/")[1]}`;
+				const description = image.alt || filename;
+				const file = new Blob([image.data], { type });
+				formData.append(`files[${index}]`, file, filename);
+
+				payload.attachments?.push({
+					id: index,
+					description,
+					filename,
+				});
+
+				payload.embeds?.push({
+					description,
+					image: {
+						url: `attachment://${filename}`,
+					},
+				});
+			});
+		}
+
+		// Add payload as JSON string
+		formData.append("payload_json", JSON.stringify(payload));
+
 		const response = await fetch(url.href, {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
 				"User-Agent":
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.6.3)", // x-release-please-version
 			},
-			body: JSON.stringify({
-				content: message,
-			}),
+			body: formData,
 		});
 
 		if (!response.ok) {
