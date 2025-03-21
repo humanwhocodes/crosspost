@@ -3,11 +3,20 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch */
+/* global fetch, FormData, Blob */
+
+//-----------------------------------------------------------------------------
+// Imports
+//-----------------------------------------------------------------------------
+
+import { validatePostOptions } from "../util/options.js";
+import { getImageMimeType } from "../util/images.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
+
+/** @typedef {import("../types.js").PostOptions} PostOptions */
 
 /**
  * @typedef {Object} DiscordOptions
@@ -26,6 +35,31 @@
  * @typedef {Object} DiscordErrorResponse
  * @property {number} code The error code.
  * @property {string} message The error message.
+ */
+
+/**
+ * @typedef {Object} DiscordPayload
+ * @property {string} content The text content of the message
+ * @property {DiscordEmbed[]} [embeds] Array of embedded messages
+ * @property {DiscordAttachment[]} [attachments] Array of file attachments
+ */
+
+/**
+ * @typedef {Object} DiscordEmbedImage
+ * @property {string} url URL of the image
+ */
+
+/**
+ * @typedef {Object} DiscordEmbed
+ * @property {string} [description] The description of the embed
+ * @property {DiscordEmbedImage} [image] The main image
+ */
+
+/**
+ * @typedef {Object} DiscordAttachment
+ * @property {number} id The unique identifier for the attachment
+ * @property {string} description A description of the attachment
+ * @property {string} filename The filename of the attachment
  */
 
 //-----------------------------------------------------------------------------
@@ -77,26 +111,61 @@ export class DiscordStrategy {
 	/**
 	 * Posts a message to Discord.
 	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<DiscordMessageResponse>} A promise that resolves with the message data.
 	 * @throws {Error} When the message fails to post.
 	 */
-	async post(message) {
+	async post(message, postOptions) {
 		if (!message) {
 			throw new TypeError("Missing message to post.");
 		}
 
+		validatePostOptions(postOptions);
+
 		const url = `${API_BASE}/channels/${this.#options.channelId}/messages`;
+		const formData = new FormData();
+
+		/** @type {DiscordPayload} */
+		const payload = {
+			content: message,
+		};
+
+		if (postOptions?.images?.length) {
+			payload.embeds = [];
+			payload.attachments = [];
+
+			postOptions.images.forEach((image, index) => {
+				const type = getImageMimeType(image.data);
+				const filename = `image${index + 1}.${type.split("/")[1]}`;
+				const description = image.alt || filename;
+				const file = new Blob([image.data], { type });
+				formData.append(`files[${index}]`, file, filename);
+
+				payload.attachments?.push({
+					id: index,
+					description,
+					filename,
+				});
+
+				payload.embeds?.push({
+					description,
+					image: {
+						url: `attachment://${filename}`,
+					},
+				});
+			});
+		}
+
+		formData.append("payload_json", JSON.stringify(payload));
+
 		const response = await fetch(url, {
 			method: "POST",
 			headers: {
 				Authorization: `Bot ${this.#options.botToken}`,
-				"Content-Type": "application/json",
 				"User-Agent":
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.7.0)", // x-release-please-version
 			},
-			body: JSON.stringify({
-				content: message,
-			}),
+			body: formData,
 		});
 
 		if (!response.ok) {

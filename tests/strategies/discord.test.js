@@ -3,6 +3,8 @@
  * @author Nicholas C. Zakas
  */
 
+/* global FormData */
+
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -27,6 +29,15 @@ const server = new MockServer("https://discord.com");
 const fetchMocker = new FetchMocker({
 	servers: [server],
 });
+
+const pngImageData = new Uint8Array([
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+	0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+	0x42, 0x60, 0x82,
+]);
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -85,17 +96,20 @@ describe("DiscordStrategy", () => {
 
 		it("should successfully post a message", async () => {
 			const message = "Hello Discord!";
+			const payload = {
+				content: message,
+			};
+
+			const formData = new FormData();
+			formData.append("payload_json", JSON.stringify(payload));
 
 			server.post(
 				{
 					url: `/api/v10/channels/${CHANNEL_ID}/messages`,
 					headers: {
 						authorization: `Bot ${BOT_TOKEN}`,
-						"content-type": "application/json",
 					},
-					body: {
-						content: message,
-					},
+					body: formData,
 				},
 				{
 					status: 200,
@@ -123,6 +137,139 @@ describe("DiscordStrategy", () => {
 			await assert.rejects(
 				strategy.post("Hello Discord!"),
 				/401 Failed to post message: Unauthorized\nNo good \(code: 123\)/,
+			);
+		});
+
+		it("should successfully post a message with images", async () => {
+			const message = "Hello Discord!";
+			const altText = "Test image";
+			const payload = {
+				content: message,
+				embeds: [
+					{
+						description: altText,
+						image: {
+							url: "attachment://image1.png",
+						},
+					},
+				],
+				attachments: [
+					{
+						id: 0,
+						description: altText,
+						filename: "image1.png",
+					},
+				],
+			};
+			const formData = new FormData();
+			formData.append("payload_json", JSON.stringify(payload));
+
+			server.post(
+				{
+					url: `/api/v10/channels/${CHANNEL_ID}/messages`,
+					headers: {
+						authorization: `Bot ${BOT_TOKEN}`,
+					},
+					body: formData,
+				},
+				async request => {
+					const formData = await request.formData();
+					const file = formData.get("files[0]");
+
+					assert.strictEqual(file.type, "image/png");
+					assert.strictEqual(file.name, "image1.png");
+					assert.deepStrictEqual(
+						await file.arrayBuffer(),
+						pngImageData.buffer,
+					);
+
+					return {
+						status: 200,
+						headers: {
+							"content-type": "application/json",
+						},
+						body: MESSAGE_RESPONSE,
+					};
+				},
+			);
+
+			const result = await strategy.post(message, {
+				images: [
+					{
+						data: pngImageData,
+						alt: altText,
+					},
+				],
+			});
+			assert.deepStrictEqual(result, MESSAGE_RESPONSE);
+		});
+
+		it("should use generic alt text when none is provided", async () => {
+			const message = "Hello Discord!";
+			const payload = {
+				content: message,
+				embeds: [
+					{
+						description: "image1.png",
+						image: {
+							url: "attachment://image1.png",
+						},
+					},
+				],
+				attachments: [
+					{
+						id: 0,
+						description: "image1.png",
+						filename: "image1.png",
+					},
+				],
+			};
+			const formData = new FormData();
+			formData.append("payload_json", JSON.stringify(payload));
+
+			server.post(
+				{
+					url: `/api/v10/channels/${CHANNEL_ID}/messages`,
+					headers: {
+						authorization: `Bot ${BOT_TOKEN}`,
+					},
+					body: formData,
+				},
+				async request => {
+					const formData = await request.formData();
+					const file = formData.get("files[0]");
+
+					assert.strictEqual(file.type, "image/png");
+					assert.strictEqual(file.name, "image1.png");
+					assert.deepStrictEqual(
+						await file.arrayBuffer(),
+						pngImageData.buffer,
+					);
+
+					return {
+						status: 200,
+						headers: {
+							"content-type": "application/json",
+						},
+						body: MESSAGE_RESPONSE,
+					};
+				},
+			);
+
+			const result = await strategy.post(message, {
+				images: [
+					{
+						data: pngImageData,
+					},
+				],
+			});
+			assert.deepStrictEqual(result, MESSAGE_RESPONSE);
+		});
+
+		it("should throw error for invalid post options", async () => {
+			await assert.rejects(
+				strategy.post("Hello", { images: [{ invalid: true }] }),
+				/Image must have data/,
 			);
 		});
 	});
