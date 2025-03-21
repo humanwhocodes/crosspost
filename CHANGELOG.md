@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.8.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.7.0...crosspost-v0.8.0) (2025-03-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* Remove CommonJS files ([#59](https://github.com/humanwhocodes/crosspost/issues/59))
+
+### Features
+
+* Add strategy to post to dev.to ([#55](https://github.com/humanwhocodes/crosspost/issues/55)) ([0b30203](https://github.com/humanwhocodes/crosspost/commit/0b3020378124c5328b94c27364b0a71b73ae60b8))
+* Enable image uploads for Bluesky ([c243128](https://github.com/humanwhocodes/crosspost/commit/c24312820c2207e8ac54f5fddb532c44de995aa0))
+* Enable image uploads for Mastodon ([c243128](https://github.com/humanwhocodes/crosspost/commit/c24312820c2207e8ac54f5fddb532c44de995aa0))
+* Remove CommonJS files ([#59](https://github.com/humanwhocodes/crosspost/issues/59)) ([62b991e](https://github.com/humanwhocodes/crosspost/commit/62b991e2ea294d88eb491e11a707a2b1f837a672))
+* Support image embeedding for Dev.to ([#66](https://github.com/humanwhocodes/crosspost/issues/66)) ([6dde57b](https://github.com/humanwhocodes/crosspost/commit/6dde57b2db37202687ba965a4010e01e258c99ff))
+* Support image uploads for Discord bots ([#65](https://github.com/humanwhocodes/crosspost/issues/65)) ([35ce812](https://github.com/humanwhocodes/crosspost/commit/35ce8128be308851b61d91cce1d76a81395d418e))
+* Support image uploads for Discord Webhooks ([#64](https://github.com/humanwhocodes/crosspost/issues/64)) ([e05d6f3](https://github.com/humanwhocodes/crosspost/commit/e05d6f363ac34ff65c1b3958ed3cd1fd320de50d))
+* Support image uploads for LinkedIn ([#62](https://github.com/humanwhocodes/crosspost/issues/62)) ([ef1fd2b](https://github.com/humanwhocodes/crosspost/commit/ef1fd2bd50ae4db8d829775e31e3fa6b86408928))
+* Support image uploads for Twitter ([#61](https://github.com/humanwhocodes/crosspost/issues/61)) ([281a267](https://github.com/humanwhocodes/crosspost/commit/281a267049859c24bd800f2ba2cd5ca1bf50d2d9))
+* Support uploading of images ([#60](https://github.com/humanwhocodes/crosspost/issues/60)) ([c243128](https://github.com/humanwhocodes/crosspost/commit/c24312820c2207e8ac54f5fddb532c44de995aa0))
+
+
+### Bug Fixes
+
+* **deps:** update dependency twitter-api-v2 to v1.20.1 ([#57](https://github.com/humanwhocodes/crosspost/issues/57)) ([9c6b8e0](https://github.com/humanwhocodes/crosspost/commit/9c6b8e06ce541b6c283b6c8fbbeeb64fce2a07e8))
+
 ## [0.7.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.6.3...crosspost-v0.7.0) (2025-02-26)
 
 
