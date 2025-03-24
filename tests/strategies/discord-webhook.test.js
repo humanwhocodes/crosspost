@@ -312,5 +312,30 @@ describe("DiscordWebhookStrategy", () => {
 				/Image must have data/,
 			);
 		});
+
+		it("should abort when signal is triggered", async () => {
+			const message = "Hello Discord!";
+			const controller = new AbortController();
+
+			server.post(
+				{
+					url: "/api/webhooks/123456789/abcdef",
+				},
+				{
+					status: 200,
+					delay: 50,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: MESSAGE_RESPONSE,
+				},
+			);
+
+			setTimeout(() => controller.abort(), 10);
+
+			await assert.rejects(async () => {
+				await strategy.post(message, { signal: controller.signal });
+			}, /AbortError/);
+		});
 	});
 });

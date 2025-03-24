@@ -166,6 +166,7 @@ export class DiscordStrategy {
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.8.0)", // x-release-please-version
 			},
 			body: formData,
+			signal: postOptions?.signal,
 		});
 
 		if (!response.ok) {

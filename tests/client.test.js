@@ -117,5 +117,88 @@ describe("Client", function () {
 				new FailureResponse(new Error("test2")),
 			]);
 		});
+
+		it("should pass signal to each strategy", async () => {
+			const controller = new AbortController();
+			const signals = [];
+
+			const strategies = [
+				{
+					name: "test1",
+					post(message, options) {
+						signals.push(options?.signal);
+						return Promise.resolve();
+					},
+				},
+				{
+					name: "test2",
+					post(message, options) {
+						signals.push(options?.signal);
+						return Promise.resolve();
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			await client.post("Hello", { signal: controller.signal });
+
+			assert.strictEqual(signals.length, 2);
+			assert.ok(signals[0] instanceof AbortSignal);
+			assert.ok(signals[1] instanceof AbortSignal);
+		});
+
+		it("should abort when signal is triggered", async () => {
+			const controller = new AbortController();
+			const aborted = [];
+
+			const strategies = [
+				{
+					name: "test1",
+					async post(message, options) {
+						try {
+							await new Promise((resolve, reject) => {
+								options?.signal?.addEventListener("abort", () =>
+									reject(new Error("Aborted")),
+								);
+								setTimeout(resolve, 100);
+							});
+						} catch (error) {
+							aborted.push("strategy1");
+							throw error;
+						}
+					},
+				},
+				{
+					name: "test2",
+					async post(message, options) {
+						try {
+							await new Promise((resolve, reject) => {
+								options?.signal?.addEventListener("abort", () =>
+									reject(new Error("Aborted")),
+								);
+								setTimeout(resolve, 100);
+							});
+						} catch (error) {
+							aborted.push("strategy2");
+							throw error;
+						}
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			setTimeout(() => controller.abort(), 10);
+
+			const responses = await client.post("Hello", {
+				signal: controller.signal,
+			});
+
+			assert.deepStrictEqual(aborted, ["strategy1", "strategy2"]);
+			assert.strictEqual(responses.length, 2);
+			assert.ok(responses[0] instanceof FailureResponse);
+			assert.ok(responses[1] instanceof FailureResponse);
+			assert.match(responses[0].reason.message, /Aborted/);
+			assert.match(responses[1].reason.message, /Aborted/);
+		});
 	});
 });

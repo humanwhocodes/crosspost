@@ -108,6 +108,8 @@ export class TwitterStrategy {
 			accessSecret: accessTokenSecret,
 		});
 
+		postOptions?.signal?.throwIfAborted();
+
 		// if there are images, upload them first
 		if (postOptions?.images?.length) {
 			const mediaIds = await Promise.all(
@@ -135,6 +137,8 @@ export class TwitterStrategy {
 						}),
 				),
 			);
+
+			postOptions?.signal?.throwIfAborted();
 
 			return client.v2.tweet(message, {
 				media: {

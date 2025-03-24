@@ -272,5 +272,33 @@ describe("DiscordStrategy", () => {
 				/Image must have data/,
 			);
 		});
+
+		it("should abort when signal is triggered", async () => {
+			const message = "Hello Discord!";
+			const controller = new AbortController();
+
+			server.post(
+				{
+					url: `/api/v10/channels/${CHANNEL_ID}/messages`,
+					headers: {
+						authorization: `Bot ${BOT_TOKEN}`,
+					},
+				},
+				{
+					status: 200,
+					delay: 50,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: MESSAGE_RESPONSE,
+				},
+			);
+
+			setTimeout(() => controller.abort(), 10);
+
+			await assert.rejects(async () => {
+				await strategy.post(message, { signal: controller.signal });
+			}, /AbortError/);
+		});
 	});
 });

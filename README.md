@@ -93,6 +93,10 @@ await client.post("Hello world!", {
 		},
 	],
 });
+
+// post to all services with an abort signal
+const controller = new AbortController();
+await client.post("Hello world!", { signal: controller.signal });
 ```
 
 ### CLI Usage

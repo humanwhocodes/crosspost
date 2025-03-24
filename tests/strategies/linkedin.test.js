@@ -263,5 +263,64 @@ describe("LinkedInStrategy", () => {
 				await strategy.post("Hello world!");
 			}, /403 Failed to create post/);
 		});
+
+		it("should abort when signal is triggered", async () => {
+			const text = "Hello, LinkedIn world!";
+			const strategy = new LinkedInStrategy(options);
+			const controller = new AbortController();
+
+			server.get(
+				{
+					url: USER_INFO_URL,
+					headers: {
+						authorization: `Bearer ${ACCESS_TOKEN}`,
+						"content-type": "application/json",
+					},
+				},
+				{
+					status: 200,
+					delay: 50,
+					body: USER_INFO_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: POST_URL,
+					headers: {
+						authorization: `Bearer ${ACCESS_TOKEN}`,
+						"content-type": "application/json",
+						"x-restli-protocol-version": "2.0.0",
+					},
+					body: {
+						author: `urn:li:person:${USER_INFO_RESPONSE.sub}`,
+						lifecycleState: "PUBLISHED",
+						specificContent: {
+							"com.linkedin.ugc.ShareContent": {
+								shareCommentary: {
+									text,
+								},
+								shareMediaCategory: "NONE",
+							},
+						},
+						visibility: {
+							"com.linkedin.ugc.MemberNetworkVisibility":
+								"PUBLIC",
+						},
+					},
+				},
+				{
+					status: 200,
+					body: CREATE_POST_RESPONSE,
+					delay: 100,
+				},
+			);
+
+			setTimeout(() => controller.abort(), 10);
+
+			await assert.rejects(async () => {
+				await strategy.post(text, { signal: controller.signal });
+			}, /AbortError/);
+		});
 	});
 });

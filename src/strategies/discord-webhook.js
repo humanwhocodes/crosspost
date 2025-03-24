@@ -176,6 +176,7 @@ export class DiscordWebhookStrategy {
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.6.3)", // x-release-please-version
 			},
 			body: formData,
+			signal: postOptions?.signal,
 		});
 
 		if (!response.ok) {

@@ -82,6 +82,7 @@ async function postArticle(apiKey, content, postOptions) {
 				published: true,
 			},
 		}),
+		signal: postOptions?.signal,
 	});
 
 	if (response.ok) {

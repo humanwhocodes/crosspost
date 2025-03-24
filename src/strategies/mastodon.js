@@ -85,10 +85,11 @@ import { getImageMimeType } from "../util/images.js";
  * @param {Object} image The image to upload.
  * @param {Uint8Array} image.data The image data.
  * @param {string} [image.alt] Alt text for the image.
+ * @param {AbortSignal} [signal] The abort signal.
  * @returns {Promise<string>} A promise that resolves with the media ID.
  * @throws {Error} If the upload fails.
  */
-async function uploadMedia({ accessToken, host }, image) {
+async function uploadMedia({ accessToken, host }, image, signal) {
 	const url = `https://${host}/api/v1/media`;
 	const type = getImageMimeType(image.data);
 
@@ -109,6 +110,7 @@ async function uploadMedia({ accessToken, host }, image) {
 			Authorization: `Bearer ${accessToken}`,
 		},
 		body: data,
+		signal,
 	});
 
 	if (!response.ok) {
@@ -202,7 +204,7 @@ export class MastodonStrategy {
 		if (postOptions?.images?.length) {
 			const mediaIds = await Promise.all(
 				postOptions.images.map(image =>
-					uploadMedia(this.#options, image),
+					uploadMedia(this.#options, image, postOptions?.signal),
 				),
 			);
 
@@ -215,6 +217,7 @@ export class MastodonStrategy {
 				Authorization: `Bearer ${accessToken}`,
 			},
 			body: data,
+			signal: postOptions?.signal,
 		});
 
 		if (!response.ok) {

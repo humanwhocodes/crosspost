@@ -121,9 +121,10 @@ function getUploadBlobUrl(options) {
  * @param {BlueskyOptions} options The options for the strategy.
  * @param {BlueskySession} session The session data.
  * @param {Uint8Array} imageData The image data to upload.
+ * @param {AbortSignal} [signal] The abort signal for the request.
  * @returns {Promise<BlueskyUploadBlobResponse>} A promise that resolves with the blob data.
  */
-async function uploadImage(options, session, imageData) {
+async function uploadImage(options, session, imageData, signal) {
 	const url = getUploadBlobUrl(options);
 
 	const response = await fetch(url, {
@@ -133,6 +134,7 @@ async function uploadImage(options, session, imageData) {
 			Authorization: `Bearer ${session.accessJwt}`,
 		},
 		body: imageData,
+		signal,
 	});
 
 	if (response.ok) {
@@ -153,9 +155,10 @@ async function uploadImage(options, session, imageData) {
 /**
  * Creates a session with Bluesky.
  * @param {BlueskyOptions} options The options for the strategy.
+ * @param {AbortSignal} [signal] The abort signal for the request.
  * @returns {Promise<BlueskySession>} A promise that resolves with the session data.
  */
-async function createSession(options) {
+async function createSession(options, signal) {
 	const url = getCreateSessionUrl(options);
 
 	const response = await fetch(url, {
@@ -167,6 +170,7 @@ async function createSession(options) {
 			identifier: options.identifier,
 			password: options.password,
 		}),
+		signal,
 	});
 
 	if (response.ok) {
@@ -211,7 +215,12 @@ async function postMessage(options, session, message, postOptions) {
 		const images = [];
 
 		for (const image of postOptions.images) {
-			const result = await uploadImage(options, session, image.data);
+			const result = await uploadImage(
+				options,
+				session,
+				image.data,
+				postOptions?.signal,
+			);
 
 			images.push({
 				alt: image.alt || "",
@@ -234,6 +243,7 @@ async function postMessage(options, session, message, postOptions) {
 			Authorization: `Bearer ${session.accessJwt}`,
 		},
 		body: JSON.stringify(body),
+		signal: postOptions?.signal,
 	});
 
 	if (response.ok) {
@@ -308,7 +318,7 @@ export class BlueskyStrategy {
 
 		validatePostOptions(postOptions);
 
-		const session = await createSession(this.#options);
+		const session = await createSession(this.#options, postOptions?.signal);
 		return postMessage(this.#options, session, message, postOptions);
 	}
 }

@@ -299,5 +299,40 @@ describe("MastodonStrategy", () => {
 				},
 			);
 		});
+
+		it("should abort when signal is triggered", async () => {
+			const options = { accessToken: "token", host: "mastodon.social" };
+			const instance = new MastodonStrategy(options);
+			const message = "Hello, Mastodon!";
+			const controller = new AbortController();
+
+			server.post(
+				{
+					url: "/api/v1/statuses",
+					request: {
+						headers: {
+							authorization: "Bearer token",
+						},
+						body: {
+							status: message,
+						},
+					},
+				},
+				{
+					status: 200,
+					delay: 50,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: { id: "12345" },
+				},
+			);
+
+			setTimeout(() => controller.abort(), 10);
+
+			await assert.rejects(async () => {
+				await instance.post(message, { signal: controller.signal });
+			}, /AbortError/);
+		});
 	});
 });
