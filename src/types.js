@@ -20,6 +20,7 @@
 /**
  * @typedef {Object} PostOptions
  * @property {ImageEmbedArray} images An array of images to include.
+ * @property {AbortSignal} [signal] Signal for aborting operations.
  */
 
 /**

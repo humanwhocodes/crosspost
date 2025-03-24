@@ -120,16 +120,18 @@ const USER_INFO_URL = "https://api.linkedin.com/v2/userinfo";
 /**
  * Retrieves the person URN from LinkedIn.
  * @param {string} accessToken The access token for the LinkedIn API.
+ * @param {AbortSignal} [signal] The abort signal for the request.
  * @returns {Promise<string>} A promise that resolves with the person URN.
  * @throws {Error} When the request fails.
  */
-async function fetchPersonUrn(accessToken) {
+async function fetchPersonUrn(accessToken, signal) {
 	const response = await fetch(USER_INFO_URL, {
 		method: "GET",
 		headers: {
 			Authorization: `Bearer ${accessToken}`,
 			"Content-Type": "application/json",
 		},
+		signal,
 	});
 
 	if (!response.ok) {
@@ -150,10 +152,11 @@ async function fetchPersonUrn(accessToken) {
  * @param {string} accessToken The access token for the LinkedIn API.
  * @param {string} personUrn The person URN to use for the upload.
  * @param {Uint8Array} imageData The image data to upload.
+ * @param {AbortSignal} [signal] The abort signal for the request.
  * @returns {Promise<string>} A promise that resolves with the asset URN.
  * @throws {Error} When the request fails.
  */
-async function uploadImage(accessToken, personUrn, imageData) {
+async function uploadImage(accessToken, personUrn, imageData, signal) {
 	const response = await fetch(
 		"https://api.linkedin.com/v2/assets?action=registerUpload",
 		{
@@ -173,6 +176,7 @@ async function uploadImage(accessToken, personUrn, imageData) {
 						},
 					],
 				},
+				signal,
 			}),
 		},
 	);
@@ -198,6 +202,7 @@ async function uploadImage(accessToken, personUrn, imageData) {
 				"Content-Type": "image/*",
 			},
 			body: imageData,
+			signal,
 		},
 	);
 
@@ -240,7 +245,12 @@ async function createPost(options, personUrn, message, postOptions) {
 	if (postOptions?.images?.length) {
 		const mediaAssets = await Promise.all(
 			postOptions.images.map(image =>
-				uploadImage(options.accessToken, personUrn, image.data),
+				uploadImage(
+					options.accessToken,
+					personUrn,
+					image.data,
+					postOptions?.signal,
+				),
 			),
 		);
 
@@ -268,6 +278,7 @@ async function createPost(options, personUrn, message, postOptions) {
 			"X-Restli-Protocol-Version": "2.0.0",
 		},
 		body: JSON.stringify(body),
+		signal: postOptions?.signal,
 	});
 
 	if (!response.ok) {

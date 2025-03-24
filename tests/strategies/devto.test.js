@@ -272,5 +272,41 @@ describe("DevtoStrategy", () => {
 
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
 		});
+
+		it("should abort when signal is triggered", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const controller = new AbortController();
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: content,
+							published: true,
+						},
+					},
+				},
+				{
+					status: 201,
+					delay: 50,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			setTimeout(() => controller.abort(), 10);
+
+			await assert.rejects(async () => {
+				await strategy.post(content, { signal: controller.signal });
+			}, /AbortError/);
+		});
 	});
 });

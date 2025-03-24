@@ -482,5 +482,38 @@ describe("BlueskyStrategy", function () {
 				});
 			}, /The blob is invalid/);
 		});
+
+		it("should abort when signal is triggered", async function () {
+			const text = "Hello, world!";
+			const controller = new AbortController();
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+					delay: 50,
+				},
+			);
+
+			// Abort after a short delay
+			setTimeout(() => controller.abort(), 10);
+
+			await assert.rejects(async () => {
+				await strategy.post(text, { signal: controller.signal });
+			}, /abort/u);
+		});
 	});
 });

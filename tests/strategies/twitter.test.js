@@ -170,5 +170,31 @@ describe("TwitterStrategy", () => {
 				text: message,
 			});
 		});
+
+		it("should abort when signal is triggered", async () => {
+			const signal = AbortSignal.abort("Aborted");
+
+			nock("https://api.x.com", {
+				reqheaders: {
+					authorization: /OAuth oauth_consumer_key="baz"/,
+				},
+			})
+				.post("/2/tweets")
+				.delay(100)
+				.reply(() => {
+					return [200, { result: "Success!" }];
+				});
+
+			const strategy = new TwitterStrategy({
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "bar",
+			});
+
+			await assert.rejects(async () => {
+				await strategy.post("Hello, world!", { signal });
+			}, /Aborted/);
+		});
 	}
 });

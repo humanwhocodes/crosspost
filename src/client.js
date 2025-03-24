@@ -110,7 +110,9 @@ export class Client {
 	async post(message, postOptions) {
 		return (
 			await Promise.allSettled(
-				this.#strategies.map(strategy => strategy.post(message, postOptions)),
+				this.#strategies.map(strategy => {
+					return strategy.post(message, postOptions);
+				}),
 			)
 		).map(result => {
 			if (result.status === "fulfilled") {
