@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.8.0...crosspost-v0.9.0) (2025-03-24)
+
+
+### Features
+
+* Add signal option to post() ([#69](https://github.com/humanwhocodes/crosspost/issues/69)) ([ae04256](https://github.com/humanwhocodes/crosspost/commit/ae04256d73430ea38101b76cd6cd661c356856c4))
+
 ## [0.8.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.7.0...crosspost-v0.8.0) (2025-03-21)
 
 
