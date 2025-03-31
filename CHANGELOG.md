@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.8.0...crosspost-v0.9.0) (2025-03-31)
+
+
+### Features
+
+* Add MCP server to allow posting from AI agents ([#72](https://github.com/humanwhocodes/crosspost/issues/72)) ([9c046f2](https://github.com/humanwhocodes/crosspost/commit/9c046f2a662717adfbefea5e15bac201d835b17e))
+* Add signal option to post() ([#69](https://github.com/humanwhocodes/crosspost/issues/69)) ([ae04256](https://github.com/humanwhocodes/crosspost/commit/ae04256d73430ea38101b76cd6cd661c356856c4))
+
+
+### Bug Fixes
+
+* **deps:** update dependency tlds to v1.256.0 ([#71](https://github.com/humanwhocodes/crosspost/issues/71)) ([50a07f4](https://github.com/humanwhocodes/crosspost/commit/50a07f4e31c1fc7e896a918e29849fd8d17771d6))
+
 ## [0.8.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.7.0...crosspost-v0.8.0) (2025-03-21)
 
 
