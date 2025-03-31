@@ -7,8 +7,8 @@
       "jsr.json",
       "LICENSE",
       "README.md",
-      "dist/esm/index.js",
-      "dist/esm/index.d.ts"
+      "dist/index.js",
+      "dist/index.d.ts"
     ]
   }
 }
