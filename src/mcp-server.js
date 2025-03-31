@@ -49,7 +49,7 @@ const properNames = new Map([
  * configuration of strategies and provides prompts and tools for posting
  * messages to all or specific platforms.
  */
-export class CrossPostMcpServer extends McpServer {
+export class CrosspostMcpServer extends McpServer {
 	/**
 	 * The strategies used by this MCP server to handle requests.
 	 * @type {Array<Strategy>}
@@ -69,7 +69,7 @@ export class CrossPostMcpServer extends McpServer {
 	 */
 	constructor({ strategies }) {
 		super({
-			name: "CrossPostMcpServer",
+			name: "Crosspost",
 			version,
 		});
 

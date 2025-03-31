@@ -10,7 +10,7 @@
 import assert from "node:assert";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { CrossPostMcpServer } from "../src/mcp-server.js";
+import { CrosspostMcpServer } from "../src/mcp-server.js";
 import {
 	ListPromptsResultSchema,
 	CallToolResultSchema,
@@ -46,19 +46,19 @@ describe("CrossPostMcpServer", () => {
 	describe("constructor", () => {
 		it("should throw an error when no strategies are provided", () => {
 			assert.throws(() => {
-				new CrossPostMcpServer({ strategies: [] });
+				new CrosspostMcpServer({ strategies: [] });
 			}, /At least one strategy must be provided./);
 		});
 
 		it("should throw an error when strategies is not an array", () => {
 			assert.throws(() => {
 				// @ts-expect-error: testing invalid input
-				new CrossPostMcpServer({ strategies: "not an array" });
+				new CrosspostMcpServer({ strategies: "not an array" });
 			}, /At least one strategy must be provided./);
 		});
 
 		it("should create an instance when valid strategies are provided", () => {
-			const server = new CrossPostMcpServer({
+			const server = new CrosspostMcpServer({
 				strategies: [new MockTwitterStrategy()],
 			});
 			assert.ok(server);
@@ -79,7 +79,7 @@ describe("CrossPostMcpServer", () => {
 		});
 
 		it("should list prompts for each strategy and one for crossposting", async () => {
-			const mcpServer = new CrossPostMcpServer({
+			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
 					new MockMastodonStrategy(),
@@ -131,7 +131,7 @@ describe("CrossPostMcpServer", () => {
 		});
 
 		it("should list tools for each strategy and one for crossposting", async () => {
-			const mcpServer = new CrossPostMcpServer({
+			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
 					new MockMastodonStrategy(),
@@ -173,7 +173,7 @@ describe("CrossPostMcpServer", () => {
 		});
 
 		it("should execute the crosspost tool and return results from all strategies", async () => {
-			const mcpServer = new CrossPostMcpServer({
+			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
 					new MockMastodonStrategy(),
@@ -216,7 +216,7 @@ describe("CrossPostMcpServer", () => {
 		});
 
 		it("should execute the post-to-twitter tool and return results", async () => {
-			const mcpServer = new CrossPostMcpServer({
+			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
 					new MockMastodonStrategy(),
@@ -250,7 +250,7 @@ describe("CrossPostMcpServer", () => {
 		});
 
 		it("should handle errors from strategies", async () => {
-			const mcpServer = new CrossPostMcpServer({
+			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
 					new MockMastodonStrategy(),

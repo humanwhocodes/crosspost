@@ -22,7 +22,7 @@ import {
 	DiscordWebhookStrategy,
 	DevtoStrategy,
 } from "./index.js";
-import { CrossPostMcpServer } from "./mcp-server.js";
+import { CrosspostMcpServer } from "./mcp-server.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 //-----------------------------------------------------------------------------
@@ -215,7 +215,7 @@ if (flags.image) {
 
 // After strategies are created, start MCP server if requested
 if (flags.mcp) {
-	const server = new CrossPostMcpServer({ strategies });
+	const server = new CrosspostMcpServer({ strategies });
 	await server.connect(new StdioServerTransport());
 	console.log(
 		"MCP server started. You can now send messages to it via stdin.",
