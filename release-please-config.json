@@ -10,7 +10,8 @@
           "path": "jsr.json",
           "jsonpath": "$.version"
         },
-        "src/strategies/discord.js"
+        "src/strategies/discord.js",
+        "src/mcp-server.js"
       ]
     }
   }

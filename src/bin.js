@@ -8,8 +8,9 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import * as dotenv from "dotenv";
+import fs from "node:fs";
 import { parseArgs } from "node:util";
+import * as dotenv from "dotenv";
 import { Env } from "@humanwhocodes/env";
 import {
 	Client,
@@ -21,7 +22,8 @@ import {
 	DiscordWebhookStrategy,
 	DevtoStrategy,
 } from "./index.js";
-import fs from "node:fs";
+import { CrosspostMcpServer } from "./mcp-server.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -59,6 +61,7 @@ const options = {
 	discord: { type: booleanType, short: "d" },
 	"discord-webhook": { type: booleanType },
 	devto: { type: booleanType },
+	mcp: { type: booleanType },
 	file: { type: stringType },
 	image: { type: stringType },
 	"image-alt": { type: stringType },
@@ -70,16 +73,22 @@ const { values: flags, positionals } = parseArgs({
 	allowPositionals: true,
 });
 
+if (flags.mcp && flags.file) {
+	console.error("Error: --file cannot be used with --mcp");
+	process.exit(1);
+}
+
 if (
 	flags.help ||
-	(positionals.length === 0 && !flags.file) ||
+	(!flags.mcp && positionals.length === 0 && !flags.file) ||
 	(!flags.twitter &&
 		!flags.mastodon &&
 		!flags.bluesky &&
 		!flags.linkedin &&
 		!flags.discord &&
 		!flags["discord-webhook"] &&
-		!flags.devto)
+		!flags.devto &&
+		!flags.mcp)
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
 	console.log("--twitter, -t	Post to Twitter.");
@@ -89,20 +98,13 @@ if (
 	console.log("--discord, -d	Post to Discord via bot.");
 	console.log("--discord-webhook	Post to Discord via webhook.");
 	console.log("--devto		Post to Dev.to.");
+	console.log("--mcp		Start MCP server.");
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
 	console.log("--help, -h	Show this message.");
 	process.exit(1);
 }
-
-/*
- * Command line arguments will escape \n as \\n, which isn't what we want.
- * Remove the extra escapes so newlines can be entered on the command line.
- */
-const message = flags.file
-	? fs.readFileSync(flags.file, "utf8")
-	: positionals[0].replace(/\\n/g, "\n");
 
 //-----------------------------------------------------------------------------
 // Load environment variables
@@ -197,11 +199,13 @@ if (flags.image) {
 	try {
 		const imageData = fs.readFileSync(flags.image);
 		const basename = flags.image.split(/[\\/]/).pop() || flags.image;
-		
-		postOptions.images = [{
-			data: new Uint8Array(imageData),
-			alt: flags["image-alt"] || basename
-		}];
+
+		postOptions.images = [
+			{
+				data: new Uint8Array(imageData),
+				alt: flags["image-alt"] || basename,
+			},
+		];
 	} catch (error) {
 		const fileError = /** @type {Error} */ (error);
 		console.error(`Error reading image file: ${fileError.message}`);
@@ -209,19 +213,37 @@ if (flags.image) {
 	}
 }
 
-const client = new Client({ strategies });
-const responses = await client.post(message, postOptions);
-let exitCode = 0;
+// After strategies are created, start MCP server if requested
+if (flags.mcp) {
+	const server = new CrosspostMcpServer({ strategies });
+	await server.connect(new StdioServerTransport());
+	console.log(
+		"MCP server started. You can now send messages to it via stdin.",
+	);
+} else {
+	/*
+	 * Command line arguments will escape \n as \\n, which isn't what we want.
+	 * Remove the extra escapes so newlines can be entered on the command line.
+	 */
+	const message = flags.file
+		? fs.readFileSync(flags.file, "utf8")
+		: positionals[0].replace(/\\n/g, "\n");
 
-responses.forEach((response, index) => {
-	if (isSuccessResponse(response)) {
-		console.log(`✅ ${strategies[index].name} succeeded.`);
-		console.log(response.response);
-	} else {
-		exitCode = 1;
-		console.log(`❌ ${strategies[index].name} failed.`);
-		console.error(response.reason);
-	}
-});
+	// normal CLI operation
+	const client = new Client({ strategies });
+	const responses = await client.post(message, postOptions);
+	let exitCode = 0;
 
-process.exit(exitCode);
+	responses.forEach((response, index) => {
+		if (isSuccessResponse(response)) {
+			console.log(`✅ ${strategies[index].name} succeeded.`);
+			console.log(response.response);
+		} else {
+			exitCode = 1;
+			console.log(`❌ ${strategies[index].name} failed.`);
+			console.error(response.reason);
+		}
+	});
+
+	process.exit(exitCode);
+}
