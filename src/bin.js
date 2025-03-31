@@ -218,7 +218,7 @@ if (flags.mcp) {
 	const server = new CrossPostMcpServer({ strategies });
 	await server.connect(new StdioServerTransport());
 	console.log(
-		`MCP server started. You can now send messages to it via stdin.`,
+		"MCP server started. You can now send messages to it via stdin.",
 	);
 } else {
 	/*
