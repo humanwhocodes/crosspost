@@ -112,6 +112,7 @@ Usage: crosspost [options] ["Message to post."]
 --discord, -d   Post to Discord via bot.
 --discord-webhook  Post to Discord via webhook.
 --devto         Post to dev.to.
+--mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
 --image-alt     Alt text for the image (defaults: filename).
@@ -165,6 +166,22 @@ Each strategy requires a set of environment variables in order to execute:
     - `DEVTO_API_KEY`
 
 Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
+
+### MCP Server
+
+Crosspost can be run as an MCP (Model Context Protocol) server, which allows it to be used by AI agents:
+
+```shell
+npx crosspost --mcp -t -m -b
+```
+
+This starts an MCP server that can post to Twitter, Mastodon, and Bluesky. The server provides prompts and tools for posting to all services or individual services. Only the services indicated by the flags are available via the server.
+
+To run the MCP server through the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for debugging purposes, run the following command:
+
+```shell
+npx run mcp:inspect -- -t -m -b
+```
 
 ## Setting up Strategies
 

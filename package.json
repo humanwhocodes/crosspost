@@ -50,7 +50,8 @@
     "test:build": "node tests/pkg.test.mjs",
     "test:jsr": "npx jsr@latest publish --dry-run",
     "test:attw": "attw --pack --profile esm-only",
-    "test": "npm run test:unit && npm run test:build && npm run test:attw"
+    "test": "npm run test:unit && npm run test:build && npm run test:attw",
+    "mcp:inspect": "npm run build && cross-env CROSSPOST_DOTENV=1 npx @modelcontextprotocol/inspector node dist/bin.js --mcp"
   },
   "repository": {
     "type": "git",
@@ -78,6 +79,7 @@
     "@types/mocha": "^10.0.3",
     "@types/node": "^22.9.0",
     "chai": "^5.1.2",
+    "cross-env": "^7.0.3",
     "eslint": "^9.0.0",
     "lint-staged": "15.4.3",
     "mentoss": "^0.5.1",
@@ -90,8 +92,10 @@
   },
   "dependencies": {
     "@humanwhocodes/env": "^4.0.0",
+    "@modelcontextprotocol/sdk": "^1.8.0",
     "dotenv": "^16.4.5",
     "tlds": "^1.255.0",
-    "twitter-api-v2": "^1.20.2"
+    "twitter-api-v2": "^1.20.2",
+    "zod": "^3.24.2"
   }
 }
