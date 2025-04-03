@@ -165,7 +165,7 @@ Each strategy requires a set of environment variables in order to execute:
 - dev.to
     - `DEVTO_API_KEY`
 
-Tip: You can also load environment variables from a `.env` file in the current working directory by setting the environment variable `CROSSPOST_DOTENV` to `1`.
+Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
 ### MCP Server
 
