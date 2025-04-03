@@ -303,11 +303,18 @@ async function createPost(options, personUrn, message, postOptions) {
  */
 export class LinkedInStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "linkedin";
+	id = "linkedin";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "LinkedIn";
 
 	/**
 	 * Options for this instance.

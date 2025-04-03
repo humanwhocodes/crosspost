@@ -37,11 +37,18 @@ import { getImageMimeType } from "../util/images.js";
  */
 export class TwitterStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "twitter";
+	id = "twitter";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "X (formerly Twitter)";
 
 	/**
 	 * Options for this instance.

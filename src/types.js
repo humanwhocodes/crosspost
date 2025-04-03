@@ -25,6 +25,7 @@
 
 /**
  * @typedef {Object} Strategy
- * @property {string} name The name of the strategy.
+ * @property {string} name The display name of the strategy.
+ * @property {string} id A unique ID for the strategy.
  * @property {(message: string, options?: PostOptions) => Promise<any>} post A function that posts a message.
  */

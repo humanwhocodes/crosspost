@@ -29,16 +29,6 @@ const postSchema = {
 	message: z.string(),
 };
 
-const properNames = new Map([
-	["twitter", "X (formerly Twitter)"],
-	["linkedin", "LinkedIn"],
-	["mastodon", "Mastodon"],
-	["discord", "Discord"],
-	["discord-webhook", "Discord Webhook"],
-	["bluesky", "Bluesky"],
-	["devto", "Dev.to"],
-]);
-
 //-----------------------------------------------------------------------------
 // Exports
 //-----------------------------------------------------------------------------
@@ -98,7 +88,7 @@ export class CrosspostMcpServer extends McpServer {
 		// prompt to post to a specific strategy
 		for (const strategy of this.#strategies) {
 			this.prompt(
-				`post-to-${strategy.name}`,
+				`post-to-${strategy.id}`,
 				postSchema,
 				({ message }) => ({
 					messages: [
@@ -106,7 +96,7 @@ export class CrosspostMcpServer extends McpServer {
 							role: "user",
 							content: {
 								type: "text",
-								text: `Post this message to ${properNames.get(strategy.name) || strategy.name}: ${message}`,
+								text: `Post this message to ${strategy.name}: ${message}`,
 							},
 						},
 					],
@@ -136,8 +126,8 @@ export class CrosspostMcpServer extends McpServer {
 		// tools to post to specific strategies
 		for (const strategy of this.#strategies) {
 			this.tool(
-				`post-to-${strategy.name}`,
-				`Post to ${properNames.get(strategy.name)}`,
+				`post-to-${strategy.id}`,
+				`Post to ${strategy.name}`,
 				postSchema,
 				async ({ message }) => {
 					const results = await strategy.post(message);

@@ -113,11 +113,12 @@ describe("DiscordWebhookStrategy", () => {
 			);
 		});
 
-		it("should create an instance if webhook URL is provided", () => {
+		it("should create an instance with correct id and name", () => {
 			const strategy = new DiscordWebhookStrategy({
 				webhookUrl: WEBHOOK_URL,
 			});
-			assert.strictEqual(strategy.name, "discord-webhook");
+			assert.strictEqual(strategy.id, "discord-webhook");
+			assert.strictEqual(strategy.name, "Discord Webhook");
 		});
 	});
 

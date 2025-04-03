@@ -81,11 +81,18 @@ import { getImageMimeType } from "../util/images.js";
  */
 export class DiscordWebhookStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "discord-webhook";
+	id = "discord-webhook";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "Discord Webhook";
 
 	/**
 	 * The webhook URL for this instance.

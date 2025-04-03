@@ -77,11 +77,18 @@ const API_BASE = "https://discord.com/api/v10";
  */
 export class DiscordStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "discord";
+	id = "discord";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "Discord Bot";
 
 	/**
 	 * Options for this instance.

@@ -22,14 +22,18 @@ import {
 //-----------------------------------------------------------------------------
 
 class MockTwitterStrategy {
-	name = "twitter";
+	id = "twitter";
+	name = "Twitter";
+
 	async post(message) {
 		return { message: `${message} (from Twitter)` };
 	}
 }
 
 class MockMastodonStrategy {
-	name = "mastodon";
+	id = "mastodon";
+	name = "Mastodon";
+
 	async post(message) {
 		if (message === "fail") {
 			return { ok: false, error: "Failed to post" };

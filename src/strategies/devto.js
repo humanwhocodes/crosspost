@@ -105,11 +105,18 @@ async function postArticle(apiKey, content, postOptions) {
  */
 export class DevtoStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "devto";
+	id = "devto";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "Dev.to";
 
 	/**
 	 * The API key for Dev.to.

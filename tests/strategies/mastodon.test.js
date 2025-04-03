@@ -49,6 +49,13 @@ describe("MastodonStrategy", () => {
 			const instance = new MastodonStrategy(options);
 			assert(instance instanceof MastodonStrategy);
 		});
+
+		it("should create an instance with correct id and name", () => {
+			const options = { accessToken: "token", host: "mastodon.social" };
+			const instance = new MastodonStrategy(options);
+			assert.strictEqual(instance.id, "mastodon");
+			assert.strictEqual(instance.name, "Mastodon");
+		});
 	});
 
 	describe("post", () => {

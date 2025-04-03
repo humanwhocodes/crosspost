@@ -57,11 +57,12 @@ describe("LinkedInStrategy", () => {
 			);
 		});
 
-		it("should create an instance if all required options are provided", () => {
+		it("should create an instance with correct id and name", () => {
 			const strategy = new LinkedInStrategy({
 				accessToken: ACCESS_TOKEN,
 			});
-			assert.strictEqual(strategy.name, "linkedin");
+			assert.strictEqual(strategy.id, "linkedin");
+			assert.strictEqual(strategy.name, "LinkedIn");
 		});
 	});
 
