@@ -111,8 +111,12 @@ if (
 //-----------------------------------------------------------------------------
 
 // load environment variables from .env file if present
-if (process.env.CROSSPOST_DOTENV === "1") {
-	dotenv.config();
+if (process.env.CROSSPOST_DOTENV) {
+	const filePath =
+		process.env.CROSSPOST_DOTENV === "1"
+			? undefined
+			: process.env.CROSSPOST_DOTENV;
+	dotenv.config({ path: filePath });
 }
 
 const env = new Env();
@@ -194,25 +198,6 @@ if (flags.devto) {
 /** @type {import("./types.js").PostOptions} */
 const postOptions = {};
 
-// if an image is specified, read it and add to options
-if (flags.image) {
-	try {
-		const imageData = fs.readFileSync(flags.image);
-		const basename = flags.image.split(/[\\/]/).pop() || flags.image;
-
-		postOptions.images = [
-			{
-				data: new Uint8Array(imageData),
-				alt: flags["image-alt"] || basename,
-			},
-		];
-	} catch (error) {
-		const fileError = /** @type {Error} */ (error);
-		console.error(`Error reading image file: ${fileError.message}`);
-		process.exit(1);
-	}
-}
-
 // After strategies are created, start MCP server if requested
 if (flags.mcp) {
 	const server = new CrosspostMcpServer({ strategies });
@@ -221,6 +206,25 @@ if (flags.mcp) {
 		"MCP server started. You can now send messages to it via stdin.",
 	);
 } else {
+	// if an image is specified, read it and add to options
+	if (flags.image) {
+		try {
+			const imageData = fs.readFileSync(flags.image);
+			const basename = flags.image.split(/[\\/]/).pop() || flags.image;
+
+			postOptions.images = [
+				{
+					data: new Uint8Array(imageData),
+					alt: flags["image-alt"] || basename,
+				},
+			];
+		} catch (error) {
+			const fileError = /** @type {Error} */ (error);
+			console.error(`Error reading image file: ${fileError.message}`);
+			process.exit(1);
+		}
+	}
+
 	/*
 	 * Command line arguments will escape \n as \\n, which isn't what we want.
 	 * Remove the extra escapes so newlines can be entered on the command line.
