@@ -57,9 +57,10 @@ describe("DevtoStrategy", () => {
 			);
 		});
 
-		it("should create an instance if all options are provided", () => {
+		it("should create an instance with correct id and name", () => {
 			const strategy = new DevtoStrategy(options);
-			assert.strictEqual(strategy.name, "devto");
+			assert.strictEqual(strategy.id, "devto");
+			assert.strictEqual(strategy.name, "Dev.to");
 		});
 	});
 

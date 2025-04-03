@@ -135,11 +135,18 @@ async function uploadMedia({ accessToken, host }, image, signal) {
  */
 export class MastodonStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "mastodon";
+	id = "mastodon";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "Mastodon";
 
 	/**
 	 * Options for this instance.

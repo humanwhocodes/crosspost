@@ -114,9 +114,10 @@ describe("BlueskyStrategy", function () {
 			);
 		});
 
-		it("should create an instance if all options are provided", function () {
+		it("should create an instance with correct id and name", () => {
 			const strategy = new BlueskyStrategy(options);
-			assert.strictEqual(strategy.name, "bluesky");
+			assert.strictEqual(strategy.id, "bluesky");
+			assert.strictEqual(strategy.name, "Bluesky");
 		});
 	});
 

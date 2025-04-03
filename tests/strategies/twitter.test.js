@@ -68,6 +68,17 @@ describe("TwitterStrategy", () => {
 				});
 			}, /consumer secret/i);
 		});
+
+		it("should create an instance with correct id and name", () => {
+			const strategy = new TwitterStrategy({
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "qux",
+			});
+			assert.strictEqual(strategy.id, "twitter");
+			assert.strictEqual(strategy.name, "X (formerly Twitter)");
+		});
 	});
 
 	// this test fails in Bun for some reason -- investigate later

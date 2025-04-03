@@ -270,11 +270,18 @@ async function postMessage(options, session, message, postOptions) {
  */
 export class BlueskyStrategy {
 	/**
-	 * The name of the strategy.
+	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
 	 */
-	name = "bluesky";
+	id = "bluesky";
+
+	/**
+	 * The display name of the strategy.
+	 * @type {string}
+	 * @readonly
+	 */
+	name = "Bluesky";
 
 	/**
 	 * Options for this instance.

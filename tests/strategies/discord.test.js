@@ -61,12 +61,13 @@ describe("DiscordStrategy", () => {
 			);
 		});
 
-		it("should create an instance if all options are provided", () => {
+		it("should create an instance with correct id and name", () => {
 			const strategy = new DiscordStrategy({
 				botToken: BOT_TOKEN,
 				channelId: CHANNEL_ID,
 			});
-			assert.strictEqual(strategy.name, "discord");
+			assert.strictEqual(strategy.id, "discord");
+			assert.strictEqual(strategy.name, "Discord Bot");
 		});
 	});
 
