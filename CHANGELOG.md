@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.9.0...crosspost-v0.10.0) (2025-04-04)
+
+
+### Features
+
+* Add id and display name to strategies ([#75](https://github.com/humanwhocodes/crosspost/issues/75)) ([37d7783](https://github.com/humanwhocodes/crosspost/commit/37d77839f995b76c611b74f238cf28d63be308a1))
+* Allow specifying path to .env file in CROSSPOST_DOTENV ([#74](https://github.com/humanwhocodes/crosspost/issues/74)) ([bce2877](https://github.com/humanwhocodes/crosspost/commit/bce2877aba46882e5c231cc7492cbf1bb75d1513))
+* Claude compatibility for MCP server ([#76](https://github.com/humanwhocodes/crosspost/issues/76)) ([198eac9](https://github.com/humanwhocodes/crosspost/commit/198eac954e2516560adbe2b352548d58ecbc8212))
+
+
+### Bug Fixes
+
+* JSR package files ([868dc58](https://github.com/humanwhocodes/crosspost/commit/868dc58a0f1ffbdbc5772d4c65b8185005c0f796))
+
 ## [0.9.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.8.0...crosspost-v0.9.0) (2025-03-31)
 
 
