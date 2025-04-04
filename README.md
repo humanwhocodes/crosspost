@@ -167,7 +167,7 @@ Each strategy requires a set of environment variables in order to execute:
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
-### MCP Server
+### MCP Server Usage
 
 Crosspost can be run as an MCP (Model Context Protocol) server, which allows it to be used by AI agents:
 
@@ -182,6 +182,62 @@ To run the MCP server through the [MCP Inspector](https://github.com/modelcontex
 ```shell
 npx run mcp:inspect -- -t -m -b
 ```
+
+#### Using the MCP Server with Claude Desktop
+
+To use the MCP server with Claude you must have [Node.js](https://nodejs.org) installed and then run:
+
+```shell
+npm install -g @humanwhocodes/crosspost
+```
+
+Then, in Claude Desktop:
+
+1. Click on File -> Settings.
+1. Select "Developer".
+1. Click "Edit Config".
+
+Claude will then create a `claude_desktop_config.json` file. Open it and add the following:
+
+```json
+{
+	"mcpServers": {
+		"crosspost": {
+			"command": "crosspost",
+			"args": ["-m", "-l", "--mcp"],
+			"env": {
+				"LINKEDIN_ACCESS_TOKEN": "abcdefghijklmnop",
+				"MASTODON_ACCESS_TOKEN": "abcdefghijklmnop",
+				"MASTODON_HOST": "mastodon.social"
+			}
+		}
+	}
+}
+```
+
+This example enables Mastodon and LinkedIn so the `env` key contains the environment variables necessary to post to those services. You can customize the services by passing different command line arguments as you would using the CLI.
+
+If you'd prefer not to put your environment variables directly into the JSON file, you can create a [`.env` file](https://www.npmjs.com/package/dotenv) and use the `CROSSPOST_DOTENV` environment variable to point to it:
+
+```json
+{
+	"mcpServers": {
+		"crosspost": {
+			"command": "crosspost",
+			"args": ["-m", "-l", "--mcp"],
+			"env": {
+				"CROSSPOST_DOTENV": "/usr/nzakas/settings/.env"
+			}
+		}
+	}
+}
+```
+
+Here are some prompts you can try:
+
+- "Crosspost this message: Hello world!" (posts to all available services)
+- "Post this to Twitter: Hello X!" (posts just to Twitter)
+- "Post this to Mastodon and Bluesky: Hello friends!" (posts to Mastodon and Bluesky)
 
 ## Setting up Strategies
 
