@@ -29,6 +29,7 @@ The API is split into two parts:
     - `DiscordStrategy`
     - `DiscordWebhookStrategy`
     - `TelegramStrategy`
+    - `DevtoStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -42,6 +43,7 @@ import {
 	DiscordStrategy,
 	DiscordWebhookStrategy,
 	TelegramStrategy,
+	DevtoStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -87,6 +89,11 @@ const telegram = new TelegramStrategy({
 	chatId: "your-chat-id", // Optional if the bot can determine the chat ID automatically
 });
 
+// Note: API key required
+const devto = new DevtoStrategy({
+	apiKey: "your-api-key",
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -97,6 +104,7 @@ const client = new Client({
 		discord,
 		discordWebhook,
 		telegram,
+		devto,
 	],
 });
 
@@ -244,7 +252,7 @@ If you'd prefer not to put your environment variables directly into the JSON fil
 	"mcpServers": {
 		"crosspost": {
 			"command": "crosspost",
-			"args": ["-m", "-l", "-t", "--telegram", "--mcp"],
+			"args": ["-m", "-l", "-t", "--mcp"],
 			"env": {
 				"CROSSPOST_DOTENV": "/usr/nzakas/settings/.env"
 			}
@@ -408,7 +416,7 @@ For the `TELEGRAM_CHAT_ID`, you have two options:
 - For group chat IDs, add your bot to the group and use a service like [@RawDataBot](https://t.me/RawDataBot) to get the chat ID.
 - Set the value as the `TELEGRAM_CHAT_ID` environment variable.
 
-**Note:** Your bot can only initiate conversations with users who have previously messaged the bot or added it to a group.
+**Note:** Your bot can only send messages to users who have previously messaged the bot or added it to a group.
 
 ## License
 
