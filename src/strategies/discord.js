@@ -170,7 +170,7 @@ export class DiscordStrategy {
 			headers: {
 				Authorization: `Bot ${this.#options.botToken}`,
 				"User-Agent":
-					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.10.0)", // x-release-please-version
+					"Crosspost (https://github.com/humanwhocodes/crosspost, v0.10.0)", // x-release-please-version
 			},
 			body: formData,
 			signal: postOptions?.signal,

@@ -11,6 +11,7 @@
           "jsonpath": "$.version"
         },
         "src/strategies/discord.js",
+        "src/strategies/discord-webhook.js",
         "src/mcp-server.js"
       ]
     }
