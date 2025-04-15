@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.10.0...crosspost-v0.11.0) (2025-04-15)
+
+
+### Features
+
+* Add strategy for posting to Telegram ([#80](https://github.com/humanwhocodes/crosspost/issues/80)) ([a84f606](https://github.com/humanwhocodes/crosspost/commit/a84f606c3cdc7b2752dd28686e5130ebd6df9a27))
+
+
+### Bug Fixes
+
+* JSR package configuration ([5c27c9b](https://github.com/humanwhocodes/crosspost/commit/5c27c9b58e283cf95165cc678352651e162288c0))
+
 ## [0.10.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.9.0...crosspost-v0.10.0) (2025-04-04)
 
 
