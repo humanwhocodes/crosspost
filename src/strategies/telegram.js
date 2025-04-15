@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch, FormData, Blob, URLSearchParams */
+/* global fetch, FormData, Blob */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -157,53 +157,6 @@ export class TelegramStrategy {
 	}
 
 	/**
-	 * Posts a message to Telegram.
-	 * @param {string} message The message to post.
-	 * @param {PostOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<TelegramMessageResponse>} A promise that resolves with the message data.
-	 * @throws {Error} When the message fails to post.
-	 */
-	async post(message, postOptions) {
-		if (!message) {
-			throw new TypeError("Missing message to post.");
-		}
-
-		validatePostOptions(postOptions);
-
-		const chatId = await this.#getChatId();
-
-		// If there are images, send each as a separate message
-		if (postOptions?.images?.length) {
-			const results = [];
-
-			// First send the text message
-			const textResult = await this.#sendText(
-				chatId,
-				message,
-				postOptions,
-			);
-			results.push(textResult);
-
-			// Then send each image
-			for (const image of postOptions.images) {
-				const imageResult = await this.#sendImage(
-					chatId,
-					image.data,
-					image.alt || "Image",
-					postOptions,
-				);
-				results.push(imageResult);
-			}
-
-			// Return the text message response as the result
-			return textResult;
-		} else {
-			// Just send text
-			return this.#sendText(chatId, message, postOptions);
-		}
-	}
-
-	/**
 	 * Sends a text message to Telegram.
 	 * @param {string} chatId The chat ID to send to.
 	 * @param {string} text The text to send.
@@ -213,18 +166,18 @@ export class TelegramStrategy {
 	 */
 	async #sendText(chatId, text, postOptions) {
 		const url = `${API_BASE}${this.#options.botToken}/sendMessage`;
-		const params = new URLSearchParams({
+		const body = JSON.stringify({
 			chat_id: chatId,
 			text,
 		});
 
-		const response = await fetch(`${url}?${params}`, {
-			method: "GET",
+		const response = await fetch(url, {
+			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				"User-Agent":
-					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.10.0)", // x-release-please-version
+				"User-Agent": "Crosspost v0.10.0", // x-release-please-version
 			},
+			body,
 			signal: postOptions?.signal,
 		});
 
@@ -287,5 +240,52 @@ export class TelegramStrategy {
 		}
 
 		return /** @type {TelegramMessageResponse} */ (await response.json());
+	}
+
+	/**
+	 * Posts a message to Telegram.
+	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<TelegramMessageResponse>} A promise that resolves with the message data.
+	 * @throws {Error} When the message fails to post.
+	 */
+	async post(message, postOptions) {
+		if (!message) {
+			throw new TypeError("Missing message to post.");
+		}
+
+		validatePostOptions(postOptions);
+
+		const chatId = await this.#getChatId();
+
+		// If there are images, send each as a separate message
+		if (postOptions?.images?.length) {
+			const results = [];
+
+			// First send the text message
+			const textResult = await this.#sendText(
+				chatId,
+				message,
+				postOptions,
+			);
+			results.push(textResult);
+
+			// Then send each image
+			for (const image of postOptions.images) {
+				const imageResult = await this.#sendImage(
+					chatId,
+					image.data,
+					image.alt || "Image",
+					postOptions,
+				);
+				results.push(imageResult);
+			}
+
+			// Return the text message response as the result
+			return textResult;
+		} else {
+			// Just send text
+			return this.#sendText(chatId, message, postOptions);
+		}
 	}
 }

@@ -111,10 +111,10 @@ describe("TelegramStrategy", () => {
 		it("should successfully post a message", async () => {
 			const message = "Hello Telegram!";
 
-			server.get(
+			server.post(
 				{
 					url: `/bot${BOT_TOKEN}/sendMessage`,
-					searchParams: {
+					body: {
 						chat_id: CHAT_ID,
 						text: message,
 					},
@@ -133,10 +133,10 @@ describe("TelegramStrategy", () => {
 		});
 
 		it("should handle API errors", async () => {
-			server.get(
+			server.post(
 				{
 					url: `/bot${BOT_TOKEN}/sendMessage`,
-					searchParams: {
+					body: {
 						chat_id: CHAT_ID,
 						text: "Hello Telegram!",
 					},
@@ -164,24 +164,19 @@ describe("TelegramStrategy", () => {
 			});
 
 			// Mock the getUpdates API call
-			server.get(
-				{
-					url: `/bot${BOT_TOKEN}/getUpdates`,
+			server.get(`/bot${BOT_TOKEN}/getUpdates`, {
+				status: 200,
+				headers: {
+					"content-type": "application/json",
 				},
-				{
-					status: 200,
-					headers: {
-						"content-type": "application/json",
-					},
-					body: UPDATE_RESPONSE,
-				},
-			);
+				body: UPDATE_RESPONSE,
+			});
 
 			// Mock the sendMessage API call
-			server.get(
+			server.post(
 				{
 					url: `/bot${BOT_TOKEN}/sendMessage`,
-					searchParams: {
+					body: {
 						chat_id: CHAT_ID,
 						text: "Hello Telegram!",
 					},
@@ -204,10 +199,10 @@ describe("TelegramStrategy", () => {
 			const altText = "Test image";
 
 			// Mock the sendMessage API call for text
-			server.get(
+			server.post(
 				{
 					url: `/bot${BOT_TOKEN}/sendMessage`,
-					searchParams: {
+					body: {
 						chat_id: CHAT_ID,
 						text: message,
 					},
@@ -283,20 +278,15 @@ describe("TelegramStrategy", () => {
 				botToken: BOT_TOKEN,
 			});
 
-			server.get(
-				{
-					url: `/bot${BOT_TOKEN}/getUpdates`,
+			server.get(`/bot${BOT_TOKEN}/getUpdates`, {
+				status: 401,
+				statusText: "Unauthorized",
+				body: {
+					ok: false,
+					error_code: 401,
+					description: "Unauthorized",
 				},
-				{
-					status: 401,
-					statusText: "Unauthorized",
-					body: {
-						ok: false,
-						error_code: 401,
-						description: "Unauthorized",
-					},
-				},
-			);
+			});
 
 			await assert.rejects(
 				strategyWithoutChatId.post("Hello Telegram!"),
@@ -309,21 +299,16 @@ describe("TelegramStrategy", () => {
 				botToken: BOT_TOKEN,
 			});
 
-			server.get(
-				{
-					url: `/bot${BOT_TOKEN}/getUpdates`,
+			server.get(`/bot${BOT_TOKEN}/getUpdates`, {
+				status: 200,
+				headers: {
+					"content-type": "application/json",
 				},
-				{
-					status: 200,
-					headers: {
-						"content-type": "application/json",
-					},
-					body: {
-						ok: true,
-						result: [], // Empty results
-					},
+				body: {
+					ok: true,
+					result: [], // Empty results
 				},
-			);
+			});
 
 			await assert.rejects(
 				strategyWithoutChatId.post("Hello Telegram!"),
@@ -342,10 +327,10 @@ describe("TelegramStrategy", () => {
 			const message = "Hello Telegram!";
 			const controller = new AbortController();
 
-			server.get(
+			server.post(
 				{
 					url: `/bot${BOT_TOKEN}/sendMessage`,
-					searchParams: {
+					body: {
 						chat_id: CHAT_ID,
 						text: message,
 					},

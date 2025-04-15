@@ -403,6 +403,7 @@ For the `TELEGRAM_CHAT_ID`, you have two options:
 
 **Option 2:** Specify a chat ID manually
 
+- You can specify any Telegram username such as `@username`.
 - To get your own chat ID, you can message [@userinfobot](https://t.me/userinfobot) on Telegram.
 - For group chat IDs, add your bot to the group and use a service like [@RawDataBot](https://t.me/RawDataBot) to get the chat ID.
 - Set the value as the `TELEGRAM_CHAT_ID` environment variable.
