@@ -1,7 +1,7 @@
 {
   "name": "@humanwhocodes/crosspost",
   "version": "0.10.0",
-  "exports": "./dist/esm/index.js",
+  "exports": "./dist/index.js",
   "publish": {
     "include": [
       "jsr.json",
