@@ -39,4 +39,10 @@ export {
 	DevtoErrorResponse,
 	DevtoOptions,
 } from "./strategies/devto.js";
+export {
+	TelegramStrategy,
+	TelegramOptions,
+	TelegramMessageResponse,
+	TelegramErrorResponse,
+} from "./strategies/telegram.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
