@@ -199,7 +199,7 @@ if (flags.telegram) {
 	strategies.push(
 		new TelegramStrategy({
 			botToken: env.require("TELEGRAM_BOT_TOKEN"),
-			chatId: env.require("TELEGRAM_CHAT_ID"),
+			chatId: env.get("TELEGRAM_CHAT_ID"),
 		}),
 	);
 }
