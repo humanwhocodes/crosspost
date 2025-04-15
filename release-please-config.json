@@ -12,6 +12,7 @@
         },
         "src/strategies/discord.js",
         "src/strategies/discord-webhook.js",
+        "src/strategies/telegram.js",
         "src/mcp-server.js"
       ]
     }
