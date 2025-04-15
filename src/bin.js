@@ -21,6 +21,7 @@ import {
 	DiscordStrategy,
 	DiscordWebhookStrategy,
 	DevtoStrategy,
+	TelegramStrategy,
 } from "./index.js";
 import { CrosspostMcpServer } from "./mcp-server.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -61,6 +62,7 @@ const options = {
 	discord: { type: booleanType, short: "d" },
 	"discord-webhook": { type: booleanType },
 	devto: { type: booleanType },
+	telegram: { type: booleanType },
 	mcp: { type: booleanType },
 	file: { type: stringType },
 	image: { type: stringType },
@@ -88,6 +90,7 @@ if (
 		!flags.discord &&
 		!flags["discord-webhook"] &&
 		!flags.devto &&
+		!flags.telegram &&
 		!flags.mcp)
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
@@ -98,6 +101,7 @@ if (
 	console.log("--discord, -d	Post to Discord via bot.");
 	console.log("--discord-webhook	Post to Discord via webhook.");
 	console.log("--devto		Post to Dev.to.");
+	console.log("--telegram	Post to Telegram.");
 	console.log("--mcp		Start MCP server.");
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
@@ -187,6 +191,15 @@ if (flags.devto) {
 	strategies.push(
 		new DevtoStrategy({
 			apiKey: env.require("DEVTO_API_KEY"),
+		}),
+	);
+}
+
+if (flags.telegram) {
+	strategies.push(
+		new TelegramStrategy({
+			botToken: env.require("TELEGRAM_BOT_TOKEN"),
+			chatId: env.get("TELEGRAM_CHAT_ID"),
 		}),
 	);
 }

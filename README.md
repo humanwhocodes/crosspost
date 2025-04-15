@@ -28,6 +28,7 @@ The API is split into two parts:
     - `LinkedInStrategy`
     - `DiscordStrategy`
     - `DiscordWebhookStrategy`
+    - `TelegramStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -40,6 +41,7 @@ import {
 	LinkedInStrategy,
 	DiscordStrategy,
 	DiscordWebhookStrategy,
+	TelegramStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -79,9 +81,23 @@ const discordWebhook = new DiscordWebhookStrategy({
 	webhookUrl: "your-webhook-url",
 });
 
+// Note: Bot token required, chat ID optional
+const telegram = new TelegramStrategy({
+	botToken: "your-bot-token",
+	chatId: "your-chat-id", // Optional if the bot can determine the chat ID automatically
+});
+
 // create a client that will post to all services
 const client = new Client({
-	strategies: [bluesky, mastodon, twitter, linkedin, discord, discordWebhook],
+	strategies: [
+		bluesky,
+		mastodon,
+		twitter,
+		linkedin,
+		discord,
+		discordWebhook,
+		telegram,
+	],
 });
 
 // post to all services with up to 4 images (must be PNG, JPEG, or GIF)
@@ -112,6 +128,7 @@ Usage: crosspost [options] ["Message to post."]
 --discord, -d   Post to Discord via bot.
 --discord-webhook  Post to Discord via webhook.
 --devto         Post to dev.to.
+--telegram      Post to Telegram.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -164,6 +181,9 @@ Each strategy requires a set of environment variables in order to execute:
     - `DISCORD_WEBHOOK_URL`
 - dev.to
     - `DEVTO_API_KEY`
+- Telegram
+    - `TELEGRAM_BOT_TOKEN`
+    - `TELEGRAM_CHAT_ID` (optional, if not provided will use the first chat that has messaged the bot)
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -224,7 +244,7 @@ If you'd prefer not to put your environment variables directly into the JSON fil
 	"mcpServers": {
 		"crosspost": {
 			"command": "crosspost",
-			"args": ["-m", "-l", "--mcp"],
+			"args": ["-m", "-l", "-t", "--telegram", "--mcp"],
 			"env": {
 				"CROSSPOST_DOTENV": "/usr/nzakas/settings/.env"
 			}
@@ -361,6 +381,34 @@ To enable posting to Dev.to:
 Use this API key as the value for the `DEVTO_API_KEY` environment variable when using the CLI.
 
 The first line of your post will be used as the article title on Dev.to.
+
+### Telegram
+
+To enable posting to Telegram using a bot:
+
+1. Start a chat with [@BotFather](https://t.me/BotFather) on Telegram.
+2. Send the command `/newbot`.
+3. Follow the prompts to create a new bot:
+    - Provide a name for your bot (e.g., "My Crosspost Bot")
+    - Provide a username for your bot (must end with "bot", e.g., "mycrosspost_bot")
+4. BotFather will provide you with a token, which will look something like `4839574812:AAFD39kkdpWt3ywyRZergyOLMaJhac60qc`.
+5. Copy this token and use it as the value for the `TELEGRAM_BOT_TOKEN` environment variable.
+
+For the `TELEGRAM_CHAT_ID`, you have two options:
+
+**Option 1:** Let the bot determine the chat ID automatically
+
+- Start a conversation with your bot by sending a message to it.
+- When posting, the bot will automatically find the first available chat ID from your conversation history.
+
+**Option 2:** Specify a chat ID manually
+
+- You can specify any Telegram username such as `@username`.
+- To get your own chat ID, you can message [@userinfobot](https://t.me/userinfobot) on Telegram.
+- For group chat IDs, add your bot to the group and use a service like [@RawDataBot](https://t.me/RawDataBot) to get the chat ID.
+- Set the value as the `TELEGRAM_CHAT_ID` environment variable.
+
+**Note:** Your bot can only initiate conversations with users who have previously messaged the bot or added it to a group.
 
 ## License
 
