@@ -29,23 +29,6 @@ const MESSAGE_RESPONSE = {
 	},
 };
 
-const UPDATE_RESPONSE = {
-	ok: true,
-	result: [
-		{
-			update_id: 123,
-			message: {
-				message_id: 456,
-				chat: {
-					id: Number(CHAT_ID),
-					type: "private",
-				},
-				text: "Test message",
-			},
-		},
-	],
-};
-
 const server = new MockServer("https://api.telegram.org");
 const fetchMocker = new FetchMocker({
 	servers: [server],
@@ -71,6 +54,14 @@ describe("TelegramStrategy", () => {
 				() => new TelegramStrategy({}),
 				TypeError,
 				"Missing bot token.",
+			);
+		});
+
+		it("should throw an error if chatId is missing", () => {
+			assert.throws(
+				() => new TelegramStrategy({ botToken: BOT_TOKEN }),
+				TypeError,
+				"Missing chat ID.",
 			);
 		});
 
@@ -158,42 +149,6 @@ describe("TelegramStrategy", () => {
 			);
 		});
 
-		it("should get chatId from updates if not provided in options", async () => {
-			const strategyWithoutChatId = new TelegramStrategy({
-				botToken: BOT_TOKEN,
-			});
-
-			// Mock the getUpdates API call
-			server.get(`/bot${BOT_TOKEN}/getUpdates`, {
-				status: 200,
-				headers: {
-					"content-type": "application/json",
-				},
-				body: UPDATE_RESPONSE,
-			});
-
-			// Mock the sendMessage API call
-			server.post(
-				{
-					url: `/bot${BOT_TOKEN}/sendMessage`,
-					body: {
-						chat_id: CHAT_ID,
-						text: "Hello Telegram!",
-					},
-				},
-				{
-					status: 200,
-					headers: {
-						"content-type": "application/json",
-					},
-					body: MESSAGE_RESPONSE,
-				},
-			);
-
-			const result = await strategyWithoutChatId.post("Hello Telegram!");
-			assert.deepStrictEqual(result, MESSAGE_RESPONSE);
-		});
-
 		it("should successfully post a message with images", async () => {
 			const message = "Hello Telegram!";
 			const altText = "Test image";
@@ -271,49 +226,6 @@ describe("TelegramStrategy", () => {
 
 			// The result should be the text message response
 			assert.deepStrictEqual(result, MESSAGE_RESPONSE);
-		});
-
-		it("should handle API errors when getting updates", async () => {
-			const strategyWithoutChatId = new TelegramStrategy({
-				botToken: BOT_TOKEN,
-			});
-
-			server.get(`/bot${BOT_TOKEN}/getUpdates`, {
-				status: 401,
-				statusText: "Unauthorized",
-				body: {
-					ok: false,
-					error_code: 401,
-					description: "Unauthorized",
-				},
-			});
-
-			await assert.rejects(
-				strategyWithoutChatId.post("Hello Telegram!"),
-				/401 Failed to get updates: Unauthorized\nUnauthorized \(code: 401\)/,
-			);
-		});
-
-		it("should throw error when no chat ID is found in updates", async () => {
-			const strategyWithoutChatId = new TelegramStrategy({
-				botToken: BOT_TOKEN,
-			});
-
-			server.get(`/bot${BOT_TOKEN}/getUpdates`, {
-				status: 200,
-				headers: {
-					"content-type": "application/json",
-				},
-				body: {
-					ok: true,
-					result: [], // Empty results
-				},
-			});
-
-			await assert.rejects(
-				strategyWithoutChatId.post("Hello Telegram!"),
-				/No chat ID found/,
-			);
 		});
 
 		it("should throw error for invalid post options", async () => {
