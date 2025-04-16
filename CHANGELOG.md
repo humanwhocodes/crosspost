@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.11.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.11.0...crosspost-v0.11.1) (2025-04-16)
+
+
+### Bug Fixes
+
+* JSR package definition ([ddd7613](https://github.com/humanwhocodes/crosspost/commit/ddd7613d0ddcef8b381feea16bdb2f4c8be55254))
+* Telegram chat ID must be provided ([ddd7613](https://github.com/humanwhocodes/crosspost/commit/ddd7613d0ddcef8b381feea16bdb2f4c8be55254))
+* Telegram chat ID must be provided ([#82](https://github.com/humanwhocodes/crosspost/issues/82)) ([ddd7613](https://github.com/humanwhocodes/crosspost/commit/ddd7613d0ddcef8b381feea16bdb2f4c8be55254))
+
 ## [0.11.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.10.0...crosspost-v0.11.0) (2025-04-15)
 
 
