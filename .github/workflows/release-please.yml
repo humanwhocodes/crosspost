@@ -52,7 +52,7 @@ jobs:
                   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
             # Tweets out release announcement
-            - run: node dist/esm/bin.js -t -b -m -l --file social-post.txt
+            - run: node dist/bin.js -t -b -m -l --file social-post.txt
               if: ${{ steps.release.outputs.release_created }}
               env:
                   TWITTER_API_CONSUMER_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
