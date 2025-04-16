@@ -134,7 +134,7 @@ export class TelegramStrategy {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				"User-Agent": "Crosspost v0.11.0", // x-release-please-version
+				"User-Agent": "Crosspost v0.11.1", // x-release-please-version
 			},
 			body,
 			signal: postOptions?.signal,
@@ -182,7 +182,7 @@ export class TelegramStrategy {
 			method: "POST",
 			headers: {
 				"User-Agent":
-					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.11.0)", // x-release-please-version
+					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.11.1)", // x-release-please-version
 			},
 			body: formData,
 			signal: postOptions?.signal,
