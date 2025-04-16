@@ -83,10 +83,10 @@ const discordWebhook = new DiscordWebhookStrategy({
 	webhookUrl: "your-webhook-url",
 });
 
-// Note: Bot token required, chat ID optional
+// Note: Bot token and chat ID required
 const telegram = new TelegramStrategy({
 	botToken: "your-bot-token",
-	chatId: "your-chat-id", // Optional if the bot can determine the chat ID automatically
+	chatId: "your-chat-id",
 });
 
 // Note: API key required
@@ -191,7 +191,7 @@ Each strategy requires a set of environment variables in order to execute:
     - `DEVTO_API_KEY`
 - Telegram
     - `TELEGRAM_BOT_TOKEN`
-    - `TELEGRAM_CHAT_ID` (optional, if not provided will use the first chat that has messaged the bot)
+    - `TELEGRAM_CHAT_ID`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -402,14 +402,7 @@ To enable posting to Telegram using a bot:
 4. BotFather will provide you with a token, which will look something like `4839574812:AAFD39kkdpWt3ywyRZergyOLMaJhac60qc`.
 5. Copy this token and use it as the value for the `TELEGRAM_BOT_TOKEN` environment variable.
 
-For the `TELEGRAM_CHAT_ID`, you have two options:
-
-**Option 1:** Let the bot determine the chat ID automatically
-
-- Start a conversation with your bot by sending a message to it.
-- When posting, the bot will automatically find the first available chat ID from your conversation history.
-
-**Option 2:** Specify a chat ID manually
+For the `TELEGRAM_CHAT_ID` (required):
 
 - You can specify any Telegram username such as `@username`.
 - To get your own chat ID, you can message [@userinfobot](https://t.me/userinfobot) on Telegram.

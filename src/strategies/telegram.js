@@ -21,7 +21,7 @@ import { getImageMimeType } from "../util/images.js";
 /**
  * @typedef {Object} TelegramOptions
  * @property {string} botToken The Telegram bot token.
- * @property {string} [chatId] The Telegram chat ID to post to. If not provided, will attempt to get updates and use the first chat ID.
+ * @property {string} chatId The Telegram chat ID to post to.
  */
 
 /**
@@ -102,58 +102,17 @@ export class TelegramStrategy {
 	 * @throws {Error} When options are missing.
 	 */
 	constructor(options) {
-		const { botToken } = options;
+		const { botToken, chatId } = options;
 
 		if (!botToken) {
 			throw new TypeError("Missing bot token.");
 		}
 
+		if (!chatId) {
+			throw new TypeError("Missing chat ID.");
+		}
+
 		this.#options = options;
-	}
-
-	/**
-	 * Gets the chat ID to post to.
-	 * @returns {Promise<string>} A promise that resolves with the chat ID.
-	 * @throws {Error} When the chat ID cannot be determined.
-	 */
-	async #getChatId() {
-		// If chat ID is provided, use it
-		if (this.#options.chatId) {
-			return this.#options.chatId;
-		}
-
-		// Otherwise, try to get updates to find a chat ID
-		const url = `${API_BASE}${this.#options.botToken}/getUpdates`;
-		const response = await fetch(url);
-
-		if (!response.ok) {
-			const errorResponse = /** @type {TelegramErrorResponse} */ (
-				await response.json()
-			);
-
-			throw new Error(
-				`${response.status} Failed to get updates: ${response.statusText}\n${errorResponse.description} (code: ${errorResponse.error_code})`,
-			);
-		}
-
-		const updateResponse = /** @type {TelegramUpdateResponse} */ (
-			await response.json()
-		);
-
-		if (!updateResponse.ok) {
-			throw new Error("Failed to get updates from Telegram API.");
-		}
-
-		// Find the first update with a message
-		const update = updateResponse.result.find(update => update.message);
-
-		if (!update?.message?.chat?.id) {
-			throw new Error(
-				"No chat ID found. Please message your bot first or provide a chat ID in the options.",
-			);
-		}
-
-		return String(update.message.chat.id);
 	}
 
 	/**
@@ -256,7 +215,7 @@ export class TelegramStrategy {
 
 		validatePostOptions(postOptions);
 
-		const chatId = await this.#getChatId();
+		const chatId = this.#options.chatId;
 
 		// If there are images, send each as a separate message
 		if (postOptions?.images?.length) {
