@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.11.1...crosspost-v0.12.0) (2025-04-17)
+
+
+### Features
+
+* Detect hashtags in Bluesky messages ([#84](https://github.com/humanwhocodes/crosspost/issues/84)) ([c9f0e77](https://github.com/humanwhocodes/crosspost/commit/c9f0e774c29fe10229ef68a1009d8215c2a20137))
+
 ## [0.11.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.11.0...crosspost-v0.11.1) (2025-04-16)
 
 
