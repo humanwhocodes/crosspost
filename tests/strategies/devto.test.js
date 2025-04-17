@@ -15,7 +15,7 @@ import { MockServer, FetchMocker } from "mentoss";
 // Data
 //-----------------------------------------------------------------------------
 
-const API_URL = "https://dev.to/api";
+const API_URL = "https://dev.to";
 const API_KEY = "abc123";
 
 const CREATE_ARTICLE_RESPONSE = {
