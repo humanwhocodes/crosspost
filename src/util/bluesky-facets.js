@@ -16,6 +16,7 @@ import { createRequire } from "node:module";
 //-----------------------------------------------------------------------------
 
 export const BLUESKY_URL_FACET = "app.bsky.richtext.facet#link";
+export const BLUESKY_TAG_FACET = "app.bsky.richtext.facet#tag";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -34,9 +35,15 @@ export const BLUESKY_URL_FACET = "app.bsky.richtext.facet#link";
  */
 
 /**
+ * @typedef {Object} TagDetails
+ * @property {string} tag The tag of the facet.
+ * @property {ByteRange} byteRange The byte range of the facet in the text.
+ */
+
+/**
  * @typedef {Object} BlueSkyFacet
  * @property {ByteRange} index The byte range of the facet in the text.
- * @property {Array<BlueSkyURIFacetFeature>} features The features of the facet.
+ * @property {Array<BlueSkyURIFacetFeature|BlueSkyTagFacetFeature>} features The features of the facet.
  */
 
 //-----------------------------------------------------------------------------
@@ -61,9 +68,9 @@ const TRAILING_PUNCTUATION_REGEX = /\p{P}+$/gu;
  * `\ufe0f` emoji modifier
  * `\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2` zero-width spaces (likely incomplete)
  */
-// const TAG_REGEX =
-//     // eslint-disable-next-line no-misleading-character-class
-//     /(^|\s)[#＃]((?!\ufe0f)[^\s\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2]*[^\d\s\p{P}\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2]+[^\s\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2]*)?/gu
+const TAG_REGEX =
+	// eslint-disable-next-line no-misleading-character-class
+	/(^|\s)[#＃]((?!\ufe0f)[^\s\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2]*[^\d\s\p{P}\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2]+[^\s\u00AD\u2060\u200A\u200B\u200C\u200D\u20e2]*)?/gu;
 
 const LEADING_WHITESPACE_REGEX = /^\s/u;
 
@@ -98,6 +105,32 @@ class BlueSkyURIFacetFeature {
 	 */
 	constructor(uri) {
 		this.uri = uri;
+	}
+}
+
+/**
+ * A Bluesky tag facet feature.
+ */
+class BlueSkyTagFacetFeature {
+	/**
+	 * The tag of the facet.
+	 * @type {string}
+	 */
+	tag;
+
+	/**
+	 * The type of facet.
+	 * @type {string}
+	 * @const
+	 */
+	$type = BLUESKY_TAG_FACET;
+
+	/**
+	 * Creates a new instance.
+	 * @param {string} tag The tag of the facet.
+	 */
+	constructor(tag) {
+		this.tag = tag;
 	}
 }
 
@@ -178,6 +211,50 @@ function detectURLs(text) {
 }
 
 /**
+ * Detects all hashtags in the given text and returns an array noting the byte location
+ * of the hashtags in the text.
+ * @param {string} text The text to search.
+ * @returns {TagDetails[]} An array of TagDetails objects.
+ */
+function detectTags(text) {
+	const matches = [];
+	let match;
+
+	while ((match = TAG_REGEX.exec(text)) !== null) {
+		let tag = match[2];
+
+		// Skip if the tag is empty or undefined
+		if (!tag) {
+			continue;
+		}
+
+		// Strip any trailing punctuation (similar to URLs)
+		if (TRAILING_PUNCTUATION_REGEX.test(tag)) {
+			tag = tag.replace(TRAILING_PUNCTUATION_REGEX, "");
+		}
+
+		// Calculate the location of the hashtag (includes the # symbol)
+		let start = match.index;
+
+		// Strip any leading whitespace from overall match
+		if (LEADING_WHITESPACE_REGEX.test(match[0])) {
+			start += 1;
+		}
+
+		// Start after the # symbol
+		const hashSymbolStart = start;
+		const tagEnd = hashSymbolStart + 1 + tag.length;
+
+		matches.push({
+			tag,
+			byteRange: getByteOffsets(text, hashSymbolStart, tagEnd),
+		});
+	}
+
+	return matches;
+}
+
+/**
  * Detects rich text facets in the given text.
  * @param {string} text The text to search.
  * @returns {Array<BlueSkyFacet>} An array of BlueSkyFacet objects.
@@ -187,6 +264,10 @@ export function detectFacets(text) {
 		...detectURLs(text).map(url => ({
 			index: url.byteRange,
 			features: [new BlueSkyURIFacetFeature(url.uri)],
+		})),
+		...detectTags(text).map(tag => ({
+			index: tag.byteRange,
+			features: [new BlueSkyTagFacetFeature(tag.tag)],
 		})),
 	];
 }
