@@ -22,6 +22,12 @@ import { getImageMimeType } from "../util/images.js";
  * @property {string} accessTokenSecret The access token secret for the Twitter app.
  * @property {string} apiConsumerKey The app (consumer) key for the Twitter app.
  * @property {string} apiConsumerSecret The app (consumer) secret for the Twitter app.
+ *
+ * @typedef {Object} TwitterPostResponse
+ * @property {Object} data The data of the posted tweet.
+ * @property {string} data.id The ID of the tweet.
+ * @property {string} data.text The text content of the tweet.
+ * @property {string[]} data.edit_history_tweet_ids The edit history tweet IDs.
  */
 
 /** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
@@ -155,5 +161,19 @@ export class TwitterStrategy {
 		}
 
 		return client.v2.tweet(message);
+	}
+
+	/**
+	 * Extracts a URL from a Twitter API response.
+	 * @param {TwitterPostResponse} response The response from the Twitter API post request.
+	 * @returns {string} The URL for the tweet.
+	 */
+	getUrlFromResponse(response) {
+		if (!response?.data?.id) {
+			throw new Error("Tweet ID not found in response");
+		}
+
+		// This format works without knowing the username - Twitter will redirect appropriately
+		return `https://x.com/i/web/status/${response.data.id}`;
 	}
 }

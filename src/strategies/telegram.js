@@ -247,4 +247,17 @@ export class TelegramStrategy {
 			return this.#sendText(chatId, message, postOptions);
 		}
 	}
+
+	/**
+	 * Extracts a URL from a Telegram API response.
+	 * @param {TelegramMessageResponse} response The response from the Telegram API post request.
+	 * @returns {string} The URL for the Telegram message.
+	 */
+	getUrlFromResponse(response) {
+		if (!response?.result?.message_id || !response?.result?.chat?.id) {
+			throw new Error("Message ID or Chat ID not found in response");
+		}
+
+		return `https://t.me/c/${response.result.chat.id.toString().replace("-100", "")}/${response.result.message_id}`;
+	}
 }

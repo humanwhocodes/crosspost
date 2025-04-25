@@ -264,4 +264,62 @@ describe("TelegramStrategy", () => {
 			}, /AbortError/);
 		});
 	});
+
+	describe("getUrlFromResponse", function () {
+		let strategy;
+		const telegramOptions = { botToken: BOT_TOKEN, chatId: CHAT_ID };
+
+		beforeEach(function () {
+			strategy = new TelegramStrategy(telegramOptions);
+		});
+
+		it("should generate the correct URL from a response", function () {
+			const response = {
+				ok: true,
+				result: {
+					message_id: 123456789,
+					chat: {
+						id: -1001234567890,
+					},
+				},
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(url, "https://t.me/c/1234567890/123456789");
+		});
+
+		it("should throw an error when message ID is missing", function () {
+			const response = {
+				ok: true,
+				result: {
+					chat: {
+						id: -1001234567890,
+					},
+				},
+			};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Message ID or Chat ID not found in response/);
+		});
+
+		it("should throw an error when chat ID is missing", function () {
+			const response = {
+				ok: true,
+				result: {
+					message_id: 123456789,
+				},
+			};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Message ID or Chat ID not found in response/);
+		});
+
+		it("should throw an error when the response is null", function () {
+			assert.throws(() => {
+				strategy.getUrlFromResponse(null);
+			}, /Message ID or Chat ID not found in response/);
+		});
+	});
 });

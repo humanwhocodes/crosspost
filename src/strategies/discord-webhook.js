@@ -29,6 +29,7 @@ import { getImageMimeType } from "../util/images.js";
  * @property {string} timestamp The timestamp of the message.
  * @property {string} webhook_id The ID of the webhook that posted the message.
  * @property {number} type The type of the message.
+ * @property {string} [guild_id] The ID of the guild the message was posted to (optional).
  */
 
 /**
@@ -195,6 +196,8 @@ export class DiscordWebhookStrategy {
 				`${response.status} Failed to post message: ${response.statusText}\n${errorResponse.message} (code: ${errorResponse.code})`,
 			);
 		}
+
+		// fetch the webhook info to see if we can get the guild_id
 
 		return /** @type {Promise<DiscordWebhookResponse>} */ (response.json());
 	}

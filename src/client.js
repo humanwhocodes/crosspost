@@ -30,6 +30,12 @@ export class SuccessResponse {
 	ok = true;
 
 	/**
+	 * The URL of the posted message, if applicable.
+	 * @type {string|undefined}
+	 */
+	url;
+
+	/**
 	 * The message posted.
 	 * @type {Object}
 	 */
@@ -38,9 +44,11 @@ export class SuccessResponse {
 	/**
 	 * Creates a new instance.
 	 * @param {Object} response The response.
+	 * @param {string} [url] The URL of the posted message, if applicable.
 	 */
-	constructor(response) {
+	constructor(response, url) {
 		this.response = response;
+		this.url = url;
 	}
 }
 
@@ -114,9 +122,12 @@ export class Client {
 					return strategy.post(message, postOptions);
 				}),
 			)
-		).map(result => {
+		).map((result, i) => {
 			if (result.status === "fulfilled") {
-				return new SuccessResponse(result.value);
+				return new SuccessResponse(
+					result.value,
+					this.#strategies[i].getUrlFromResponse?.(result.value),
+				);
 			} else {
 				return new FailureResponse(result.reason);
 			}

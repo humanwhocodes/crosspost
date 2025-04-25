@@ -44,11 +44,16 @@ describe("Client", function () {
 
 	describe("post", function () {
 		it("should call post on each strategy", async function () {
+			const url1 = "https://example.com/strategy1";
+
 			const strategies = [
 				{
 					name: "test1",
 					post() {
 						return Promise.resolve("test1");
+					},
+					getUrlFromResponse() {
+						return url1;
 					},
 				},
 				{
@@ -63,7 +68,7 @@ describe("Client", function () {
 			const response = await client.post("Hello, world!");
 
 			assert.deepStrictEqual(response, [
-				new SuccessResponse("test1"),
+				new SuccessResponse("test1", url1),
 				new SuccessResponse("test2"),
 			]);
 		});
@@ -80,6 +85,11 @@ describe("Client", function () {
 					name: "test2",
 					post() {
 						return Promise.reject(new Error("test2"));
+					},
+					getUrlFromResponse() {
+						assert.fail(
+							"getUrlForResponse should not be called on failure",
+						);
 					},
 				},
 			];

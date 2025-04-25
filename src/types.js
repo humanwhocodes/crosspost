@@ -28,4 +28,5 @@
  * @property {string} name The display name of the strategy.
  * @property {string} id A unique ID for the strategy.
  * @property {(message: string, options?: PostOptions) => Promise<any>} post A function that posts a message.
+ * @property {(response: any) => string} [getUrlFromResponse] A function that extracts or calculates a URL from the response.
  */

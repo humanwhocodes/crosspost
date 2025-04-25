@@ -254,11 +254,13 @@ if (flags.mcp) {
 	responses.forEach((response, index) => {
 		if (isSuccessResponse(response)) {
 			console.log(`✅ ${strategies[index].name} succeeded.`);
-			console.log(response.response);
+			console.log(response.url ?? response.response);
+			console.log("");
 		} else {
 			exitCode = 1;
 			console.log(`❌ ${strategies[index].name} failed.`);
 			console.error(response.reason);
+			console.log("");
 		}
 	});
 

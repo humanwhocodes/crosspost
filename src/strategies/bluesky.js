@@ -328,4 +328,25 @@ export class BlueskyStrategy {
 		const session = await createSession(this.#options, postOptions?.signal);
 		return postMessage(this.#options, session, message, postOptions);
 	}
+
+	/**
+	 * Extracts a URL from a Bluesky API response.
+	 * @param {BlueskyCreateRecordResponse} response The response from the Bluesky post request.
+	 * @returns {string} The URL for the Bluesky post.
+	 */
+	getUrlFromResponse(response) {
+		if (!response?.uri) {
+			throw new Error("Post URI not found in response");
+		}
+
+		// The URI format is typically: at://did:plc:something/app.bsky.feed.post/recordId
+		const parts = response.uri.split("/");
+		const recordId = parts[parts.length - 1];
+
+		/*
+		 * Cheating for now: No way to map the API host to the web host, so just
+		 * assume the web host is always bsky.app.
+		 */
+		return `https://bsky.app/profile/${this.#options.identifier}/post/${recordId}`;
+	}
 }
