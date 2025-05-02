@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.12.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.11.1...crosspost-v0.12.0) (2025-05-02)
+
+
+### Features
+
+* Detect hashtags in Bluesky messages ([#84](https://github.com/humanwhocodes/crosspost/issues/84)) ([c9f0e77](https://github.com/humanwhocodes/crosspost/commit/c9f0e774c29fe10229ef68a1009d8215c2a20137))
+* Generate URL from post response ([#89](https://github.com/humanwhocodes/crosspost/issues/89)) ([ba10434](https://github.com/humanwhocodes/crosspost/commit/ba104347652beea49db3237316d8ee9032a35026))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @humanwhocodes/env to v4.0.1 ([#90](https://github.com/humanwhocodes/crosspost/issues/90)) ([3d1e09b](https://github.com/humanwhocodes/crosspost/commit/3d1e09b77f8b4fdba03cc3f8af1804c2289c2629))
+* **deps:** update dependency twitter-api-v2 to v1.22.0 ([#88](https://github.com/humanwhocodes/crosspost/issues/88)) ([4006c99](https://github.com/humanwhocodes/crosspost/commit/4006c990aac4afd0d4004388c808e629617b87ce))
+
 ## [0.11.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.11.0...crosspost-v0.11.1) (2025-04-16)
 
 
