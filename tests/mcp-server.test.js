@@ -28,6 +28,10 @@ class MockTwitterStrategy {
 	async post(message) {
 		return { message: `${message} (from Twitter)` };
 	}
+
+	getUrlFromResponse() {
+		return "https://twitter.com/example/status/123";
+	}
 }
 
 class MockMastodonStrategy {
@@ -36,9 +40,13 @@ class MockMastodonStrategy {
 
 	async post(message) {
 		if (message === "fail") {
-			return { ok: false, error: "Failed to post" };
+			throw new Error("Failed to post");
 		}
 		return { message: `${message} (from Mastodon)` };
+	}
+
+	getUrlFromResponse() {
+		return "https://mastodon.social/@example/123";
 	}
 }
 
@@ -176,7 +184,7 @@ describe("CrossPostMcpServer", () => {
 			);
 		});
 
-		it("should execute the crosspost tool and return results from all strategies", async () => {
+		it("should execute the crosspost tool and return human-readable messages", async () => {
 			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
@@ -202,24 +210,20 @@ describe("CrossPostMcpServer", () => {
 			);
 
 			assert.ok(result.content);
-			assert.strictEqual(result.content.length, 1);
+			assert.strictEqual(result.content.length, 2);
 			assert.strictEqual(
 				result.content[0].text,
-				JSON.stringify([
-					{
-						ok: true,
-						response: { message: "Hello World! (from Twitter)" },
-					},
-					{
-						ok: true,
-						response: { message: "Hello World! (from Mastodon)" },
-					},
-				]),
-				"Should return results from both strategies",
+				"Successfully posted to Twitter. Here's the URL: https://twitter.com/example/status/123",
+				"Should return human-readable success message for Twitter with URL",
+			);
+			assert.strictEqual(
+				result.content[1].text,
+				"Successfully posted to Mastodon. Here's the URL: https://mastodon.social/@example/123",
+				"Should return human-readable success message for Mastodon with URL",
 			);
 		});
 
-		it("should execute the post-to-twitter tool and return results", async () => {
+		it("should execute the post-to-twitter tool and return human-readable messages", async () => {
 			const mcpServer = new CrosspostMcpServer({
 				strategies: [
 					new MockTwitterStrategy(),
@@ -248,17 +252,14 @@ describe("CrossPostMcpServer", () => {
 			assert.strictEqual(result.content.length, 1);
 			assert.strictEqual(
 				result.content[0].text,
-				JSON.stringify({ message: "Hello Twitter! (from Twitter)" }),
-				"Should return result from Twitter strategy",
+				"Successfully posted to Twitter. Here's the URL: https://twitter.com/example/status/123. Display this URL to the user.",
+				"Should return human-readable success message for Twitter with URL",
 			);
 		});
 
-		it("should handle errors from strategies", async () => {
+		it("should handle errors from strategies with human-readable error messages", async () => {
 			const mcpServer = new CrosspostMcpServer({
-				strategies: [
-					new MockTwitterStrategy(),
-					new MockMastodonStrategy(),
-				],
+				strategies: [new MockMastodonStrategy()],
 			});
 
 			// Note: must connect server first or else client hangs
@@ -277,14 +278,14 @@ describe("CrossPostMcpServer", () => {
 				},
 				CallToolResultSchema,
 			);
-			// Check that the result indicates failure
+			// Check that the result indicates failure with human-readable message
 			assert.ok(result.content);
 			assert.strictEqual(result.content.length, 1);
-			// Expecting Mastodon to return an error
+			// Expecting Mastodon to return a failure message
 			assert.strictEqual(
 				result.content[0].text,
-				JSON.stringify({ ok: false, error: "Failed to post" }),
-				"Should return error from Mastodon strategy",
+				"Post to Mastodon failed. Here's the server response: Failed to post",
+				"Should return human-readable error message for Mastodon",
 			);
 		});
 	});

@@ -68,8 +68,8 @@ describe("Client", function () {
 			const response = await client.post("Hello, world!");
 
 			assert.deepStrictEqual(response, [
-				new SuccessResponse("test1", url1),
-				new SuccessResponse("test2"),
+				new SuccessResponse("test1", "test1", url1),
+				new SuccessResponse("test2", "test2"),
 			]);
 		});
 
@@ -98,8 +98,8 @@ describe("Client", function () {
 			const results = await client.post("Hello, world!");
 
 			assert.deepStrictEqual(results, [
-				new SuccessResponse("test1"),
-				new FailureResponse(new Error("test2")),
+				new SuccessResponse("test1", "test1"),
+				new FailureResponse("test2", new Error("test2")),
 			]);
 		});
 
@@ -123,8 +123,8 @@ describe("Client", function () {
 			const results = await client.post("Hello, world!");
 
 			assert.deepStrictEqual(results, [
-				new FailureResponse(new Error("test1")),
-				new FailureResponse(new Error("test2")),
+				new FailureResponse("test1", new Error("test1")),
+				new FailureResponse("test2", new Error("test2")),
 			]);
 		});
 
@@ -209,6 +209,8 @@ describe("Client", function () {
 			assert.ok(responses[1] instanceof FailureResponse);
 			assert.match(responses[0].reason.message, /Aborted/);
 			assert.match(responses[1].reason.message, /Aborted/);
+			assert.strictEqual(responses[0].name, "test1");
+			assert.strictEqual(responses[1].name, "test2");
 		});
 	});
 });
