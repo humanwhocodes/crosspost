@@ -17,6 +17,7 @@ import { Client } from "./client.js";
 
 /**
  * @import { Strategy } from "./types.js";
+ * @import { SuccessResponse, FailureResponse } from "./client.js";
  */
 
 //-----------------------------------------------------------------------------
@@ -28,6 +29,36 @@ const version = "0.11.1"; // x-release-please-version
 const postSchema = {
 	message: z.string(),
 };
+
+//-----------------------------------------------------------------------------
+// Helpers
+//-----------------------------------------------------------------------------
+
+/**
+ * Generates a success message based on the response.
+ * @param {SuccessResponse} response The successful response from a strategy.
+ * @returns {string} A formatted success message.
+ */
+function getSuccessMessage(response) {
+	let message = `Successfully posted to ${response.name}.`;
+	if (response.url) {
+		message += ` Here's the URL: ${response.url}`;
+	}
+	return message;
+}
+
+/**
+ * Generates a failure message based on the response.
+ * @param {FailureResponse} response The failed response from a strategy.
+ * @returns {string} A formatted failure message.
+ */
+function getFailureMessage(response) {
+	let message = `Post to ${response.name} failed.`;
+	if (response.reason) {
+		message += ` Here's the server response: ${JSON.stringify(response.reason)}`;
+	}
+	return message;
+}
 
 //-----------------------------------------------------------------------------
 // Exports
@@ -110,15 +141,30 @@ export class CrosspostMcpServer extends McpServer {
 			"Post to all available services.",
 			postSchema,
 			async ({ message }) => {
-				const result = await this.#client.post(message);
+				const results = await this.#client.post(message);
+
+				const content = results.map(result => {
+					if (result.ok) {
+						const okResponse = /** @type {SuccessResponse} */ (
+							result
+						);
+						return {
+							type: /** @type {const} */ ("text"),
+							text: getSuccessMessage(okResponse),
+						};
+					} else {
+						const failureResponse = /** @type {FailureResponse} */ (
+							result
+						);
+						return {
+							type: /** @type {const} */ ("text"),
+							text: getFailureMessage(failureResponse),
+						};
+					}
+				});
 
 				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result),
-						},
-					],
+					content: content,
 				};
 			},
 		);
@@ -130,16 +176,28 @@ export class CrosspostMcpServer extends McpServer {
 				`Post to ${strategy.name}`,
 				postSchema,
 				async ({ message }) => {
-					const results = await strategy.post(message);
+					try {
+						const result = await strategy.post(message);
+						const url = strategy.getUrlFromResponse?.(result);
+						let text = `Successfully posted to ${strategy.name}.`;
+						if (url) {
+							text += ` Here's the URL: ${url}. Display this URL to the user.`;
+						}
 
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify(results),
-							},
-						],
-					};
+						return {
+							content: [{ type: "text", text }],
+						};
+					} catch (ex) {
+						const error = /** @type {Error} */ (ex);
+						return {
+							content: [
+								{
+									type: "text",
+									text: `Post to ${strategy.name} failed. Here's the server response: ${error.message}`,
+								},
+							],
+						};
+					}
 				},
 			);
 		}

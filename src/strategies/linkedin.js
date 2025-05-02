@@ -369,4 +369,19 @@ export class LinkedInStrategy {
 		const personUrn = await this.#getPersonUrn();
 		return createPost(this.#options, personUrn, message, postOptions);
 	}
+
+	/**
+	 * Extracts a URL from a LinkedIn API response.
+	 * @param {LinkedInPostResponse} response The response from the LinkedIn API post request.
+	 * @returns {string} The URL for the LinkedIn post.
+	 */
+	getUrlFromResponse(response) {
+		if (!response?.id) {
+			throw new Error("Post ID not found in response");
+		}
+
+		// LinkedIn post URN looks like: urn:li:share:123456789
+		// Convert this to a URL like https://www.linkedin.com/feed/update/urn:li:share:123456789
+		return `https://www.linkedin.com/feed/update/${response.id}`;
+	}
 }

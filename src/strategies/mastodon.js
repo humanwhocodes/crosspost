@@ -23,28 +23,20 @@ import { getImageMimeType } from "../util/images.js";
  * @typedef {Object} MastodonOptions
  * @property {string} accessToken The access token for the Mastodon account.
  * @property {string} host The host for the Mastodon instance.
- */
-
-/**
+ *
  * @typedef {Object} MastodonErrorResponse
  * @property {string} error The error message returned by the Mastodon API.
- */
-
-/**
+ *
  * @typedef {Object} MastodonMediaSize
  * @property {number} width The width of the media.
  * @property {number} height The height of the media.
  * @property {string} size The size as string (e.g. "640x480").
  * @property {number} aspect The aspect ratio.
- */
-
-/**
+ *
  * @typedef {Object} MastodonMediaFocus
  * @property {number} x The x coordinate of the focus point.
  * @property {number} y The y coordinate of the focus point.
- */
-
-/**
+ *
  * @typedef {Object} MastodonMediaResponse
  * @property {string} id The unique identifier of the uploaded media
  * @property {string} type The type of media (e.g. "image")
@@ -58,9 +50,7 @@ import { getImageMimeType } from "../util/images.js";
  * @property {MastodonMediaSize} meta.small The small preview dimensions
  * @property {string} description Alt text description of the media
  * @property {string} blurhash The blurhash string for the media
- */
-
-/**
+ *
  * @typedef {Object} MastodonMediaAttachment
  * @property {string} id The unique identifier of the media attachment
  * @property {string} type The type of media (e.g. "image")
@@ -71,6 +61,12 @@ import { getImageMimeType } from "../util/images.js";
  * @property {Object} meta Metadata about the media attachment
  * @property {string} description Alt text description of the media
  * @property {string} blurhash The blurhash string for generating a placeholder
+ *
+ * @typedef {Object} MastodonPostResponse
+ * @property {string} id The unique identifier of the post.
+ * @property {string} uri The URI of the post.
+ * @property {string} url The URL of the post.
+ * @property {string} content The content of the post.
  */
 
 //-----------------------------------------------------------------------------
@@ -237,5 +233,29 @@ export class MastodonStrategy {
 		}
 
 		return /**@type {Object} */ (await response.json());
+	}
+
+	/**
+	 * Extracts a URL from a Mastodon API response.
+	 * @param {MastodonPostResponse} response The response from the Mastodon API post request.
+	 * @returns {string} The URL for the Mastodon post.
+	 */
+	getUrlFromResponse(response) {
+		if (!response?.uri) {
+			throw new Error("Post URI not found in response");
+		}
+
+		// Replace the instance domain with our known host
+		// URI format: https://instance.domain/users/username/statuses/123456789
+		// We want: https://our.host/@username/123456789
+		const uriParts = response.uri.split("/");
+		if (uriParts.length < 2) {
+			throw new Error("Invalid URI format in response");
+		}
+
+		const username = uriParts[uriParts.length - 3]; // Extract username from URI
+		const statusId = uriParts[uriParts.length - 1]; // Extract status ID from URI
+
+		return `https://${this.#options.host}/@${username}/${statusId}`;
 	}
 }

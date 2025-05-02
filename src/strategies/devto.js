@@ -18,17 +18,52 @@ import { getImageMimeType } from "../util/images.js";
 /**
  * @typedef {Object} DevtoOptions
  * @property {string} apiKey The Dev.to API key.
- */
-
-/**
+ *
  * @typedef {Object} DevtoArticle
  * @property {string} title The title of the article.
  * @property {string} body_markdown The markdown content of the article.
  * @property {boolean} published Whether the article is published.
  * @property {string[]} tags The tags for the article.
- */
-
-/**
+ *
+ * @typedef {Object} DevToUser
+ * @property {string} name The name of the user.
+ * @property {string} username The username of the user.
+ * @property {string|null} twitter_username The Twitter username of the user.
+ * @property {string|null} github_username The GitHub username of the user.
+ * @property {number} user_id The ID of the user.
+ * @property {string|null} website_url The website URL of the user.
+ * @property {string} profile_image The profile image URL of the user.
+ * @property {string} profile_image_90 The profile image URL of the user (90px).
+ *
+ * @typedef {Object} DevToPostResponse
+ * @property {string} type_of The type of post (e.g., "article").
+ * @property {number} id The ID of the article.
+ * @property {string} title The title of the article.
+ * @property {string} description The description of the article.
+ * @property {string} readable_publish_date The human-readable publish date.
+ * @property {string} slug The slug of the article.
+ * @property {string} path The path of the article.
+ * @property {string} url The full URL of the article.
+ * @property {number} comments_count The number of comments.
+ * @property {number} public_reactions_count The number of public reactions.
+ * @property {number} collection_id The collection ID of the article.
+ * @property {string} published_timestamp The publish timestamp.
+ * @property {number} positive_reactions_count The number of positive reactions.
+ * @property {string|null} cover_image The cover image URL.
+ * @property {string|null} social_image The social image URL.
+ * @property {string|null} canonical_url The canonical URL.
+ * @property {string} created_at The creation timestamp.
+ * @property {string|null} edited_at The last edit timestamp.
+ * @property {string|null} crossposted_at The crosspost timestamp.
+ * @property {string} published_at The publish timestamp.
+ * @property {string} last_comment_at The last comment timestamp.
+ * @property {number} reading_time_minutes The reading time in minutes.
+ * @property {string} tag_list The comma-separated list of tags.
+ * @property {string[]} tags The array of tags.
+ * @property {string} body_html The HTML content of the article.
+ * @property {string} body_markdown The markdown content of the article.
+ * @property {DevToUser} user The user who created the article.
+ *
  * @typedef {Object} DevtoErrorResponse
  * @property {string} error The error message.
  * @property {string} status The error status.
@@ -151,5 +186,29 @@ export class DevtoStrategy {
 		}
 
 		return postArticle(this.#apiKey, message, postOptions);
+	}
+
+	/**
+	 * Extracts a URL from a Dev.to API response.
+	 * @param {DevToPostResponse} response The response from the Dev.to API post request.
+	 * @returns {string} The URL for the Dev.to article.
+	 */
+	getUrlFromResponse(response) {
+		if (!response || !response.id) {
+			throw new Error("Article ID not found in response");
+		}
+
+		// If url is directly available in the response, use that
+		if (response.url) {
+			return response.url;
+		}
+
+		// If canonical_url is available, use that
+		if (response.canonical_url) {
+			return response.canonical_url;
+		}
+
+		// Fall back to constructing a URL from the ID
+		return `https://dev.to/articles/${response.id}`;
 	}
 }

@@ -517,4 +517,41 @@ describe("BlueskyStrategy", function () {
 			}, /abort/u);
 		});
 	});
+
+	describe("getUrlFromResponse", function () {
+		let strategy;
+
+		beforeEach(function () {
+			strategy = new BlueskyStrategy(options);
+		});
+
+		it("should generate the correct URL from a response", function () {
+			const response = {
+				uri: "at://did:plc:abcxyz/app.bsky.feed.post/123456789",
+				cid: "bafyreieya2tik2z5e2jjin3qozcgzvvbirwo6di6gjftq45mr5ujkqe44i",
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(
+				url,
+				`https://bsky.app/profile/${options.identifier}/post/123456789`,
+			);
+		});
+
+		it("should throw an error when the URI is missing", function () {
+			const response = {
+				cid: "bafyreieya2tik2z5e2jjin3qozcgzvvbirwo6di6gjftq45mr5ujkqe44i",
+			};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Post URI not found in response/);
+		});
+
+		it("should throw an error when the response is null", function () {
+			assert.throws(() => {
+				strategy.getUrlFromResponse(null);
+			}, /Post URI not found in response/);
+		});
+	});
 });

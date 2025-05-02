@@ -324,4 +324,39 @@ describe("LinkedInStrategy", () => {
 			}, /AbortError/);
 		});
 	});
+
+	describe("getUrlFromResponse", function () {
+		let strategy;
+		const options = { accessToken: ACCESS_TOKEN };
+
+		beforeEach(function () {
+			strategy = new LinkedInStrategy(options);
+		});
+
+		it("should generate the correct URL from a response", function () {
+			const response = {
+				id: "urn:li:share:123456789",
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(
+				url,
+				"https://www.linkedin.com/feed/update/urn:li:share:123456789",
+			);
+		});
+
+		it("should throw an error when the post ID is missing", function () {
+			const response = {};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Post ID not found in response/);
+		});
+
+		it("should throw an error when the response is null", function () {
+			assert.throws(() => {
+				strategy.getUrlFromResponse(null);
+			}, /Post ID not found in response/);
+		});
+	});
 });

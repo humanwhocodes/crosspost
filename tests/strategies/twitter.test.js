@@ -207,5 +207,48 @@ describe("TwitterStrategy", () => {
 				await strategy.post("Hello, world!", { signal });
 			}, /Aborted/);
 		});
+
+		describe("getUrlFromResponse", function () {
+			let strategy;
+
+			beforeEach(function () {
+				strategy = new TwitterStrategy({
+					accessTokenKey: "foo",
+					accessTokenSecret: "bar",
+					apiConsumerKey: "baz",
+					apiConsumerSecret: "bar",
+				});
+			});
+
+			it("should generate the correct URL from a response", function () {
+				const response = {
+					data: {
+						id: "1234567890",
+					},
+				};
+
+				const url = strategy.getUrlFromResponse(response);
+				assert.strictEqual(
+					url,
+					"https://x.com/i/web/status/1234567890",
+				);
+			});
+
+			it("should throw an error when tweet ID is missing", function () {
+				const response = {
+					data: {},
+				};
+
+				assert.throws(() => {
+					strategy.getUrlFromResponse(response);
+				}, /Tweet ID not found in response/);
+			});
+
+			it("should throw an error when the response is null", function () {
+				assert.throws(() => {
+					strategy.getUrlFromResponse(null);
+				}, /Tweet ID not found in response/);
+			});
+		});
 	}
 });

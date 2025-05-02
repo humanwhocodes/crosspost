@@ -342,4 +342,51 @@ describe("MastodonStrategy", () => {
 			}, /AbortError/);
 		});
 	});
+
+	describe("getUrlFromResponse", function () {
+		let strategy;
+		const testOptions = { accessToken: "token", host: "mastodon.social" };
+
+		beforeEach(function () {
+			strategy = new MastodonStrategy(testOptions);
+		});
+
+		it("should generate the correct URL from a response", function () {
+			const response = {
+				uri: "https://mastodon.example/users/testuser/statuses/123456789",
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(
+				url,
+				`https://${testOptions.host}/@testuser/123456789`,
+			);
+		});
+
+		it("should throw an error when the URI is missing", function () {
+			const response = {
+				id: "123456789",
+			};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Post URI not found in response/);
+		});
+
+		it("should throw an error when the URI has an invalid format", function () {
+			const response = {
+				uri: "invalid-uri",
+			};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Invalid URI format in response/);
+		});
+
+		it("should throw an error when the response is null", function () {
+			assert.throws(() => {
+				strategy.getUrlFromResponse(null);
+			}, /Post URI not found in response/);
+		});
+	});
 });

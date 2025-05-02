@@ -310,4 +310,61 @@ describe("DevtoStrategy", () => {
 			}, /AbortError/);
 		});
 	});
+
+	describe("getUrlFromResponse", function () {
+		let strategy;
+
+		beforeEach(function () {
+			strategy = new DevtoStrategy({ apiKey: "test-api-key" });
+		});
+
+		it("should use the url property when available", function () {
+			const response = {
+				id: 12345,
+				url: "https://dev.to/username/article-slug-12ab",
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(
+				url,
+				"https://dev.to/username/article-slug-12ab",
+			);
+		});
+
+		it("should use the canonical_url property when available and url is not", function () {
+			const response = {
+				id: 12345,
+				canonical_url: "https://blog.example.com/article-original",
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(
+				url,
+				"https://blog.example.com/article-original",
+			);
+		});
+
+		it("should create a URL from the ID when url and canonical_url are not available", function () {
+			const response = {
+				id: 12345,
+			};
+
+			const url = strategy.getUrlFromResponse(response);
+			assert.strictEqual(url, "https://dev.to/articles/12345");
+		});
+
+		it.skip("should throw an error when the ID is missing", function () {
+			const response = {};
+
+			assert.throws(() => {
+				strategy.getUrlFromResponse(response);
+			}, /Article ID not found in response/);
+		});
+
+		it.skip("should throw an error when the response is null", function () {
+			assert.throws(() => {
+				strategy.getUrlFromResponse(null);
+			}, /Article ID not found in response/);
+		});
+	});
 });

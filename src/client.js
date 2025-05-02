@@ -30,17 +30,33 @@ export class SuccessResponse {
 	ok = true;
 
 	/**
+	 * The name of the strategy that produced this response.
+	 * @type {string}
+	 */
+	name;
+
+	/**
 	 * The message posted.
 	 * @type {Object}
 	 */
 	response;
 
 	/**
-	 * Creates a new instance.
-	 * @param {Object} response The response.
+	 * The URL of the posted message, if applicable.
+	 * @type {string|undefined}
 	 */
-	constructor(response) {
+	url;
+
+	/**
+	 * Creates a new instance.
+	 * @param {string} name The name of the strategy that produced this response.
+	 * @param {Object} response The response.
+	 * @param {string} [url] The URL of the posted message, if applicable.
+	 */
+	constructor(name, response, url) {
+		this.name = name;
 		this.response = response;
+		this.url = url;
 	}
 }
 
@@ -56,6 +72,12 @@ export class FailureResponse {
 	ok = false;
 
 	/**
+	 * The name of the strategy that produced this response.
+	 * @type {string}
+	 */
+	name;
+
+	/**
 	 * The error or response.
 	 * @type {Object}
 	 */
@@ -63,9 +85,11 @@ export class FailureResponse {
 
 	/**
 	 * Creates a new instance.
+	 * @param {string} name The name of the strategy that produced this response.
 	 * @param {Object} reason The reason for failure.
 	 */
-	constructor(reason) {
+	constructor(name, reason) {
+		this.name = name;
 		this.reason = reason;
 	}
 }
@@ -114,11 +138,18 @@ export class Client {
 					return strategy.post(message, postOptions);
 				}),
 			)
-		).map(result => {
+		).map((result, i) => {
 			if (result.status === "fulfilled") {
-				return new SuccessResponse(result.value);
+				return new SuccessResponse(
+					this.#strategies[i].name,
+					result.value,
+					this.#strategies[i].getUrlFromResponse?.(result.value),
+				);
 			} else {
-				return new FailureResponse(result.reason);
+				return new FailureResponse(
+					this.#strategies[i].name,
+					result.reason,
+				);
 			}
 		});
 	}
