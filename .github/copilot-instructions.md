@@ -49,7 +49,6 @@ This project is a Node.js library for posting messages across multiple social me
 - Use `Array.prototype.filter()` to remove unwanted entries before processing
 - Use `Array.prototype.reduce()` for accumulating results when necessary, but don't use this to create objects; use `Object.fromEntries()` instead
 - Always use indented block bodies for control structures to improve readability
--
 
 ### Testing Patterns
 
