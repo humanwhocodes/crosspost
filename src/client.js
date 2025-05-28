@@ -161,6 +161,8 @@ export class Client {
 	 * @param {Array<PostToEntry>} entries An array of messages and their target strategies.
 	 * @param {PostToOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<Array<SuccessResponse|FailureResponse>>} A promise that resolves with an array of results.
+	 * @throws {TypeError} When `entries` is not an array.
+	 * @throws {TypeError} When `entries` is an empty array.
 	 * @throws {Error} When a strategy ID doesn't match any registered strategy.
 	 */
 	async postTo(entries, postOptions) {
