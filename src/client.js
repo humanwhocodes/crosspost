@@ -9,6 +9,8 @@
 
 /** @typedef {import("./types.js").Strategy} Strategy */
 /** @typedef {import("./types.js").PostOptions} PostOptions */
+/** @typedef {import("./types.js").PostToOptions} PostToOptions */
+/** @typedef {import("./types.js").PostToEntry} PostToEntry */
 /**
  * @typedef {Object} ClientOptions
  * @property {Array<Strategy>} strategies An array of strategies to use.
@@ -150,6 +152,62 @@ export class Client {
 					this.#strategies[i].name,
 					result.reason,
 				);
+			}
+		});
+	}
+
+	/**
+	 * Posts messages using specific strategies.
+	 * @param {Array<PostToEntry>} entries An array of messages and their target strategies.
+	 * @param {PostToOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<SuccessResponse|FailureResponse>>} A promise that resolves with an array of results.
+	 * @throws {TypeError} When `entries` is not an array.
+	 * @throws {TypeError} When `entries` is an empty array.
+	 * @throws {Error} When a strategy ID doesn't match any registered strategy.
+	 */
+	async postTo(entries, postOptions) {
+		if (!Array.isArray(entries)) {
+			throw new TypeError("Expected an array argument.");
+		}
+
+		if (entries.length === 0) {
+			throw new TypeError("Expected at least one entry.");
+		}
+
+		// Validate all strategy IDs and create strategy-entry pairs
+		const strategyEntryPairs = entries.map(entry => {
+			const strategy = this.#strategies.find(
+				s => s.id === entry.strategyId,
+			);
+			if (!strategy) {
+				throw new Error(
+					`Strategy with ID "${entry.strategyId}" not found.`,
+				);
+			}
+			return { strategy, entry };
+		});
+
+		return (
+			await Promise.allSettled(
+				strategyEntryPairs.map(({ strategy, entry }) => {
+					const { message, images } = entry;
+					return strategy.post(message, {
+						images,
+						signal: postOptions?.signal,
+					});
+				}),
+			)
+		).map((result, i) => {
+			const { strategy } = strategyEntryPairs[i];
+
+			if (result.status === "fulfilled") {
+				return new SuccessResponse(
+					strategy.name,
+					result.value,
+					strategy.getUrlFromResponse?.(result.value),
+				);
+			} else {
+				return new FailureResponse(strategy.name, result.reason);
 			}
 		});
 	}
