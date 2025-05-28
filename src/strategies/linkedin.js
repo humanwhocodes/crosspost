@@ -246,7 +246,7 @@ async function createPost(options, personUrn, message, postOptions) {
 		const images = postOptions.images;
 
 		const mediaAssets = await Promise.all(
-			postOptions.images.map(image =>
+			images.map(image =>
 				uploadImage(
 					options.accessToken,
 					personUrn,
