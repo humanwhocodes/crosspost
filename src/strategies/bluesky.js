@@ -270,6 +270,13 @@ async function postMessage(options, session, message, postOptions) {
  */
 export class BlueskyStrategy {
 	/**
+	 * Maximum length of a Bluesky post in characters.
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = 300;
+
+	/**
 	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
@@ -310,6 +317,21 @@ export class BlueskyStrategy {
 		}
 
 		this.#options = options;
+	}
+
+	/**
+	 * Calculates the length of a message according to Bluesky's algorithm.
+	 * All URLs are counted as 27 characters, all other Unicode characters as is.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		// Replace URLs with 27 characters (Bluesky's t.co-like length)
+		const urlAdjusted = message.replace(
+			/https?:\/\/[^\s]+/g,
+			"x".repeat(27),
+		);
+		return [...urlAdjusted].length;
 	}
 
 	/**

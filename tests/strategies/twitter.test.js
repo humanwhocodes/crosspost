@@ -251,4 +251,53 @@ describe("TwitterStrategy", () => {
 			});
 		});
 	}
+
+	describe("MAX_MESSAGE_LENGTH", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new TwitterStrategy({
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "qux",
+			});
+		});
+		it("should have a MAX_MESSAGE_LENGTH property", () => {
+			assert.ok(
+				Object.prototype.hasOwnProperty.call(
+					strategy,
+					"MAX_MESSAGE_LENGTH",
+				),
+				"MAX_MESSAGE_LENGTH property is missing",
+			);
+			assert.strictEqual(typeof strategy.MAX_MESSAGE_LENGTH, "number");
+		});
+	});
+
+	describe("calculateMessageLength", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new TwitterStrategy({
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "qux",
+			});
+		});
+		it("should calculate length of plain text correctly", () => {
+			const msg = "Hello world!";
+			assert.strictEqual(
+				strategy.calculateMessageLength(msg),
+				msg.length,
+			);
+		});
+		it("should count URLs as 23 characters", () => {
+			const msg =
+				"Check this out: https://example.com/abcde and http://foo.bar";
+			const urlCount = 2;
+			const expected =
+				msg.replace(/https?:\/\/[^\s]+/g, "").length + urlCount * 23;
+			assert.strictEqual(strategy.calculateMessageLength(msg), expected);
+		});
+	});
 });

@@ -41,4 +41,6 @@
  * @property {string} id A unique ID for the strategy.
  * @property {(message: string, options?: PostOptions) => Promise<any>} post A function that posts a message.
  * @property {(response: any) => string} [getUrlFromResponse] A function that extracts or calculates a URL from the response.
+ * @property {number} MAX_MESSAGE_LENGTH The maximum message length for the strategy.
+ * @property {(message: string) => number} calculateMessageLength Calculates the message length according to the strategy's algorithm.
  */

@@ -176,4 +176,26 @@ export class TwitterStrategy {
 		// This format works without knowing the username - Twitter will redirect appropriately
 		return `https://x.com/i/web/status/${response.data.id}`;
 	}
+
+	/**
+	 * Maximum length of a tweet in characters.
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = 280;
+
+	/**
+	 * Calculates the length of a message according to Twitter's algorithm.
+	 * URLs are counted as 23 characters for http:// or https:// URLs regardless of their actual length.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		// Replace URLs with 23 characters (Twitter's t.co length)
+		const urlAdjusted = message.replace(
+			/https?:\/\/[^\s]+/g,
+			"x".repeat(23),
+		);
+		return [...urlAdjusted].length;
+	}
 }

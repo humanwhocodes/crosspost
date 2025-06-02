@@ -554,4 +554,51 @@ describe("BlueskyStrategy", function () {
 			}, /Post URI not found in response/);
 		});
 	});
+
+	describe("MAX_MESSAGE_LENGTH", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new BlueskyStrategy({
+				identifier: "user.bsky.social",
+				password: "pw",
+				host: "bsky.social",
+			});
+		});
+		it("should have a MAX_MESSAGE_LENGTH property", () => {
+			assert.ok(
+				Object.prototype.hasOwnProperty.call(
+					strategy,
+					"MAX_MESSAGE_LENGTH",
+				),
+				"MAX_MESSAGE_LENGTH property is missing",
+			);
+			assert.strictEqual(typeof strategy.MAX_MESSAGE_LENGTH, "number");
+		});
+	});
+
+	describe("calculateMessageLength", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new BlueskyStrategy({
+				identifier: "user.bsky.social",
+				password: "pw",
+				host: "bsky.social",
+			});
+		});
+		it("should calculate length of plain text correctly", () => {
+			const msg = "Hello world!";
+			assert.strictEqual(
+				strategy.calculateMessageLength(msg),
+				msg.length,
+			);
+		});
+		it("should count URLs as 27 characters", () => {
+			const msg =
+				"Check this out: https://example.com/abcde and http://foo.bar";
+			const urlCount = 2;
+			const expected =
+				msg.replace(/https?:\/\/[^\s]+/g, "").length + urlCount * 27;
+			assert.strictEqual(strategy.calculateMessageLength(msg), expected);
+		});
+	});
 });

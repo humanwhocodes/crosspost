@@ -319,6 +319,13 @@ export class LinkedInStrategy {
 	name = "LinkedIn";
 
 	/**
+	 * Maximum length of a LinkedIn post in characters.
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = 3000;
+
+	/**
 	 * Options for this instance.
 	 * @type {LinkedInOptions}
 	 */
@@ -385,5 +392,15 @@ export class LinkedInStrategy {
 		// LinkedIn post URN looks like: urn:li:share:123456789
 		// Convert this to a URL like https://www.linkedin.com/feed/update/urn:li:share:123456789
 		return `https://www.linkedin.com/feed/update/${response.id}`;
+	}
+
+	/**
+	 * Calculates the length of a message according to LinkedIn's algorithm.
+	 * All Unicode characters are counted as is.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		return [...message].length;
 	}
 }
