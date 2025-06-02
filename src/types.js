@@ -19,8 +19,20 @@
 
 /**
  * @typedef {Object} PostOptions
- * @property {ImageEmbedArray} images An array of images to include.
+ * @property {ImageEmbedArray} [images] An array of images to include.
  * @property {AbortSignal} [signal] Signal for aborting operations.
+ */
+
+/**
+ * @typedef {Object} PostToOptions
+ * @property {AbortSignal} [signal] Signal for aborting operations.
+ */
+
+/**
+ * @typedef {Object} PostToEntry
+ * @property {string} message The message to post.
+ * @property {string} strategyId The ID of the strategy to use for posting.
+ * @property {ImageEmbedArray} [images] An array of images to include.
  */
 
 /**

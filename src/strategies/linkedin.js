@@ -243,8 +243,10 @@ async function createPost(options, personUrn, message, postOptions) {
 
 	// handle image uploads if present
 	if (postOptions?.images?.length) {
+		const images = postOptions.images;
+
 		const mediaAssets = await Promise.all(
-			postOptions.images.map(image =>
+			images.map(image =>
 				uploadImage(
 					options.accessToken,
 					personUrn,
@@ -261,7 +263,7 @@ async function createPost(options, personUrn, message, postOptions) {
 			mediaAssets.map((asset, index) => ({
 				status: "READY",
 				description: {
-					text: postOptions.images[index].alt || "",
+					text: images[index].alt || "",
 				},
 				media: asset,
 				title: {

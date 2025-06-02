@@ -121,6 +121,43 @@ await client.post("Hello world!", {
 // post to all services with an abort signal
 const controller = new AbortController();
 await client.post("Hello world!", { signal: controller.signal });
+
+// post to specific services using postTo
+await client.postTo([
+	{
+		message: "Hello Twitter!",
+		strategyId: "twitter", // Uses the strategy's id property
+	},
+	{
+		message: "Hello Mastodon and Bluesky!",
+		strategyId: "mastodon",
+		images: [
+			{
+				data: imageData, // Uint8Array of image data
+				alt: "Description of the image",
+			},
+		],
+	},
+	{
+		message: "Hello Bluesky!",
+		strategyId: "bluesky",
+	},
+]);
+
+// post to specific services with a signal
+await client.postTo(
+	[
+		{
+			message: "Hello Twitter!",
+			strategyId: "twitter",
+		},
+		{
+			message: "Hello Mastodon!",
+			strategyId: "mastodon",
+		},
+	],
+	{ signal: controller.signal },
+);
 ```
 
 ### CLI Usage
