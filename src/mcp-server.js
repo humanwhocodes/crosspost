@@ -24,7 +24,7 @@ import { Client } from "./client.js";
 // Helpers
 //-----------------------------------------------------------------------------
 
-const version = "0.12.0"; // x-release-please-version
+const version = "0.13.0"; // x-release-please-version
 
 const postSchema = {
 	message: z.string(),
