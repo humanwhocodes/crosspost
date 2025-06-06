@@ -82,6 +82,13 @@ import { getImageMimeType } from "../util/images.js";
  */
 export class DiscordWebhookStrategy {
 	/**
+	 * Maximum length of a Discord webhook message in characters.
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = 2000;
+
+	/**
 	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
@@ -114,6 +121,16 @@ export class DiscordWebhookStrategy {
 		}
 
 		this.#webhookUrl = webhookUrl;
+	}
+
+	/**
+	 * Calculates the length of a message according to Discord's algorithm.
+	 * All characters are counted as is.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		return [...message].length;
 	}
 
 	/**

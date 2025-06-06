@@ -343,6 +343,51 @@ describe("MastodonStrategy", () => {
 		});
 	});
 
+	describe("MAX_MESSAGE_LENGTH", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new MastodonStrategy({
+				accessToken: "token",
+				host: "mastodon.social",
+			});
+		});
+		it("should have a MAX_MESSAGE_LENGTH property", () => {
+			assert.ok(
+				Object.prototype.hasOwnProperty.call(
+					strategy,
+					"MAX_MESSAGE_LENGTH",
+				),
+				"MAX_MESSAGE_LENGTH property is missing",
+			);
+			assert.strictEqual(typeof strategy.MAX_MESSAGE_LENGTH, "number");
+		});
+	});
+
+	describe("calculateMessageLength", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new MastodonStrategy({
+				accessToken: "token",
+				host: "mastodon.social",
+			});
+		});
+		it("should calculate length of plain text correctly", () => {
+			const msg = "Hello world!";
+			assert.strictEqual(
+				strategy.calculateMessageLength(msg),
+				msg.length,
+			);
+		});
+		it("should count URLs as their actual length", () => {
+			const msg =
+				"Check this out: https://example.com/abcde and http://foo.bar";
+			assert.strictEqual(
+				strategy.calculateMessageLength(msg),
+				[...msg].length,
+			);
+		});
+	});
+
 	describe("getUrlFromResponse", function () {
 		let strategy;
 		const testOptions = { accessToken: "token", host: "mastodon.social" };

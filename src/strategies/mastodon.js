@@ -151,6 +151,13 @@ export class MastodonStrategy {
 	#options;
 
 	/**
+	 * Maximum length of a Mastodon post in characters (default instance limit).
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = 500;
+
+	/**
 	 * Creates a new instance.
 	 * @param {MastodonOptions} options Options for the instance.
 	 * @throws {Error} When options are missing.
@@ -167,6 +174,16 @@ export class MastodonStrategy {
 		}
 
 		this.#options = options;
+	}
+
+	/**
+	 * Calculates the length of a message according to Mastodon's algorithm.
+	 * All characters, including URLs, are counted as their actual length.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		return [...message].length;
 	}
 
 	/**

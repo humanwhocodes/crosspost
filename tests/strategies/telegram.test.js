@@ -322,4 +322,49 @@ describe("TelegramStrategy", () => {
 			}, /Message ID or Chat ID not found in response/);
 		});
 	});
+
+	describe("MAX_MESSAGE_LENGTH", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new TelegramStrategy({
+				botToken: "token",
+				chatId: "123",
+			});
+		});
+		it("should have a MAX_MESSAGE_LENGTH property", () => {
+			assert.ok(
+				Object.prototype.hasOwnProperty.call(
+					strategy,
+					"MAX_MESSAGE_LENGTH",
+				),
+				"MAX_MESSAGE_LENGTH property is missing",
+			);
+			assert.strictEqual(typeof strategy.MAX_MESSAGE_LENGTH, "number");
+		});
+	});
+
+	describe("calculateMessageLength", () => {
+		let strategy;
+		beforeEach(() => {
+			strategy = new TelegramStrategy({
+				botToken: "token",
+				chatId: "123",
+			});
+		});
+		it("should calculate length of plain text correctly", () => {
+			const msg = "Hello world!";
+			assert.strictEqual(
+				strategy.calculateMessageLength(msg),
+				msg.length,
+			);
+		});
+		it("should count URLs as their actual length", () => {
+			const msg =
+				"Check this out: https://example.com/abcde and http://foo.bar";
+			assert.strictEqual(
+				strategy.calculateMessageLength(msg),
+				[...msg].length,
+			);
+		});
+	});
 });

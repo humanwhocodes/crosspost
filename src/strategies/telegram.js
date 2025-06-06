@@ -91,6 +91,13 @@ export class TelegramStrategy {
 	name = "Telegram";
 
 	/**
+	 * Maximum length of a Telegram message in characters.
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = 4096;
+
+	/**
 	 * Options for this instance.
 	 * @type {TelegramOptions}
 	 */
@@ -259,5 +266,15 @@ export class TelegramStrategy {
 		}
 
 		return `https://t.me/c/${response.result.chat.id.toString().replace("-100", "")}/${response.result.message_id}`;
+	}
+
+	/**
+	 * Calculates the length of a message according to Telegram's algorithm.
+	 * All Unicode characters are counted as is.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		return [...message].length;
 	}
 }

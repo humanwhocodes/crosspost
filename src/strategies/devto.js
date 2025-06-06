@@ -140,6 +140,13 @@ async function postArticle(apiKey, content, postOptions) {
  */
 export class DevtoStrategy {
 	/**
+	 * Maximum length of a Dev.to article (no strict limit).
+	 * @type {number}
+	 * @const
+	 */
+	MAX_MESSAGE_LENGTH = Infinity;
+
+	/**
 	 * The ID of the strategy.
 	 * @type {string}
 	 * @readonly
@@ -210,5 +217,15 @@ export class DevtoStrategy {
 
 		// Fall back to constructing a URL from the ID
 		return `https://dev.to/articles/${response.id}`;
+	}
+
+	/**
+	 * Calculates the length of a message for Dev.to.
+	 * Dev.to has no strict character limit for articles, but this returns the character count.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The calculated length of the message.
+	 */
+	calculateMessageLength(message) {
+		return [...message].length;
 	}
 }
