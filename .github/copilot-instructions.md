@@ -57,6 +57,10 @@ This project is a Node.js library for posting messages across multiple social me
 - Create mock strategies with required properties
 - Test both success and failure scenarios
 - Verify proper error messages exactly
+- All tests for a given method should be in a single `describe` block
+- Use `beforeEach` to set up common test fixtures
+- Use `afterEach` to clean up after tests if necessary
+- There must be at one empty line between `describe` blocks for readability
 
 ## Strategy Pattern Implementation
 
