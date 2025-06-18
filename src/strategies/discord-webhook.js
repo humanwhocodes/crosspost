@@ -198,7 +198,7 @@ export class DiscordWebhookStrategy {
 			method: "POST",
 			headers: {
 				"User-Agent":
-					"Crosspost (https://github.com/humanwhocodes/crosspost, v0.12.0)", // x-release-please-version
+					"Crosspost (https://github.com/humanwhocodes/crosspost, v0.13.0)", // x-release-please-version
 			},
 			body: formData,
 			signal: postOptions?.signal,

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.13.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.12.0...crosspost-v0.13.0) (2025-06-18)
+
+
+### Features
+
+* Add calculateMessageLength and MAX_MESSAGE_LENGTH to strategies ([#99](https://github.com/humanwhocodes/crosspost/issues/99)) ([25d60c0](https://github.com/humanwhocodes/crosspost/commit/25d60c0bb04831de2d8625ccd0075ab879058416))
+* Add Client#postTo() method ([#96](https://github.com/humanwhocodes/crosspost/issues/96)) ([9ddba2f](https://github.com/humanwhocodes/crosspost/commit/9ddba2ff5a5391d435104486ebabca92d708fb26))
+* MCP server shortens messages when necessary ([#100](https://github.com/humanwhocodes/crosspost/issues/100)) ([1e04742](https://github.com/humanwhocodes/crosspost/commit/1e0474244ed8ca35d5d2de90bb461e7f81b2dc46))
+
 ## [0.12.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.11.1...crosspost-v0.12.0) (2025-05-02)
 
 
