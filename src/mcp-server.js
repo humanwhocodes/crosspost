@@ -3,6 +3,8 @@
  * @author Nicholas C. Zakas
  */
 
+/* global Buffer */
+
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -81,24 +83,41 @@ const postSchema = {
 	message: z.string(),
 };
 
+const imageEmbedSchema = z.object({
+	data: z.string().describe("Base64 encoded image data"),
+	alt: z.string().optional().describe("Optional alt text for the image"),
+});
+
 const socialMediaPostSchema = {
 	entries: z.array(
 		z.object({
-			strategyId: z.string(),
-			message: z.string(),
+			strategyId: z
+				.string()
+				.describe("The ID of the strategy to use for posting"),
+			message: z.string().describe("The message to post"),
 		}),
 	),
+	images: z
+		.array(imageEmbedSchema)
+		.optional()
+		.describe("An array of images to include in the post"),
 };
 
 const strategyMessageSchema = {
-	strategyId: z.string(),
-	message: z.string(),
+	strategyId: z
+		.string()
+		.describe("The ID of the strategy to use for posting"),
+	message: z.string().describe("The message to post"),
 };
 
 const shortenMessageSchema = {
-	strategyId: z.string(),
-	message: z.string(),
-	excessLength: z.number(),
+	strategyId: z
+		.string()
+		.describe("The ID of the strategy to use for resizing the message"),
+	message: z.string().describe("The message to resize"),
+	excessLength: z
+		.number()
+		.describe("The number of characters to remove from the message"),
 };
 
 /**
@@ -251,10 +270,24 @@ export class CrosspostMcpServer extends McpServer {
 		// tool to post to multiple social media services
 		this.tool(
 			"post-to-social-media",
-			"Post the same message to one or more social media services (if possible). When using this tool, you must provide an array of entries with strategyId and message. Check the message length using the check-message-length tool and the corresponding strategy before posting. If the message doesn't fit within the strategy's limits, ask the user if they'd like you to shorten it for any of the services. If no, post the original message; if yes, then use the resize-message tool to generate a more appropriate version of the message for just that strategy. Prepare appropriate message versions for all services first, then post them all together in a single batch.",
+			"Post the same message to one or more social media services (if possible). When using this tool, you must provide an array of entries with strategyId and message, and an optional top-level images array. If alt text is not provided for an image, generate alt text using generate-social-media-alt-text. Check the message length using the check-message-length tool and the corresponding strategy before posting. If the message doesn't fit within the strategy's limits, ask the user if they'd like you to shorten it for any of the services. If no, post the original message; if yes, then use the resize-message tool to generate a more appropriate version of the message for just that strategy. Prepare appropriate message versions for all services first, then post them all together in a single batch.",
 			socialMediaPostSchema,
-			async ({ entries }) => {
-				const results = await this.#client.postTo(entries);
+			async ({ entries, images }) => {
+				// Convert base64 image data to Uint8Array and handle optional alt text
+				let formattedImages = images?.map(img => ({
+					data: new Uint8Array(Buffer.from(img.data, "base64")),
+					alt: img.alt,
+				}));
+
+				const formattedEntries = entries.map(
+					({ strategyId, message }) => ({
+						strategyId,
+						message,
+						formattedImages,
+					}),
+				);
+
+				const results = await this.#client.postTo(formattedEntries);
 
 				const content = results.map(result => {
 					if (result.ok) {
@@ -399,6 +432,24 @@ export class CrosspostMcpServer extends McpServer {
 					strategy.MAX_MESSAGE_LENGTH,
 				);
 
+				return {
+					content: [
+						{
+							type: "text",
+							text: prompt,
+						},
+					],
+				};
+			},
+		);
+
+		// tool to generate alt text for an image
+		this.tool(
+			"generate-social-media-alt-text",
+			"Returns a prompt to generate descriptive alt text for an image to be posted on social media. The alt text must be 1000 characters or less.",
+			{},
+			async () => {
+				const prompt = `You are an expert at writing accessible image descriptions (alt text) for the visually impaired. Analyze the provided image and write a concise, accurate, and helpful alt text description. The alt text must be 1000 characters or less. If the image is unclear, describe what can be reasonably inferred. Do not include the words 'image of', 'photo of', or similar phrases—just describe the content directly.`;
 				return {
 					content: [
 						{
