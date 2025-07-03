@@ -17,6 +17,7 @@ import { createRequire } from "node:module";
 
 export const BLUESKY_URL_FACET = "app.bsky.richtext.facet#link";
 export const BLUESKY_TAG_FACET = "app.bsky.richtext.facet#tag";
+export const BLUESKY_MENTION_FACET = "app.bsky.richtext.facet#mention";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -41,9 +42,15 @@ export const BLUESKY_TAG_FACET = "app.bsky.richtext.facet#tag";
  */
 
 /**
+ * @typedef {Object} MentionDetails
+ * @property {string} handle The handle of the mentioned user.
+ * @property {ByteRange} byteRange The byte range of the facet in the text.
+ */
+
+/**
  * @typedef {Object} BlueSkyFacet
  * @property {ByteRange} index The byte range of the facet in the text.
- * @property {Array<BlueSkyURIFacetFeature|BlueSkyTagFacetFeature>} features The features of the facet.
+ * @property {Array<BlueSkyURIFacetFeature|BlueSkyTagFacetFeature|BlueSkyMentionFacetFeature>} features The features of the facet.
  */
 
 //-----------------------------------------------------------------------------
@@ -60,6 +67,7 @@ export const BLUESKY_TAG_FACET = "app.bsky.richtext.facet#tag";
  */
 
 // const MENTION_REGEX = /(^|\s|\()(@)([a-zA-Z0-9.-]+)(\b)/g
+const MENTION_REGEX = /(^|\s|\()(@)([a-zA-Z][a-zA-Z0-9.-]*[a-zA-Z0-9]|[a-zA-Z])(\b)/g;
 const URL_REGEX =
 	/(^|\s|\()((https?:\/\/[\S]+)|((?<domain>[a-z][a-z0-9]*(\.[a-z0-9]+)+)[\S]*))/gim;
 const TRAILING_PUNCTUATION_REGEX = /\p{P}+$/gu;
@@ -131,6 +139,34 @@ class BlueSkyTagFacetFeature {
 	 */
 	constructor(tag) {
 		this.tag = tag;
+	}
+}
+
+/**
+ * A Bluesky mention facet feature.
+ */
+class BlueSkyMentionFacetFeature {
+	/**
+	 * The DID of the mentioned user.
+	 * Note: When created by detectMentions(), this initially contains the handle.
+	 * The BlueSky strategy resolves handles to actual DIDs before posting.
+	 * @type {string}
+	 */
+	did;
+
+	/**
+	 * The type of facet.
+	 * @type {string}
+	 * @const
+	 */
+	$type = BLUESKY_MENTION_FACET;
+
+	/**
+	 * Creates a new instance.
+	 * @param {string} did The DID of the mentioned user (initially the handle, resolved by the strategy).
+	 */
+	constructor(did) {
+		this.did = did;
 	}
 }
 
@@ -255,6 +291,53 @@ function detectTags(text) {
 }
 
 /**
+ * Detects all mentions in the given text and returns an array noting the byte location
+ * of the mentions in the text.
+ * @param {string} text The text to search.
+ * @returns {MentionDetails[]} An array of MentionDetails objects.
+ */
+function detectMentions(text) {
+	const matches = [];
+	let match;
+
+	while ((match = MENTION_REGEX.exec(text)) !== null) {
+		let handle = match[3];
+
+		// Skip if the handle is empty or undefined
+		if (!handle) {
+			continue;
+		}
+
+		// Strip any trailing punctuation (similar to URLs)
+		if (TRAILING_PUNCTUATION_REGEX.test(handle)) {
+			handle = handle.replace(TRAILING_PUNCTUATION_REGEX, "");
+		}
+
+		// Calculate the location of the mention (includes the @ symbol)
+		let start = match.index;
+
+		// Strip any leading whitespace or punctuation from overall match
+		if (LEADING_WHITESPACE_REGEX.test(match[0])) {
+			start += 1;
+		} else if (match[1] && match[1] !== "") {
+			// If there's a prefix character like '(', adjust the start position
+			start += match[1].length;
+		}
+
+		// Start at the @ symbol position
+		const atSymbolStart = start;
+		const mentionEnd = atSymbolStart + 1 + handle.length;
+
+		matches.push({
+			handle,
+			byteRange: getByteOffsets(text, atSymbolStart, mentionEnd),
+		});
+	}
+
+	return matches;
+}
+
+/**
  * Detects rich text facets in the given text.
  * @param {string} text The text to search.
  * @returns {Array<BlueSkyFacet>} An array of BlueSkyFacet objects.
@@ -268,6 +351,10 @@ export function detectFacets(text) {
 		...detectTags(text).map(tag => ({
 			index: tag.byteRange,
 			features: [new BlueSkyTagFacetFeature(tag.tag)],
+		})),
+		...detectMentions(text).map(mention => ({
+			index: mention.byteRange,
+			features: [new BlueSkyMentionFacetFeature(mention.handle)],
 		})),
 	];
 }

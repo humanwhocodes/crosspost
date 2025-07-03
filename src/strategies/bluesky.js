@@ -3,7 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch */
+/* global fetch, URLSearchParams */
 
 //-----------------------------------------------------------------------------
 // Imports
@@ -85,6 +85,11 @@ import { validatePostOptions } from "../util/options.js";
  * @property {number} blob.size The size of the blob in bytes
  */
 
+/**
+ * @typedef {Object} BlueskyResolveHandleResponse
+ * @property {string} did The DID corresponding to the handle.
+ */
+
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
@@ -114,6 +119,47 @@ function getPostMessageUrl(options) {
  */
 function getUploadBlobUrl(options) {
 	return `https://${options.host}/xrpc/com.atproto.repo.uploadBlob`;
+}
+
+/**
+ * Gets the URL for resolving a handle to a DID.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @returns {string} The URL for resolving a handle.
+ */
+function getResolveHandleUrl(options) {
+	return `https://${options.host}/xrpc/com.atproto.identity.resolveHandle`;
+}
+
+/**
+ * Resolves a handle to its corresponding DID.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @param {string} handle The handle to resolve (without @ prefix).
+ * @param {AbortSignal} [signal] The abort signal for the request.
+ * @returns {Promise<string>} A promise that resolves with the DID.
+ */
+async function resolveHandle(options, handle, signal) {
+	const url = getResolveHandleUrl(options);
+	const params = new URLSearchParams({ handle });
+
+	const response = await fetch(`${url}?${params}`, {
+		method: "GET",
+		signal,
+	});
+
+	if (response.ok) {
+		const result = /** @type {Promise<BlueskyResolveHandleResponse>} */ (
+			response.json()
+		);
+		return (await result).did;
+	}
+
+	const errorBody = /** @type {BlueskyErrorResponse} */ (
+		await response.json()
+	);
+
+	throw new Error(
+		`${response.status} ${response.statusText}: Failed to resolve handle "${handle}":\n${errorBody.error} - ${errorBody.message}`,
+	);
 }
 
 /**
@@ -150,6 +196,52 @@ async function uploadImage(options, session, imageData, signal) {
 	throw new Error(
 		`${response.status} ${response.statusText}: Failed to upload image:\n${errorBody.error} - ${errorBody.message}`,
 	);
+}
+
+/**
+ * Resolves mention handles to DIDs in facets.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @param {Array<{index: Object, features: Array<{$type: string, did?: string, uri?: string, tag?: string}>}>} facets The facets to process.
+ * @param {AbortSignal} [signal] The abort signal for the request.
+ * @returns {Promise<Array<{index: Object, features: Array<{$type: string, did?: string, uri?: string, tag?: string}>}>>} A promise that resolves with processed facets.
+ */
+async function resolveMentionFacets(options, facets, signal) {
+	const processedFacets = [];
+
+	for (const facet of facets) {
+		const processedFeatures = [];
+
+		for (const feature of facet.features) {
+			// Check if this is a mention facet
+			if (feature.$type === "app.bsky.richtext.facet#mention" && feature.did) {
+				try {
+					// Resolve the handle to a DID
+					const did = await resolveHandle(options, feature.did, signal);
+					processedFeatures.push({
+						...feature,
+						did,
+					});
+				} catch {
+					// If handle resolution fails, skip this mention facet
+					// to prevent the entire post from failing
+					continue;
+				}
+			} else {
+				// For non-mention facets, keep them as-is
+				processedFeatures.push(feature);
+			}
+		}
+
+		// Only add the facet if it has features after processing
+		if (processedFeatures.length > 0) {
+			processedFacets.push({
+				...facet,
+				features: processedFeatures,
+			});
+		}
+	}
+
+	return processedFacets;
 }
 
 /**
@@ -196,7 +288,10 @@ async function createSession(options, signal) {
  */
 async function postMessage(options, session, message, postOptions) {
 	const url = getPostMessageUrl(options);
-	const facets = detectFacets(message);
+	const rawFacets = detectFacets(message);
+	
+	// Resolve mention handles to DIDs in facets
+	const facets = await resolveMentionFacets(options, rawFacets, postOptions?.signal);
 
 	/** @type {BlueskyPostBody} */
 	const body = {
