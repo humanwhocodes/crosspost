@@ -19,6 +19,7 @@ const HOST = "test.social";
 const CREATE_SESSION_URL = `/xrpc/com.atproto.server.createSession`;
 const CREATE_RECORD_URL = `/xrpc/com.atproto.repo.createRecord`;
 const UPLOAD_BLOB_URL = `/xrpc/com.atproto.repo.uploadBlob`;
+const RESOLVE_HANDLE_URL = `/xrpc/com.atproto.identity.resolveHandle`;
 
 const CREATE_SESSION_RESPONSE = {
 	did: "did:plc:rzf7l6olyl67yfy2jwufdq7f",
@@ -515,6 +516,193 @@ describe("BlueskyStrategy", function () {
 			await assert.rejects(async () => {
 				await strategy.post(text, { signal: controller.signal });
 			}, /abort/u);
+		});
+
+		it("should successfully post a message with mentions", async function () {
+			const text = "Hello @alice and @bob.example.com!";
+
+			// Mock session creation
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock handle resolution for alice
+			server.get(
+				{
+					url: RESOLVE_HANDLE_URL,
+					query: { handle: "alice" },
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: { did: "did:plc:alice123" },
+				},
+			);
+
+			// Mock handle resolution for bob.example.com
+			server.get(
+				{
+					url: RESOLVE_HANDLE_URL,
+					query: { handle: "bob.example.com" },
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: { did: "did:plc:bob456" },
+				},
+			);
+
+			// Mock post creation
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 6,
+										byteEnd: 12,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#mention",
+											did: "did:plc:alice123",
+										},
+									],
+								},
+								{
+									index: {
+										byteStart: 17,
+										byteEnd: 33,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#mention",
+											did: "did:plc:bob456",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const result = await strategy.post(text);
+
+			assert.strictEqual(result.uri, CREATE_RECORD_RESPONSE.uri);
+			assert.strictEqual(result.cid, CREATE_RECORD_RESPONSE.cid);
+		});
+
+		it("should handle mention resolution failure gracefully", async function () {
+			const text = "Hello @nonexistent!";
+
+			// Mock session creation
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock handle resolution failure
+			server.get(
+				{
+					url: RESOLVE_HANDLE_URL,
+					query: { handle: "nonexistent" },
+				},
+				{
+					status: 400,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: { 
+						error: "InvalidRequest",
+						message: "Handle not found"
+					},
+				},
+			);
+
+			// Mock post creation without mention facets
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [], // No mention facets due to resolution failure
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const result = await strategy.post(text);
+
+			assert.strictEqual(result.uri, CREATE_RECORD_RESPONSE.uri);
+			assert.strictEqual(result.cid, CREATE_RECORD_RESPONSE.cid);
 		});
 	});
 

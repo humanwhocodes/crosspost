@@ -148,8 +148,8 @@ class BlueSkyTagFacetFeature {
 class BlueSkyMentionFacetFeature {
 	/**
 	 * The DID of the mentioned user.
-	 * Note: Currently stores the handle. In a future version, this should be
-	 * resolved to the actual DID via the BlueSky API.
+	 * Note: When created by detectMentions(), this initially contains the handle.
+	 * The BlueSky strategy resolves handles to actual DIDs before posting.
 	 * @type {string}
 	 */
 	did;
@@ -163,7 +163,7 @@ class BlueSkyMentionFacetFeature {
 
 	/**
 	 * Creates a new instance.
-	 * @param {string} did The DID of the mentioned user (currently the handle).
+	 * @param {string} did The DID of the mentioned user (initially the handle, resolved by the strategy).
 	 */
 	constructor(did) {
 		this.did = did;
