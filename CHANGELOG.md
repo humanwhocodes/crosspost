@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.13.0...crosspost-v0.14.0) (2025-07-03)
+
+
+### Features
+
+* Implement at-mention detection for Bluesky posts ([#104](https://github.com/humanwhocodes/crosspost/issues/104)) ([a04f786](https://github.com/humanwhocodes/crosspost/commit/a04f786c3ea1e5decbbfbf2a2496841ae4361759))
+
 ## [0.13.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.12.0...crosspost-v0.13.0) (2025-06-18)
 
 
