@@ -48,4 +48,10 @@ export {
 	TelegramMessageResponse,
 	TelegramErrorResponse,
 } from "./strategies/telegram.js";
+export {
+	SlackStrategy,
+	SlackOptions,
+	SlackMessageResponse,
+	SlackErrorResponse,
+} from "./strategies/slack.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
