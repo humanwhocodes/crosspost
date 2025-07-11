@@ -90,17 +90,14 @@ describe("SlackStrategy", function () {
 		});
 
 		it("should throw an Error if message is missing", async function () {
-			await assert.rejects(
-				strategy.post(""),
-				{
-					name: "TypeError",
-					message: "Missing message to post.",
-				},
-			);
+			await assert.rejects(strategy.post(""), {
+				name: "TypeError",
+				message: "Missing message to post.",
+			});
 		});
 
 		it("should successfully post a message", async function () {
-			server.post("/api/chat.postMessage", { 
+			server.post("/api/chat.postMessage", {
 				status: 200,
 				body: MESSAGE_RESPONSE,
 			});
@@ -111,18 +108,15 @@ describe("SlackStrategy", function () {
 		});
 
 		it("should handle post message request failure", async function () {
-			server.post("/api/chat.postMessage", { 
+			server.post("/api/chat.postMessage", {
 				status: 500,
 				body: "Internal Server Error",
 			});
 
-			await assert.rejects(
-				strategy.post("Hello, Slack!"),
-				{
-					name: "Error",
-					message: "500 Failed to post message: Internal Server Error",
-				},
-			);
+			await assert.rejects(strategy.post("Hello, Slack!"), {
+				name: "Error",
+				message: "500 Failed to post message: Internal Server Error",
+			});
 		});
 
 		it("should handle Slack API error response", async function () {
@@ -131,18 +125,15 @@ describe("SlackStrategy", function () {
 				error: "channel_not_found",
 			};
 
-			server.post("/api/chat.postMessage", { 
+			server.post("/api/chat.postMessage", {
 				status: 200,
 				body: errorResponse,
 			});
 
-			await assert.rejects(
-				strategy.post("Hello, Slack!"),
-				{
-					name: "Error",
-					message: "Failed to post message: channel_not_found",
-				},
-			);
+			await assert.rejects(strategy.post("Hello, Slack!"), {
+				name: "Error",
+				message: "Failed to post message: channel_not_found",
+			});
 		});
 
 		it("should throw a TypeError if images is not an array", async function () {
@@ -167,8 +158,8 @@ describe("SlackStrategy", function () {
 
 		it("should throw a TypeError if image data is not a Uint8Array", async function () {
 			await assert.rejects(
-				strategy.post("Hello, Slack!", { 
-					images: [{ data: "not-a-uint8array" }] 
+				strategy.post("Hello, Slack!", {
+					images: [{ data: "not-a-uint8array" }],
 				}),
 				{
 					name: "TypeError",
@@ -181,16 +172,19 @@ describe("SlackStrategy", function () {
 			const uploadUrlResponse = {
 				ok: true,
 				upload_url: "https://files.slack.com/upload/v1/ABCD1234",
-				file_id: "F1234567890"
+				file_id: "F1234567890",
 			};
 
 			const completeUploadResponse = {
 				ok: true,
-				files: [{
-					id: "F1234567890",
-					title: "image1.png",
-					permalink: "https://files.slack.com/files-pri/T1234567890-F1234567890/image1.png"
-				}]
+				files: [
+					{
+						id: "F1234567890",
+						title: "image1.png",
+						permalink:
+							"https://files.slack.com/files-pri/T1234567890-F1234567890/image1.png",
+					},
+				],
 			};
 
 			const messageResponse = {
@@ -205,24 +199,24 @@ describe("SlackStrategy", function () {
 			};
 
 			// Step 1: Get upload URL
-			server.post("/api/files.getUploadURLExternal", { 
+			server.post("/api/files.getUploadURLExternal", {
 				status: 200,
 				body: uploadUrlResponse,
 			});
 
 			// Step 2: Upload to external URL (mocked)
-			server.post("https://files.slack.com/upload/v1/ABCD1234", { 
+			server.post("https://files.slack.com/upload/v1/ABCD1234", {
 				status: 200,
 				body: "",
 			});
 
 			// Step 3: Complete upload
-			server.post("/api/files.completeUploadExternal", { 
+			server.post("/api/files.completeUploadExternal", {
 				status: 200,
 				body: completeUploadResponse,
 			});
 
-			server.post("/api/chat.postMessage", { 
+			server.post("/api/chat.postMessage", {
 				status: 200,
 				body: messageResponse,
 			});
@@ -235,7 +229,7 @@ describe("SlackStrategy", function () {
 		});
 
 		it("should handle image upload failure", async function () {
-			server.post("/api/files.getUploadURLExternal", { 
+			server.post("/api/files.getUploadURLExternal", {
 				status: 500,
 				body: "Internal Server Error",
 			});
@@ -246,7 +240,8 @@ describe("SlackStrategy", function () {
 				}),
 				{
 					name: "Error",
-					message: "500 Failed to get upload URL: Internal Server Error",
+					message:
+						"500 Failed to get upload URL: Internal Server Error",
 				},
 			);
 		});
@@ -257,7 +252,7 @@ describe("SlackStrategy", function () {
 				error: "invalid_auth",
 			};
 
-			server.post("/api/files.getUploadURLExternal", { 
+			server.post("/api/files.getUploadURLExternal", {
 				status: 200,
 				body: errorResponse,
 			});
@@ -277,15 +272,15 @@ describe("SlackStrategy", function () {
 			const uploadUrlResponse = {
 				ok: true,
 				upload_url: "https://files.slack.com/upload/v1/ABCD1234",
-				file_id: "F1234567890"
+				file_id: "F1234567890",
 			};
 
-			server.post("/api/files.getUploadURLExternal", { 
+			server.post("/api/files.getUploadURLExternal", {
 				status: 200,
 				body: uploadUrlResponse,
 			});
 
-			server.post("https://files.slack.com/upload/v1/ABCD1234", { 
+			server.post("https://files.slack.com/upload/v1/ABCD1234", {
 				status: 400,
 				body: "Bad Request",
 			});
@@ -305,20 +300,20 @@ describe("SlackStrategy", function () {
 			const uploadUrlResponse = {
 				ok: true,
 				upload_url: "https://files.slack.com/upload/v1/ABCD1234",
-				file_id: "F1234567890"
+				file_id: "F1234567890",
 			};
 
-			server.post("/api/files.getUploadURLExternal", { 
+			server.post("/api/files.getUploadURLExternal", {
 				status: 200,
 				body: uploadUrlResponse,
 			});
 
-			server.post("https://files.slack.com/upload/v1/ABCD1234", { 
+			server.post("https://files.slack.com/upload/v1/ABCD1234", {
 				status: 200,
 				body: "",
 			});
 
-			server.post("/api/files.completeUploadExternal", { 
+			server.post("/api/files.completeUploadExternal", {
 				status: 500,
 				body: "Internal Server Error",
 			});
@@ -329,7 +324,8 @@ describe("SlackStrategy", function () {
 				}),
 				{
 					name: "Error",
-					message: "500 Failed to complete upload: Internal Server Error",
+					message:
+						"500 Failed to complete upload: Internal Server Error",
 				},
 			);
 		});
@@ -338,7 +334,7 @@ describe("SlackStrategy", function () {
 			const uploadUrlResponse = {
 				ok: true,
 				upload_url: "https://files.slack.com/upload/v1/ABCD1234",
-				file_id: "F1234567890"
+				file_id: "F1234567890",
 			};
 
 			const errorResponse = {
@@ -346,17 +342,17 @@ describe("SlackStrategy", function () {
 				error: "channel_not_found",
 			};
 
-			server.post("/api/files.getUploadURLExternal", { 
+			server.post("/api/files.getUploadURLExternal", {
 				status: 200,
 				body: uploadUrlResponse,
 			});
 
-			server.post("https://files.slack.com/upload/v1/ABCD1234", { 
+			server.post("https://files.slack.com/upload/v1/ABCD1234", {
 				status: 200,
 				body: "",
 			});
 
-			server.post("/api/files.completeUploadExternal", { 
+			server.post("/api/files.completeUploadExternal", {
 				status: 200,
 				body: errorResponse,
 			});
@@ -376,7 +372,7 @@ describe("SlackStrategy", function () {
 			const controller = new AbortController();
 			const signal = controller.signal;
 
-			server.post("/api/chat.postMessage", { 
+			server.post("/api/chat.postMessage", {
 				status: 200,
 				body: MESSAGE_RESPONSE,
 				delay: 100,

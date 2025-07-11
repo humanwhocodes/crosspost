@@ -159,18 +159,33 @@ export class SlackStrategy {
 	 */
 	async #uploadImage(imageData, filename, altText, postOptions) {
 		const type = getImageMimeType(imageData);
-		
+
 		// Step 1: Get upload URL
-		const uploadUrlResponse = await this.#getUploadURL(filename, imageData.length, type, altText, postOptions);
-		
+		const uploadUrlResponse = await this.#getUploadURL(
+			filename,
+			imageData.length,
+			altText,
+			postOptions,
+		);
+
 		// Step 2: Upload file to the provided URL
-		await this.#uploadFileToURL(uploadUrlResponse.upload_url, imageData, type, filename, postOptions);
-		
+		await this.#uploadFileToURL(
+			uploadUrlResponse.upload_url,
+			imageData,
+			type,
+			postOptions,
+		);
+
 		// Step 3: Complete the upload
-		const completeResponse = await this.#completeUpload([{
-			id: uploadUrlResponse.file_id,
-			title: filename
-		}], altText, postOptions);
+		const completeResponse = await this.#completeUpload(
+			[
+				{
+					id: uploadUrlResponse.file_id,
+					title: filename,
+				},
+			],
+			postOptions,
+		);
 
 		// Return in the expected format for backward compatibility
 		return {
@@ -178,8 +193,8 @@ export class SlackStrategy {
 			file: {
 				id: completeResponse.files[0].id,
 				name: filename,
-				permalink: completeResponse.files[0].permalink
-			}
+				permalink: completeResponse.files[0].permalink,
+			},
 		};
 	}
 
@@ -187,28 +202,29 @@ export class SlackStrategy {
 	 * Gets an upload URL from Slack.
 	 * @param {string} filename The filename for the image.
 	 * @param {number} length The file size in bytes.
-	 * @param {string} mimeType The MIME type of the file.
 	 * @param {string} [altText] The alt text for the image.
 	 * @param {PostOptions} [postOptions] Additional options for the request.
 	 * @returns {Promise<SlackUploadURLResponse>} A promise that resolves with the upload URL response.
 	 * @throws {Error} When the request fails.
 	 */
-	async #getUploadURL(filename, length, mimeType, altText, postOptions) {
+	async #getUploadURL(filename, length, altText, postOptions) {
 		const url = `${API_BASE}/files.getUploadURLExternal`;
-		const payload = {
-			filename,
-			length
-		};
+		const formData = new FormData();
+		formData.append("filename", filename);
+		formData.append("length", length.toString());
+
+		if (altText) {
+			formData.append("alt_text", altText);
+		}
 
 		const response = await fetch(url, {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${this.#options.botToken}`,
-				"Content-Type": "application/json",
+				Authorization: `Bearer ${this.#options.botToken}`,
 				"User-Agent":
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.14.0)", // x-release-please-version
 			},
-			body: JSON.stringify(payload),
+			body: formData,
 			signal: postOptions?.signal,
 		});
 
@@ -223,10 +239,10 @@ export class SlackStrategy {
 		);
 
 		if (!result.ok) {
-			const errorResponse = /** @type {SlackErrorResponse} */ (/** @type {unknown} */ (result));
-			throw new Error(
-				`Failed to get upload URL: ${errorResponse.error}`,
+			const errorResponse = /** @type {SlackErrorResponse} */ (
+				/** @type {unknown} */ (result)
 			);
+			throw new Error(`Failed to get upload URL: ${errorResponse.error}`);
 		}
 
 		return result;
@@ -237,12 +253,11 @@ export class SlackStrategy {
 	 * @param {string} uploadUrl The URL to upload the file to.
 	 * @param {Uint8Array} imageData The image data to upload.
 	 * @param {string} type The MIME type of the file.
-	 * @param {string} filename The filename for the image.
 	 * @param {PostOptions} [postOptions] Additional options for the request.
 	 * @returns {Promise<void>} A promise that resolves when the upload completes.
 	 * @throws {Error} When the upload fails.
 	 */
-	async #uploadFileToURL(uploadUrl, imageData, type, filename, postOptions) {
+	async #uploadFileToURL(uploadUrl, imageData, type, postOptions) {
 		const response = await fetch(uploadUrl, {
 			method: "POST",
 			headers: {
@@ -263,23 +278,20 @@ export class SlackStrategy {
 	/**
 	 * Completes the file upload process.
 	 * @param {Array<{id: string, title: string}>} files The files to complete.
-	 * @param {string} [altText] The alt text for the image.
 	 * @param {PostOptions} [postOptions] Additional options for the request.
 	 * @returns {Promise<SlackUploadCompleteResponse>} A promise that resolves with the completion response.
 	 * @throws {Error} When the completion fails.
 	 */
-	async #completeUpload(files, altText, postOptions) {
+	async #completeUpload(files, postOptions) {
 		const url = `${API_BASE}/files.completeUploadExternal`;
 		const payload = {
 			files,
-			channel_id: this.#options.channel,
-			...(altText && { initial_comment: altText })
 		};
 
 		const response = await fetch(url, {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${this.#options.botToken}`,
+				Authorization: `Bearer ${this.#options.botToken}`,
 				"Content-Type": "application/json",
 				"User-Agent":
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.14.0)", // x-release-please-version
@@ -299,7 +311,9 @@ export class SlackStrategy {
 		);
 
 		if (!result.ok) {
-			const errorResponse = /** @type {SlackErrorResponse} */ (/** @type {unknown} */ (result));
+			const errorResponse = /** @type {SlackErrorResponse} */ (
+				/** @type {unknown} */ (result)
+			);
 			throw new Error(
 				`Failed to complete upload: ${errorResponse.error}`,
 			);
@@ -323,6 +337,7 @@ export class SlackStrategy {
 		validatePostOptions(postOptions);
 
 		const url = `${API_BASE}/chat.postMessage`;
+		/** @type {any} */
 		const payload = {
 			channel: this.#options.channel,
 			text: message,
@@ -331,23 +346,40 @@ export class SlackStrategy {
 		// Handle images if provided
 		if (postOptions?.images?.length) {
 			// For images, we need to upload them first and then share them
-			const uploadPromises = postOptions.images.map(async (image, index) => {
-				const filename = `image${index + 1}.${getImageMimeType(image.data).split("/")[1]}`;
-				return this.#uploadImage(image.data, filename, image.alt, postOptions);
-			});
+			const uploadPromises = postOptions.images.map(
+				async (image, index) => {
+					const filename = `image${index + 1}.${getImageMimeType(image.data).split("/")[1]}`;
+					const uploadResult = await this.#uploadImage(
+						image.data,
+						filename,
+						image.alt,
+						postOptions,
+					);
+					return {
+						permalink: uploadResult.file.permalink,
+						alt: image.alt,
+					};
+				},
+			);
 
 			// Wait for all uploads to complete
 			const uploadResults = await Promise.all(uploadPromises);
-			
-			// Add file permalinks to the message
-			const fileLinks = uploadResults.map(result => result.file.permalink).join("\n");
+
+			// Add file permalinks to the message with alt text if provided
+			const fileLinks = uploadResults
+				.map(result =>
+					result.alt
+						? `${result.alt}: ${result.permalink}`
+						: result.permalink,
+				)
+				.join("\n");
 			payload.text = `${message}\n\n${fileLinks}`;
 		}
 
 		const response = await fetch(url, {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer ${this.#options.botToken}`,
+				Authorization: `Bearer ${this.#options.botToken}`,
 				"Content-Type": "application/json",
 				"User-Agent":
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.14.0)", // x-release-please-version
@@ -367,10 +399,10 @@ export class SlackStrategy {
 		);
 
 		if (!result.ok) {
-			const errorResponse = /** @type {SlackErrorResponse} */ (/** @type {unknown} */ (result));
-			throw new Error(
-				`Failed to post message: ${errorResponse.error}`,
+			const errorResponse = /** @type {SlackErrorResponse} */ (
+				/** @type {unknown} */ (result)
 			);
+			throw new Error(`Failed to post message: ${errorResponse.error}`);
 		}
 
 		return result;
@@ -385,8 +417,7 @@ export class SlackStrategy {
 		// Slack doesn't provide direct message URLs in the API response
 		// We construct it from the channel and timestamp
 		const channelId = response.channel;
-		const timestamp = response.ts.replace(".", "");
-		
+
 		// For public channels, we can construct a URL
 		// For private channels or DMs, this may not work as expected
 		return `https://slack.com/app_redirect?channel=${channelId}&message_ts=${response.ts}`;
