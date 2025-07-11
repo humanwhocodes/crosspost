@@ -46,6 +46,26 @@ import { getImageMimeType } from "../util/images.js";
  */
 
 /**
+ * @typedef {Object} SlackUploadURLResponse
+ * @property {boolean} ok Whether the request was successful.
+ * @property {string} upload_url The URL to upload the file to.
+ * @property {string} file_id The file ID for completing the upload.
+ */
+
+/**
+ * @typedef {Object} SlackUploadCompleteResponse
+ * @property {boolean} ok Whether the request was successful.
+ * @property {SlackFileInfo[]} files The uploaded file information.
+ */
+
+/**
+ * @typedef {Object} SlackFileInfo
+ * @property {string} id The file ID.
+ * @property {string} title The file title.
+ * @property {string} permalink The permanent link to the file.
+ */
+
+/**
  * @typedef {Object} SlackUploadResponse
  * @property {boolean} ok Whether the request was successful.
  * @property {SlackFile} file The uploaded file data.
@@ -129,7 +149,7 @@ export class SlackStrategy {
 	}
 
 	/**
-	 * Uploads an image to Slack.
+	 * Uploads an image to Slack using the new three-step process.
 	 * @param {Uint8Array} imageData The image data to upload.
 	 * @param {string} filename The filename for the image.
 	 * @param {string} [altText] The alt text for the image.
@@ -138,42 +158,148 @@ export class SlackStrategy {
 	 * @throws {Error} When the upload fails.
 	 */
 	async #uploadImage(imageData, filename, altText, postOptions) {
-		const url = `${API_BASE}/files.upload`;
 		const type = getImageMimeType(imageData);
-		const formData = new FormData();
+		
+		// Step 1: Get upload URL
+		const uploadUrlResponse = await this.#getUploadURL(filename, imageData.length, postOptions);
+		
+		// Step 2: Upload file to the provided URL
+		await this.#uploadFileToURL(uploadUrlResponse.upload_url, imageData, type, filename, postOptions);
+		
+		// Step 3: Complete the upload
+		const completeResponse = await this.#completeUpload([{
+			id: uploadUrlResponse.file_id,
+			title: filename
+		}], altText, postOptions);
 
-		formData.append("channels", this.#options.channel);
-		formData.append("file", new Blob([imageData], { type }), filename);
-		formData.append("filename", filename);
-		if (altText) {
-			formData.append("initial_comment", altText);
-		}
+		// Return in the expected format for backward compatibility
+		return {
+			ok: true,
+			file: {
+				id: completeResponse.files[0].id,
+				name: filename,
+				permalink: completeResponse.files[0].permalink
+			}
+		};
+	}
+
+	/**
+	 * Gets an upload URL from Slack.
+	 * @param {string} filename The filename for the image.
+	 * @param {number} length The file size in bytes.
+	 * @param {PostOptions} [postOptions] Additional options for the request.
+	 * @returns {Promise<SlackUploadURLResponse>} A promise that resolves with the upload URL response.
+	 * @throws {Error} When the request fails.
+	 */
+	async #getUploadURL(filename, length, postOptions) {
+		const url = `${API_BASE}/files.getUploadURLExternal`;
+		const payload = {
+			filename,
+			length
+		};
 
 		const response = await fetch(url, {
 			method: "POST",
 			headers: {
 				"Authorization": `Bearer ${this.#options.botToken}`,
+				"Content-Type": "application/json",
 				"User-Agent":
 					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.14.0)", // x-release-please-version
 			},
-			body: formData,
+			body: JSON.stringify(payload),
 			signal: postOptions?.signal,
 		});
 
 		if (!response.ok) {
 			throw new Error(
-				`${response.status} Failed to upload image: ${response.statusText}`,
+				`${response.status} Failed to get upload URL: ${response.statusText}`,
 			);
 		}
 
-		const result = /** @type {SlackUploadResponse} */ (
+		const result = /** @type {SlackUploadURLResponse} */ (
 			await response.json()
 		);
 
 		if (!result.ok) {
 			const errorResponse = /** @type {SlackErrorResponse} */ (/** @type {unknown} */ (result));
 			throw new Error(
-				`Failed to upload image: ${errorResponse.error}`,
+				`Failed to get upload URL: ${errorResponse.error}`,
+			);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Uploads file data to the provided upload URL.
+	 * @param {string} uploadUrl The URL to upload the file to.
+	 * @param {Uint8Array} imageData The image data to upload.
+	 * @param {string} type The MIME type of the file.
+	 * @param {string} filename The filename for the image.
+	 * @param {PostOptions} [postOptions] Additional options for the request.
+	 * @returns {Promise<void>} A promise that resolves when the upload completes.
+	 * @throws {Error} When the upload fails.
+	 */
+	async #uploadFileToURL(uploadUrl, imageData, type, filename, postOptions) {
+		const response = await fetch(uploadUrl, {
+			method: "POST",
+			headers: {
+				"User-Agent":
+					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.14.0)", // x-release-please-version
+			},
+			body: new Blob([imageData], { type }),
+			signal: postOptions?.signal,
+		});
+
+		if (!response.ok) {
+			throw new Error(
+				`${response.status} Failed to upload file: ${response.statusText}`,
+			);
+		}
+	}
+
+	/**
+	 * Completes the file upload process.
+	 * @param {Array<{id: string, title: string}>} files The files to complete.
+	 * @param {string} [altText] The alt text for the image.
+	 * @param {PostOptions} [postOptions] Additional options for the request.
+	 * @returns {Promise<SlackUploadCompleteResponse>} A promise that resolves with the completion response.
+	 * @throws {Error} When the completion fails.
+	 */
+	async #completeUpload(files, altText, postOptions) {
+		const url = `${API_BASE}/files.completeUploadExternal`;
+		const payload = {
+			files,
+			channel_id: this.#options.channel,
+			...(altText && { initial_comment: altText })
+		};
+
+		const response = await fetch(url, {
+			method: "POST",
+			headers: {
+				"Authorization": `Bearer ${this.#options.botToken}`,
+				"Content-Type": "application/json",
+				"User-Agent":
+					"Crosspost CLI (https://github.com/humanwhocodes/crosspost, v0.14.0)", // x-release-please-version
+			},
+			body: JSON.stringify(payload),
+			signal: postOptions?.signal,
+		});
+
+		if (!response.ok) {
+			throw new Error(
+				`${response.status} Failed to complete upload: ${response.statusText}`,
+			);
+		}
+
+		const result = /** @type {SlackUploadCompleteResponse} */ (
+			await response.json()
+		);
+
+		if (!result.ok) {
+			const errorResponse = /** @type {SlackErrorResponse} */ (/** @type {unknown} */ (result));
+			throw new Error(
+				`Failed to complete upload: ${errorResponse.error}`,
 			);
 		}
 

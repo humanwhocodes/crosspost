@@ -53,5 +53,10 @@ export {
 	SlackOptions,
 	SlackMessageResponse,
 	SlackErrorResponse,
+	SlackUploadURLResponse,
+	SlackUploadCompleteResponse,
+	SlackFileInfo,
+	SlackUploadResponse,
+	SlackFile,
 } from "./strategies/slack.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
