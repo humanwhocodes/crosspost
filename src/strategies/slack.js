@@ -197,8 +197,7 @@ export class SlackStrategy {
 		const url = `${API_BASE}/files.getUploadURLExternal`;
 		const payload = {
 			filename,
-			length,
-			alt_text: altText || filename
+			length
 		};
 
 		const response = await fetch(url, {
