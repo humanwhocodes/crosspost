@@ -161,7 +161,7 @@ export class SlackStrategy {
 		const type = getImageMimeType(imageData);
 		
 		// Step 1: Get upload URL
-		const uploadUrlResponse = await this.#getUploadURL(filename, imageData.length, postOptions);
+		const uploadUrlResponse = await this.#getUploadURL(filename, imageData.length, type, altText, postOptions);
 		
 		// Step 2: Upload file to the provided URL
 		await this.#uploadFileToURL(uploadUrlResponse.upload_url, imageData, type, filename, postOptions);
@@ -187,15 +187,19 @@ export class SlackStrategy {
 	 * Gets an upload URL from Slack.
 	 * @param {string} filename The filename for the image.
 	 * @param {number} length The file size in bytes.
+	 * @param {string} mimeType The MIME type of the file.
+	 * @param {string} [altText] The alt text for the image.
 	 * @param {PostOptions} [postOptions] Additional options for the request.
 	 * @returns {Promise<SlackUploadURLResponse>} A promise that resolves with the upload URL response.
 	 * @throws {Error} When the request fails.
 	 */
-	async #getUploadURL(filename, length, postOptions) {
+	async #getUploadURL(filename, length, mimeType, altText, postOptions) {
 		const url = `${API_BASE}/files.getUploadURLExternal`;
 		const payload = {
 			filename,
-			length
+			length,
+			alt_text: altText || filename,
+			file_type: mimeType
 		};
 
 		const response = await fetch(url, {
