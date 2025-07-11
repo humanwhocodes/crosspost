@@ -198,8 +198,7 @@ export class SlackStrategy {
 		const payload = {
 			filename,
 			length,
-			alt_text: altText || filename,
-			file_type: mimeType
+			alt_text: altText || filename
 		};
 
 		const response = await fetch(url, {
