@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.14.0...crosspost-v0.15.0) (2025-07-15)
+
+
+### Features
+
+* Add Slack strategy for posting messages to Slack channels ([#107](https://github.com/humanwhocodes/crosspost/issues/107)) ([f0fb763](https://github.com/humanwhocodes/crosspost/commit/f0fb763d86e881fd5aee4740329fb2727d0e6a93))
+
 ## [0.14.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.13.0...crosspost-v0.14.0) (2025-07-03)
 
 
