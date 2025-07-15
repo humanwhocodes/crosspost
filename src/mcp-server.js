@@ -75,7 +75,7 @@ ${message}
 // Helpers
 //-----------------------------------------------------------------------------
 
-const version = "0.14.0"; // x-release-please-version
+const version = "0.15.0"; // x-release-please-version
 
 const postSchema = {
 	message: z.string(),
