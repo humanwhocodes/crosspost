@@ -2,6 +2,12 @@
  * @fileoverview Tests for SlackStrategy
  */
 
+/* global FormData */
+
+//-----------------------------------------------------------------------------
+// Imports
+//-----------------------------------------------------------------------------
+
 import { strict as assert } from "assert";
 import { SlackStrategy } from "../../src/strategies/slack.js";
 import { FetchMocker, MockServer } from "mentoss";
@@ -168,7 +174,7 @@ describe("SlackStrategy", function () {
 			);
 		});
 
-		it("should successfully post a message with an image", async function () {
+		it("should successfully post a message with an image and alt text", async function () {
 			const uploadUrlResponse = {
 				ok: true,
 				upload_url: "https://files.slack.com/upload/v1/ABCD1234",
@@ -198,11 +204,22 @@ describe("SlackStrategy", function () {
 				},
 			};
 
+			const form = new FormData();
+			form.append("filename", "image1.png");
+			form.append("length", pngImageData.length);
+			form.append("alt_text", "Test image");
+
 			// Step 1: Get upload URL
-			server.post("/api/files.getUploadURLExternal", {
-				status: 200,
-				body: uploadUrlResponse,
-			});
+			server.post(
+				{
+					url: "/api/files.getUploadURLExternal",
+					body: form,
+				},
+				{
+					status: 200,
+					body: uploadUrlResponse,
+				},
+			);
 
 			// Step 2: Upload to external URL (mocked)
 			server.post("https://files.slack.com/upload/v1/ABCD1234", {
