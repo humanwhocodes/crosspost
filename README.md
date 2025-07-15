@@ -230,7 +230,7 @@ Each strategy requires a set of environment variables in order to execute:
     - `TELEGRAM_BOT_TOKEN`
     - `TELEGRAM_CHAT_ID`
 - Slack
-    - `SLACK_BOT_TOKEN`
+    - `SLACK_TOKEN`
     - `SLACK_CHANNEL`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
@@ -458,11 +458,11 @@ To enable posting to Slack using a bot:
 3. Click "Create App".
 4. In the left sidebar, click "OAuth & Permissions".
 5. Scroll down to "Scopes" and under "Bot Token Scopes", add the following scopes:
-   - `chat:write` - Send messages as the bot user
-   - `files:write` - Upload files as the bot user (required for image support)
+    - `chat:write` - Send messages as the bot user
+    - `files:write` - Upload files as the bot user (required for image support)
 6. Scroll to the top and click "Install to Workspace".
 7. Review the permissions and click "Allow".
-8. Copy the "Bot User OAuth Token" that starts with `xoxb-`. This is your `SLACK_BOT_TOKEN`.
+8. Copy the "Bot User OAuth Token" that starts with `xoxb-`. This is your `SLACK_TOKEN`.
 
 To get your channel ID:
 
@@ -471,7 +471,7 @@ To get your channel ID:
 3. The channel ID is the part after the last slash in the URL (e.g., `C1234567890`).
 4. Alternatively, you can use the channel name (e.g., `#general`).
 
-Use the bot token as the `SLACK_BOT_TOKEN` environment variable and the channel ID or name as the `SLACK_CHANNEL` environment variable.
+Use the bot token as the `SLACK_TOKEN` environment variable and the channel ID or name as the `SLACK_CHANNEL` environment variable.
 
 **Note:** The bot must be added to the channel you want to post to. You can do this by mentioning the bot in the channel (e.g., `@your-bot-name`) or by using the `/invite @your-bot-name` command.
 

@@ -211,7 +211,7 @@ if (flags.telegram) {
 if (flags.slack) {
 	strategies.push(
 		new SlackStrategy({
-			botToken: env.require("SLACK_BOT_TOKEN"),
+			botToken: env.require("SLACK_TOKEN"),
 			channel: env.require("SLACK_CHANNEL"),
 		}),
 	);
