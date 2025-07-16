@@ -59,4 +59,11 @@ export {
 	SlackUploadResponse,
 	SlackFile,
 } from "./strategies/slack.js";
+export {
+	ThreadsStrategy,
+	ThreadsOptions,
+	ThreadsPostResponse,
+	ThreadsErrorResponse,
+	ThreadsMediaUploadResponse,
+} from "./strategies/threads.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
