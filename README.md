@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/humanwhocodes-crosspost-badge.png)](https://mseep.ai/app/humanwhocodes-crosspost)
+
 # Crosspost
 
 by [Nicholas C. Zakas](https://humanwhocodes.com)
