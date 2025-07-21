@@ -81,7 +81,7 @@
     "chai": "^5.1.2",
     "cross-env": "^7.0.3",
     "eslint": "^9.0.0",
-    "lint-staged": "15.4.3",
+    "lint-staged": "15.5.2",
     "mentoss": "^0.9.2",
     "mocha": "^11.0.0",
     "nock": "^13.5.5",
