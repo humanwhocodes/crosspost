@@ -2,7 +2,7 @@
 
 by [Nicholas C. Zakas](https://humanwhocodes.com)
 
-If you find this useful, please consider supporting my work with a [donation](https://humanwhocodes.com/donate) or [nominate me](https://stars.github.com/nominate/) for a GitHub Star.
+If you find this useful, please consider supporting my work with a [donation](https://humanwhocodes.com/donate).
 
 ## Description
 
@@ -185,10 +185,10 @@ Examples:
 
 ```shell
 # Post a message to multiple services
-npx crosspost -t -m -b "Check out this beach!"
+npx @humanwhocodes/crosspost -t -m -b "Check out this beach!"
 
 # Post a message with an image to multiple services
-npx crosspost -t -m -b --image ./photo.jpg --image-alt "A beautiful sunset" "Check out this beach!"
+npx @humanwhocodes/crosspost -t -m -b --image ./photo.jpg --image-alt "A beautiful sunset" "Check out this beach!"
 ```
 
 This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky with an attached image. You can choose to post to any combination by specifying the appropriate command line options.
@@ -197,10 +197,10 @@ You can also read the message from a file instead of from the command line:
 
 ```shell
 # Post a message to multiple services
-npx crosspost -t -m -b -f message.txt
+npx @humanwhocodes/crosspost -t -m -b -f message.txt
 
 # Post a message with an image to multiple services
-npx crosspost -t -m -b -f message.txt -i path/to/image.jpg
+npx @humanwhocodes/crosspost -t -m -b -f message.txt -i path/to/image.jpg
 ```
 
 Each strategy requires a set of environment variables in order to execute:
@@ -240,7 +240,7 @@ Tip: You can load environment variables from a `.env` file by setting the enviro
 Crosspost can be run as an MCP (Model Context Protocol) server, which allows it to be used by AI agents:
 
 ```shell
-npx crosspost --mcp -t -m -b
+npx @humanwhocodes/crosspost --mcp -t -m -b
 ```
 
 This starts an MCP server that can post to Twitter, Mastodon, and Bluesky. The server provides prompts and tools for posting to all services or individual services. Only the services indicated by the flags are available via the server.
@@ -253,12 +253,7 @@ npx run mcp:inspect -- -t -m -b
 
 #### Using the MCP Server with Claude Desktop
 
-To use the MCP server with Claude you must have [Node.js](https://nodejs.org) installed and then run:
-
-```shell
-npm install -g @humanwhocodes/crosspost
-```
-
+To use the MCP server with Claude you must have [Node.js](https://nodejs.org) installed.
 Then, in Claude Desktop:
 
 1. Click on File -> Settings.
@@ -271,8 +266,8 @@ Claude will then create a `claude_desktop_config.json` file. Open it and add the
 {
 	"mcpServers": {
 		"crosspost": {
-			"command": "crosspost",
-			"args": ["-m", "-l", "--mcp"],
+			"command": "npx",
+			"args": ["@humanwhocodes/crosspost", "-m", "-l", "--mcp"],
 			"env": {
 				"LINKEDIN_ACCESS_TOKEN": "abcdefghijklmnop",
 				"MASTODON_ACCESS_TOKEN": "abcdefghijklmnop",
@@ -291,8 +286,8 @@ If you'd prefer not to put your environment variables directly into the JSON fil
 {
 	"mcpServers": {
 		"crosspost": {
-			"command": "crosspost",
-			"args": ["-m", "-l", "-t", "--mcp"],
+			"command": "npx",
+			"args": ["@humanwhocodes/crosspost", "-m", "-l", "-t", "--mcp"],
 			"env": {
 				"CROSSPOST_DOTENV": "/usr/nzakas/settings/.env"
 			}
