@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.15.0...crosspost-v0.15.1) (2025-07-21)
+
+
+### Bug Fixes
+
+* **docs:** Update README ([8dd9bd3](https://github.com/humanwhocodes/crosspost/commit/8dd9bd3017e99db3f5ad06e98773e60981e1489d)), closes [#113](https://github.com/humanwhocodes/crosspost/issues/113)
+
 ## [0.15.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.14.0...crosspost-v0.15.0) (2025-07-15)
 
 
