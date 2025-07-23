@@ -30,6 +30,7 @@ The API is split into two parts:
     - `DiscordWebhookStrategy`
     - `TelegramStrategy`
     - `DevtoStrategy`
+    - `ThreadsStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -44,6 +45,7 @@ import {
 	DiscordWebhookStrategy,
 	TelegramStrategy,
 	DevtoStrategy,
+	ThreadsStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -94,6 +96,12 @@ const devto = new DevtoStrategy({
 	apiKey: "your-api-key",
 });
 
+// Note: Access token and user ID required
+const threads = new ThreadsStrategy({
+	accessToken: "your-threads-access-token",
+	userId: "your-threads-user-id",
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -105,6 +113,7 @@ const client = new Client({
 		discordWebhook,
 		telegram,
 		devto,
+		threads,
 	],
 });
 
@@ -174,6 +183,7 @@ Usage: crosspost [options] ["Message to post."]
 --discord-webhook  Post to Discord via webhook.
 --devto         Post to dev.to.
 --telegram      Post to Telegram.
+--threads       Post to Threads.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -229,6 +239,9 @@ Each strategy requires a set of environment variables in order to execute:
 - Telegram
     - `TELEGRAM_BOT_TOKEN`
     - `TELEGRAM_CHAT_ID`
+- Threads
+    - `THREADS_ACCESS_TOKEN`
+    - `THREADS_USER_ID`
 - Slack
     - `SLACK_TOKEN`
     - `SLACK_CHANNEL`
@@ -476,6 +489,93 @@ Use the bot token as the `SLACK_TOKEN` environment variable and the channel ID o
 **Note:** The bot must be added to the channel you want to post to. You can do this by mentioning the bot in the channel (e.g., `@your-bot-name`) or by using the `/invite @your-bot-name` command.
 
 **Note:** Your bot can only send messages to users who have previously messaged the bot or added it to a group.
+
+### Threads
+
+To enable posting to Threads, you'll need to create a Threads app and get the necessary credentials:
+
+#### Step 1: Create a Meta Developer Account
+
+1. Go to [Meta for Developers](https://developers.facebook.com/).
+2. Click "Get Started" in the top right corner.
+3. Log in with your Facebook account or create a new one.
+4. Complete the developer account setup process.
+
+#### Step 2: Create a New App
+
+1. In the Meta Developer Dashboard, click "Create App".
+2. Select "Other" as the use case.
+3. Choose "Business" as the app type.
+4. Fill in your app details:
+   - **App Name**: Give your app a descriptive name
+   - **App Contact Email**: Provide a valid email address
+5. Click "Create App".
+
+#### Step 3: Add Threads Basic Display Product
+
+1. In your app dashboard, scroll down to "Add Products to Your App".
+2. Find "Threads Basic Display" and click "Set Up".
+3. Click "Create New App" in the Threads Basic Display settings.
+4. Accept the terms and conditions.
+
+#### Step 4: Configure Basic Settings
+
+1. Go to Threads Basic Display > Basic Display.
+2. Add your website URL in the "Valid OAuth Redirect URIs" field.
+3. For testing purposes, you can use `https://localhost/` as a placeholder.
+4. Save your changes.
+
+#### Step 5: Get Your Access Token
+
+**Option A: Using the Graph API Explorer (Recommended for Testing)**
+
+1. Go to the [Graph API Explorer](https://developers.facebook.com/tools/explorer/).
+2. Select your app from the dropdown.
+3. Click "Generate Access Token".
+4. Grant the necessary permissions when prompted.
+5. Copy the generated access token.
+
+**Option B: Using OAuth Flow (For Production)**
+
+1. Construct the authorization URL:
+   ```
+   https://threads.net/oauth/authorize?client_id={your-app-id}&redirect_uri={your-redirect-uri}&scope=threads_basic,threads_content_publish&response_type=code
+   ```
+2. Direct users to this URL to authorize your app.
+3. Handle the callback to get the authorization code.
+4. Exchange the code for an access token using a server-side request.
+
+#### Step 6: Get Your User ID
+
+1. With your access token, make a request to:
+   ```
+   https://graph.threads.net/v1.0/me?fields=id,username&access_token={your-access-token}
+   ```
+2. The response will contain your user ID:
+   ```json
+   {
+     "id": "17841400000000000",
+     "username": "your_username"
+   }
+   ```
+3. Copy the `id` value - this is your user ID.
+
+#### Step 7: Test Your Configuration
+
+Use the access token and user ID in your Threads strategy configuration:
+
+```javascript
+const threads = new ThreadsStrategy({
+	accessToken: "your-threads-access-token",
+	userId: "your-threads-user-id",
+});
+```
+
+**Important Notes:**
+- Access tokens have expiration times. For production apps, implement token refresh logic.
+- Your app needs to be in "Live" mode to post to accounts other than the app developer's account.
+- Threads has rate limits and content policies that your posts must comply with.
+- The Threads API is still evolving, so check the [official documentation](https://developers.facebook.com/docs/threads) for the latest updates.
 
 ## License
 
