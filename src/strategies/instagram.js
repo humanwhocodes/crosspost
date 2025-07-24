@@ -196,7 +196,6 @@ export class InstagramStrategy {
 	 * @param {string} accessToken The access token.
 	 * @param {AbortSignal} [signal] Optional abort signal.
 	 * @returns {Promise<string>} The URL of the uploaded image.
-	 * @private
 	 */
 	async #uploadImage(image, accessToken, signal) {
 		if (this.#uploadImageFn) {
@@ -221,7 +220,6 @@ export class InstagramStrategy {
 	 * @param {string} instagramAccountId The Instagram account ID.
 	 * @param {AbortSignal} [signal] Optional abort signal.
 	 * @returns {Promise<string>} The ID of the created media container.
-	 * @private
 	 */
 	async #createMediaContainer(caption, imageUrl, accessToken, instagramAccountId, signal) {
 		signal?.throwIfAborted();
@@ -263,7 +261,6 @@ export class InstagramStrategy {
 	 * @param {string} instagramAccountId The Instagram account ID.
 	 * @param {AbortSignal} [signal] Optional abort signal.
 	 * @returns {Promise<InstagramPublishResponse>} The published media data.
-	 * @private
 	 */
 	async #publishMediaContainer(creationId, accessToken, instagramAccountId, signal) {
 		signal?.throwIfAborted();
