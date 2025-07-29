@@ -13,7 +13,13 @@
 		// published for 30 days
 		{
 			matchDatasources: ["npm"],
+			matchDepTypes: ["dependencies"],
 			minimumReleaseAge: "30 days",
+		},
+		{
+			matchDatasources: ["npm"],
+			matchDepTypes: ["devDependencies"],
+			enabled: false,
 		},
 	],
 }
