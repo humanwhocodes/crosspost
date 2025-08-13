@@ -1,5 +1,5 @@
 /**
- * @fileoverview Nostr strategy for posting notes.
+ * @fileoverview Nostr strategy for posting messages.
  * @author Arda Kilicdagi
  */
 
@@ -7,15 +7,12 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { finalizeEvent } from "nostr-tools/pure";
-import { SimplePool, useWebSocketImplementation } from "nostr-tools/pool";
-import * as nip19 from "nostr-tools/nip19";
-import { hexToBytes } from "@noble/hashes/utils";
-import { validatePostOptions } from "../util/options.js";
-import WebSocket from "ws";
-
-// Set up WebSocket implementation for Node.js
-useWebSocketImplementation(WebSocket);
+import { schnorr } from "@noble/curves/secp256k1";
+import { WebSocket } from "ws";
+import { createHash } from "node:crypto";
+import { nsecToHex } from "../util/nostr.js";
+import { Buffer } from "node:buffer";
+import { setTimeout, clearTimeout } from "node:timers";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -23,224 +20,291 @@ useWebSocketImplementation(WebSocket);
 
 /**
  * @typedef {Object} NostrOptions
- * @property {string} privateKey The private key for the Nostr account (nsec format or hex).
- * @property {string[]} relays Array of relay URLs to publish to.
- */
-
-/**
- * @typedef {Object} NostrEvent
- * @property {string} id The event ID.
- * @property {string} pubkey The public key of the author.
- * @property {number} created_at Unix timestamp when the event was created.
- * @property {number} kind The kind of event (1 for text note).
- * @property {string[][]} tags Array of tags.
- * @property {string} content The content of the note.
- * @property {string} sig The signature of the event.
+ * @property {string} privateKey The Nostr private key in `nsec` format.
+ * @property {string[]} [relays] An array of relay URLs to use.
  */
 
 /**
  * @typedef {Object} NostrPostResponse
- * @property {NostrEvent} event The published event.
- * @property {string[]} publishedTo Array of relay URLs that successfully published the event.
+ * @property {string} id The event ID as a hex string.
+ * @property {string} url The URL to view the post (njump.me link).
+ * @property {string} text The original message text.
  */
 
-/** @typedef {import("../types.js").PostOptions} PostOptions */
-
-//-----------------------------------------------------------------------------
-// Exports
-//-----------------------------------------------------------------------------
+// #region Helper functions
+/**
+ * Creates a Nostr event ID.
+ * @param {import("../types.js").NostrEvent} event The event to create an ID for.
+ * @returns {string} The event ID as a hex string.
+ */
+function createEventId(event) {
+	const serializedEvent = JSON.stringify([
+		0,
+		event.pubkey,
+		event.created_at,
+		event.kind,
+		event.tags,
+		event.content,
+	]);
+	const hash = createHash("sha256");
+	hash.update(serializedEvent);
+	return hash.digest("hex");
+}
 
 /**
- * A strategy for posting notes to Nostr.
+ * Signs a Nostr event.
+ * @param {string} privateKey The private key to sign with.
+ * @param {string} eventId The event ID to sign.
+ * @returns {Promise<string>} The signature as a hex string.
+ */
+async function signEvent(privateKey, eventId) {
+	// The eventId is a hex string, but signAsync expects a 32-byte Uint8Array.
+	const eventIdBytes = Buffer.from(eventId, "hex");
+	// The private key is a hex string, but signAsync expects a 32-byte Uint8Array.
+	const privateKeyBytes = Buffer.from(privateKey, "hex");
+	const signature = await schnorr.sign(eventIdBytes, privateKeyBytes);
+	return Buffer.from(signature).toString("hex");
+}
+
+/**
+ * Creates a Nostr event.
+ * @param {string} message The message to post.
+ * @param {string} publicKey The public key of the author.
+ * @returns {Partial<import("../types.js").NostrEvent>} The created event.
+ */
+function createEvent(message, publicKey) {
+	return {
+		pubkey: publicKey,
+		created_at: Math.floor(Date.now() / 1000),
+		kind: 1,
+		tags: [],
+		content: message,
+	};
+}
+
+// #endregion
+
+/**
+ * A strategy for posting to the Nostr network.
+ * @typedef {import("../types.js").Strategy} Strategy
+ * @implements {Strategy}
  */
 export class NostrStrategy {
 	/**
-	 * Maximum length of a Nostr note in characters.
-	 * While technically Nostr doesn't have a hard limit, most clients
-	 * expect reasonable note lengths.
-	 * @type {number}
-	 * @const
-	 */
-	MAX_MESSAGE_LENGTH = 5000;
-
-	/**
-	 * The ID of the strategy.
-	 * @type {string}
-	 * @readonly
-	 */
-	id = "nostr";
-
-	/**
 	 * The display name of the strategy.
 	 * @type {string}
-	 * @readonly
 	 */
 	name = "Nostr";
 
 	/**
-	 * The private key for this instance.
-	 * @type {Uint8Array}
+	 * The unique ID of the strategy.
+	 * @type {string}
 	 */
-	#privateKey;
+	id = "nostr";
 
 	/**
-	 * The relay URLs for this instance.
+	 * The maximum message length for Nostr.
+	 * According to NIP-01, there is no limit, but this is a reasonable default.
+	 * @type {number}
+	 */
+	MAX_MESSAGE_LENGTH = 1024;
+
+	/**
+	 * Calculates the message length.
+	 * @param {string} message The message to calculate the length of.
+	 * @returns {number} The length of the message.
+	 */
+	calculateMessageLength(message) {
+		return message.length;
+	}
+
+	/**
+	 * The relays to publish to.
 	 * @type {string[]}
 	 */
 	#relays;
 
 	/**
-	 * The SimplePool instance for managing relay connections.
-	 * @type {SimplePool}
+	 * The private key as a hex string.
+	 * @type {string}
 	 */
-	#pool;
+	#privateKeyHex;
 
 	/**
-	 * Creates a new instance.
-	 * @param {NostrOptions} options Options for the instance.
-	 * @throws {TypeError} When options are missing or invalid.
+	 * The public key as a hex string.
+	 * @type {string}
 	 */
-	constructor(options) {
-		const { privateKey, relays } = options;
+	#publicKeyHex;
 
+	/**
+	 * Creates a new instance of the NostrStrategy.
+	 * @param {NostrOptions} options The options for the strategy.
+	 */
+	constructor({
+		privateKey,
+		relays = [
+			"wss://relay.damus.io",
+			"wss://relay.nostr.band",
+			"wss://nos.lol",
+		],
+	}) {
 		if (!privateKey) {
-			throw new TypeError("Missing Nostr private key.");
+			throw new Error("Nostr private key is required.");
 		}
 
-		if (!relays || !Array.isArray(relays) || relays.length === 0) {
-			throw new TypeError("Missing or empty Nostr relays array.");
-		}
+		this.#privateKeyHex = nsecToHex(privateKey);
 
-		// Parse private key - support both nsec format and hex
-		let secretKey;
-		if (privateKey.startsWith("nsec")) {
-			try {
-				const { type, data } = nip19.decode(privateKey);
-				if (type !== "nsec") {
-					throw new TypeError("Invalid nsec private key format.");
-				}
-				secretKey = data;
-			} catch (error) {
-				throw new TypeError(`Invalid nsec private key: ${error instanceof Error ? error.message : String(error)}`);
-			}
-		} else {
-			try {
-				secretKey = hexToBytes(privateKey);
-			} catch (error) {
-				throw new TypeError(`Invalid hex private key: ${error instanceof Error ? error.message : String(error)}`);
-			}
-		}
+		// Nostr uses the 32-byte X-only public key.
+		const privateKeyBytes = Buffer.from(this.#privateKeyHex, "hex");
+		const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
+		this.#publicKeyHex = Buffer.from(publicKeyBytes).toString("hex");
 
-		this.#privateKey = secretKey;
 		this.#relays = relays;
-		this.#pool = new SimplePool();
 	}
 
 	/**
-	 * Calculates the length of a message according to Nostr's algorithm.
-	 * All characters are counted as is.
-	 * @param {string} message The message to calculate the length of.
-	 * @returns {number} The calculated length of the message.
-	 */
-	calculateMessageLength(message) {
-		return [...message].length;
-	}
-
-	/**
-	 * Posts a note to Nostr relays.
+	 * Posts a message to the Nostr network.
 	 * @param {string} message The message to post.
-	 * @param {PostOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<NostrPostResponse>} A promise that resolves with the event data.
-	 * @throws {Error} When the message fails to post.
+	 * @param {import("../types.js").PostOptions} [postOptions] Options for posting.
+	 * @returns {Promise<NostrPostResponse>} A promise that resolves with the result of the post.
 	 */
 	async post(message, postOptions) {
-		if (!message) {
-			throw new TypeError("Missing message to post.");
+		if (typeof message !== "string" || message.length === 0) {
+			throw new TypeError("Message must be a non-empty string.");
 		}
 
-		validatePostOptions(postOptions);
-
-		// Check for images - Nostr doesn't directly support image uploads like other platforms
-		// Images would typically be uploaded to external services and referenced by URL
-		if (postOptions?.images?.length) {
-			throw new Error("Direct image uploads are not supported by Nostr. Please upload images to external services and include URLs in the message.");
+		if (message.length > this.MAX_MESSAGE_LENGTH) {
+			throw new Error(
+				`Message exceeds maximum length of ${this.MAX_MESSAGE_LENGTH} characters.`,
+			);
 		}
 
-		try {
-			// Create the event template
-			const eventTemplate = {
-				kind: 1, // Text note
-				created_at: Math.floor(Date.now() / 1000),
-				tags: [],
-				content: message,
+		const event = createEvent(
+			message,
+			this.#publicKeyHex,
+		);
+		event.id = createEventId(
+			/** @type {import("../types.js").NostrEvent} */ (event),
+		);
+		event.sig = await signEvent(this.#privateKeyHex, event.id);
+
+		const results = await Promise.allSettled(
+			this.#relays.map(relayUrl =>
+				this.#publishToRelay(
+					relayUrl,
+					/** @type {import("../types.js").NostrEvent} */ (event),
+					postOptions?.signal,
+				),
+			),
+		);
+
+		const successfulPosts = results.filter(
+			result => result.status === "fulfilled" && result.value,
+		);
+
+		if (successfulPosts.length === 0) {
+			throw new Error("Failed to publish to any relay");
+		}
+
+		return {
+			id: event.id,
+			url: `https://njump.me/${event.id}`,
+			text: message,
+		};
+	}
+
+	/**
+	 * Publishes an event to a single relay.
+	 * @param {string} relayUrl The URL of the relay to publish to.
+	 * @param {import("../types.js").NostrEvent} event The event to publish.
+	 * @param {AbortSignal} [signal] An optional abort signal.
+	 * @returns {Promise<boolean>} A promise that resolves to true if the event was published successfully.
+	 */
+	async #publishToRelay(relayUrl, event, signal) {
+		return new Promise((resolve, reject) => {
+			const ws = new WebSocket(relayUrl);
+			let resolved = false;
+
+			const cleanup = () => {
+				if (ws.readyState === WebSocket.OPEN) {
+					ws.close();
+				}
 			};
 
-			// Sign the event
-			const signedEvent = finalizeEvent(eventTemplate, this.#privateKey);
+			const timeoutId = setTimeout(() => {
+				if (!resolved) {
+					resolved = true;
+					cleanup();
+					reject(new Error("Relay connection timeout"));
+				}
+			}, 10000); // 10 second timeout
 
-			// Publish to relays
-			const publishedTo = [];
+			// Handle abort signal
+			const abortHandler = () => {
+				if (!resolved) {
+					resolved = true;
+					cleanup();
+					clearTimeout(timeoutId);
+					reject(new Error("Request aborted"));
+				}
+			};
 
-			// Publish to all relays at once
-			try {
-				const publishPromises = this.#pool.publish(this.#relays, signedEvent);
-				
-				// Wait for all publish attempts to complete
-				const results = await Promise.allSettled(publishPromises);
-				
-				// Track which relays succeeded
-				results.forEach((result, index) => {
-					if (result.status === 'fulfilled') {
-						publishedTo.push(this.#relays[index]);
-					}
-					// Silently ignore individual relay failures for now
-				});
-			} catch {
-				// If all fails, try individual relay publishing as fallback
-				for (const relay of this.#relays) {
+			if (signal) {
+				if (signal.aborted) {
+					clearTimeout(timeoutId);
+					reject(new Error("Request aborted"));
+					return;
+				}
+				signal.addEventListener("abort", abortHandler);
+			}
+
+			ws.on("open", () => {
+				// Send the event
+				ws.send(JSON.stringify(["EVENT", event]));
+			});
+
+			ws.on("message", (data) => {
+				if (!resolved) {
 					try {
-						const publishPromises = this.#pool.publish([relay], signedEvent);
-						await Promise.allSettled(publishPromises);
-						publishedTo.push(relay);
+						const message = JSON.parse(data.toString());
+						if (Array.isArray(message) && message[0] === "OK" && message[1] === event.id) {
+							resolved = true;
+							cleanup();
+							clearTimeout(timeoutId);
+							if (signal) {
+								signal.removeEventListener("abort", abortHandler);
+							}
+							// The third element indicates success (true) or failure (false)
+							resolve(message[2]);
+						}
 					} catch {
-						// Silently ignore individual relay failures
+						// Ignore parse errors for other messages
 					}
 				}
-			}
+			});
 
-			// Check if we successfully published to at least one relay
-			if (publishedTo.length === 0) {
-				throw new Error("Failed to publish to any relay.");
-			}
+			ws.on("error", (error) => {
+				if (!resolved) {
+					resolved = true;
+					cleanup();
+					clearTimeout(timeoutId);
+					if (signal) {
+						signal.removeEventListener("abort", abortHandler);
+					}
+					reject(error);
+				}
+			});
 
-			return {
-				event: signedEvent,
-				publishedTo,
-			};
-		} catch (error) {
-			throw new Error(`Failed to post to Nostr: ${error instanceof Error ? error.message : String(error)}`);
-		}
-	}
-
-	/**
-	 * Extracts a URL from the response.
-	 * Since Nostr doesn't have centralized URLs, we'll return a nostr: URI
-	 * that represents the event.
-	 * @param {NostrPostResponse} response The response from the post method.
-	 * @returns {string} The nostr URI for the event.
-	 */
-	getUrlFromResponse(response) {
-		// Create a nostr: URI using the event ID
-		// This follows the NIP-21 standard for Nostr URIs
-		return `nostr:${response.event.id}`;
-	}
-
-	/**
-	 * Closes the pool and cleans up resources.
-	 */
-	close() {
-		if (this.#pool) {
-			this.#pool.close(this.#relays);
-		}
+			ws.on("close", () => {
+				if (!resolved) {
+					resolved = true;
+					clearTimeout(timeoutId);
+					if (signal) {
+						signal.removeEventListener("abort", abortHandler);
+					}
+					resolve(false); // Connection closed without confirmation
+				}
+			});
+		});
 	}
 }

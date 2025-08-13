@@ -95,11 +95,13 @@
   "dependencies": {
     "@humanwhocodes/env": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.8.0",
+    "@noble/curves": "^1.9.6",
+    "@noble/secp256k1": "^2.3.0",
+    "bech32": "^2.0.0",
     "dotenv": "^16.4.5",
-    "nostr-tools": "^2.16.2",
     "tlds": "^1.255.0",
     "twitter-api-v2": "^1.20.2",
-    "ws": "^8.18.0",
+    "ws": "^8.17.0",
     "zod": "^3.24.2"
   }
 }

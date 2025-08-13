@@ -62,7 +62,6 @@ export {
 export {
 	NostrStrategy,
 	NostrOptions,
-	NostrEvent,
 	NostrPostResponse,
 } from "./strategies/nostr.js";
 export { Client, ClientOptions, Strategy } from "./client.js";

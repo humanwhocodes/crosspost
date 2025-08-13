@@ -36,6 +36,24 @@
  */
 
 /**
+ * @typedef {Object} PostResult
+ * @property {string} id The ID of the post.
+ * @property {string} [url] The URL of the post.
+ * @property {string} text The original message text.
+ */
+
+/**
+ * @typedef {Object} NostrEvent
+ * @property {string} id 32-bytes lowercase hex-encoded sha256 of the serialized event data
+ * @property {string} pubkey 32-bytes lowercase hex-encoded public key of the event creator
+ * @property {number} created_at unix timestamp in seconds
+ * @property {number} kind event kind
+ * @property {Array<Array<string>>} tags list of tags
+ * @property {string} content arbitrary string
+ * @property {string} sig 64-bytes signature of the sha256 hash of the serialized event data, which is the same as the "id" field
+ */
+
+/**
  * @typedef {Object} Strategy
  * @property {string} name The display name of the strategy.
  * @property {string} id A unique ID for the strategy.
