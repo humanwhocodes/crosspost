@@ -64,6 +64,7 @@
     "mastodon",
     "discord",
     "linkedin",
+    "nostr",
     "social",
     "social media",
     "social networks",
@@ -78,6 +79,7 @@
     "@tsconfig/node16": "^16.1.1",
     "@types/mocha": "^10.0.3",
     "@types/node": "^22.16.3",
+    "@types/ws": "^8.5.13",
     "chai": "^5.1.2",
     "cross-env": "^7.0.3",
     "eslint": "^9.0.0",
@@ -94,8 +96,10 @@
     "@humanwhocodes/env": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.8.0",
     "dotenv": "^16.4.5",
+    "nostr-tools": "^2.16.2",
     "tlds": "^1.255.0",
     "twitter-api-v2": "^1.20.2",
+    "ws": "^8.18.0",
     "zod": "^3.24.2"
   }
 }

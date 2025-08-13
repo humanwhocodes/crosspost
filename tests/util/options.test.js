@@ -22,6 +22,20 @@ describe("validatePostOptions()", () => {
 	it("should not throw error when options is empty object", () => {
 		assert.doesNotThrow(() => validatePostOptions({}));
 	});
+
+	it("should throw error when options is not an object", () => {
+		assert.throws(
+			() => validatePostOptions("invalid"),
+			new TypeError("Expected an object."),
+		);
+	});
+
+	it("should throw error when options is an array", () => {
+		assert.throws(
+			() => validatePostOptions([]),
+			new TypeError("Expected an object."),
+		);
+	});
 	it("should throw error when images is not an array", () => {
 		assert.throws(
 			() => validatePostOptions({ images: {} }),

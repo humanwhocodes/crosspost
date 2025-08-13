@@ -24,6 +24,10 @@ export function validatePostOptions(options) {
 		return;
 	}
 
+	if (typeof options !== "object" || Array.isArray(options)) {
+		throw new TypeError("Expected an object.");
+	}
+
 	if (options.images && !Array.isArray(options.images)) {
 		throw new TypeError("images must be an array.");
 	}
