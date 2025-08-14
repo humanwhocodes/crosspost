@@ -844,12 +844,12 @@ describe("BlueskyStrategy", function () {
 								{
 									index: {
 										byteStart: 16,
-										byteEnd: 42, // Actual detected byte end from the test failure
+										byteEnd: 43, // 16 (prefix) + 27 (truncated URL) = 43
 									},
 									features: [
 										{
-											$type: "app.bsky.richtext.facet#link",
 											uri: longUrl, // Original URL preserved in facet
+											$type: "app.bsky.richtext.facet#link",
 										},
 									],
 								},
@@ -985,20 +985,20 @@ describe("BlueskyStrategy", function () {
 									},
 									features: [
 										{
-											$type: "app.bsky.richtext.facet#link",
 											uri: shortUrl,
+											$type: "app.bsky.richtext.facet#link",
 										},
 									],
 								},
 								{
 									index: {
 										byteStart: 37,
-										byteEnd: 63, // Long URL facet (truncated)
+										byteEnd: 64, // Long URL facet (37 + 27 = 64)
 									},
 									features: [
 										{
-											$type: "app.bsky.richtext.facet#link",
 											uri: longUrl, // Original URL preserved
+											$type: "app.bsky.richtext.facet#link",
 										},
 									],
 								},

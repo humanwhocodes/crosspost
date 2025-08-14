@@ -289,13 +289,13 @@ async function createSession(options, signal) {
 async function postMessage(options, session, message, postOptions) {
 	const url = getPostMessageUrl(options);
 	
-	// First, create a map of truncated URLs (without "...") to original URLs
+	// First, create a map of truncated URLs (without "...") to original URLs and their positions
 	const urlMapping = new Map();
 	let truncatedMessage = message.replace(/https?:\/\/[^\s]+/g, (originalUrl) => {
 		if (originalUrl.length > 27) {
-			const truncated = originalUrl.substring(0, 24) + "...";
-			// Map the URL without "..." since that's what facet detection will find
 			const truncatedWithoutDots = originalUrl.substring(0, 24);
+			const truncated = truncatedWithoutDots + "...";
+			// Map the URL without "..." since that's what facet detection will find
 			urlMapping.set(truncatedWithoutDots, originalUrl);
 			return truncated;
 		}
@@ -305,19 +305,34 @@ async function postMessage(options, session, message, postOptions) {
 	// Detect facets from the truncated message 
 	const rawFacets = detectFacets(truncatedMessage);
 	
-	// Update URL facets to point to original URLs
+	// Update URL facets to point to original URLs and fix byte positions for truncated URLs
 	const facetsWithOriginalUrls = rawFacets.map(facet => ({
 		...facet,
 		features: facet.features.map(feature => {
-			if (feature.$type === BLUESKY_URL_FACET && feature.uri) {
+			if (feature.$type === BLUESKY_URL_FACET && 'uri' in feature && feature.uri) {
 				// Check if this is a truncated URL and restore the original
 				const originalUrl = urlMapping.get(feature.uri);
 				if (originalUrl) {
-					return { ...feature, uri: originalUrl };
+					// For truncated URLs, the facet should span the full 27 characters (including "...")
+					// but the URI should point to the original URL
+					return { 
+						...feature, 
+						uri: originalUrl 
+					};
 				}
 			}
 			return feature;
-		})
+		}),
+		// Fix byte positions for truncated URLs
+		index: facet.features.some(feature => 
+			feature.$type === BLUESKY_URL_FACET && 
+			'uri' in feature && 
+			feature.uri && 
+			urlMapping.has(feature.uri)
+		) ? {
+			...facet.index,
+			byteEnd: facet.index.byteStart + 27  // Truncated URLs are always 27 chars
+		} : facet.index
 	}));
 	
 	// Resolve mention handles to DIDs in facets
@@ -446,12 +461,17 @@ export class BlueskyStrategy {
 
 	/**
 	 * Calculates the length of a message according to Bluesky's algorithm.
-	 * All Unicode characters are counted as is, including URLs at their full length.
+	 * URLs longer than 27 characters are counted as 27 characters (representing truncated length),
+	 * all other Unicode characters are counted as is.
 	 * @param {string} message The message to calculate the length of.
 	 * @returns {number} The calculated length of the message.
 	 */
 	calculateMessageLength(message) {
-		return [...message].length;
+		// Replace URLs with their truncated length (27 chars if longer, original if shorter)
+		const urlAdjusted = message.replace(/https?:\/\/[^\s]+/g, (url) => {
+			return url.length > 27 ? "x".repeat(27) : url;
+		});
+		return [...urlAdjusted].length;
 	}
 
 	/**
