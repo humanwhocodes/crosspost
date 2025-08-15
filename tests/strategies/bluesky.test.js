@@ -780,13 +780,243 @@ describe("BlueskyStrategy", function () {
 				msg.length,
 			);
 		});
-		it("should count URLs as 27 characters", () => {
+		it("should count URLs as their actual length", () => {
 			const msg =
 				"Check this out: https://example.com/abcde and http://foo.bar";
-			const urlCount = 2;
-			const expected =
-				msg.replace(/https?:\/\/[^\s]+/g, "").length + urlCount * 27;
+			const expected = [...msg].length;
 			assert.strictEqual(strategy.calculateMessageLength(msg), expected);
+		});
+	});
+
+	describe("URL truncation in posts", () => {
+		let strategy;
+
+		beforeEach(function () {
+			strategy = new BlueskyStrategy(options);
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(() => {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should truncate long URLs to 27 characters in posted text while preserving original URLs in facets", async function () {
+			const longUrl = "https://example.com/very/long/path/that/should/be/truncated/because/it/exceeds/the/limit";
+			const text = `Check this out: ${longUrl}`;
+			const expectedTruncatedUrl = longUrl.substring(0, 24) + "...";
+			const expectedTruncatedText = `Check this out: ${expectedTruncatedUrl}`;
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text: expectedTruncatedText,
+							facets: [
+								{
+									index: {
+										byteStart: 16,
+										byteEnd: 43, // 16 (prefix) + 27 (truncated URL) = 43
+									},
+									features: [
+										{
+											uri: longUrl, // Original URL preserved in facet
+											$type: "app.bsky.richtext.facet#link",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should not truncate short URLs", async function () {
+			const shortUrl = "https://example.com";
+			const text = `Check this out: ${shortUrl}`;
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text: text, // Original text unchanged
+							facets: [
+								{
+									index: {
+										byteStart: 16,
+										byteEnd: 35, // 16 + 19 (short URL length)
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: shortUrl,
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should handle multiple URLs with mixed truncation", async function () {
+			const shortUrl = "https://example.com";
+			const longUrl = "https://example.org/very/long/path/that/should/be/truncated/because/it/exceeds/the/limit";
+			const text = `Short: ${shortUrl} and long: ${longUrl}`;
+			const expectedTruncatedUrl = longUrl.substring(0, 24) + "...";
+			const expectedText = `Short: ${shortUrl} and long: ${expectedTruncatedUrl}`;
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text: expectedText,
+							facets: [
+								{
+									index: {
+										byteStart: 7,
+										byteEnd: 26, // Short URL facet
+									},
+									features: [
+										{
+											uri: shortUrl,
+											$type: "app.bsky.richtext.facet#link",
+										},
+									],
+								},
+								{
+									index: {
+										byteStart: 37,
+										byteEnd: 64, // Long URL facet (37 + 27 = 64)
+									},
+									features: [
+										{
+											uri: longUrl, // Original URL preserved
+											$type: "app.bsky.richtext.facet#link",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
 		});
 	});
 });

@@ -213,10 +213,17 @@ async function resolveMentionFacets(options, facets, signal) {
 
 		for (const feature of facet.features) {
 			// Check if this is a mention facet
-			if (feature.$type === "app.bsky.richtext.facet#mention" && feature.did) {
+			if (
+				feature.$type === "app.bsky.richtext.facet#mention" &&
+				feature.did
+			) {
 				try {
 					// Resolve the handle to a DID
-					const did = await resolveHandle(options, feature.did, signal);
+					const did = await resolveHandle(
+						options,
+						feature.did,
+						signal,
+					);
 					processedFeatures.push({
 						...feature,
 						did,
@@ -288,10 +295,16 @@ async function createSession(options, signal) {
  */
 async function postMessage(options, session, message, postOptions) {
 	const url = getPostMessageUrl(options);
-	const rawFacets = detectFacets(message);
-	
+
+	// Detect facets from the truncated message; detectFacets now returns { facets, text }
+	const { facets: rawFacets, text: truncatedMessage } = detectFacets(message);
+
 	// Resolve mention handles to DIDs in facets
-	const facets = await resolveMentionFacets(options, rawFacets, postOptions?.signal);
+	const facets = await resolveMentionFacets(
+		options,
+		rawFacets,
+		postOptions?.signal,
+	);
 
 	/** @type {BlueskyPostBody} */
 	const body = {
@@ -299,7 +312,7 @@ async function postMessage(options, session, message, postOptions) {
 		collection: "app.bsky.feed.post",
 		record: {
 			$type: "app.bsky.feed.post",
-			text: message,
+			text: truncatedMessage,
 			facets,
 			createdAt: new Date().toISOString(),
 		},
@@ -416,16 +429,16 @@ export class BlueskyStrategy {
 
 	/**
 	 * Calculates the length of a message according to Bluesky's algorithm.
-	 * All URLs are counted as 27 characters, all other Unicode characters as is.
+	 * URLs longer than 27 characters are counted as 27 characters (representing truncated length),
+	 * all other Unicode characters are counted as is.
 	 * @param {string} message The message to calculate the length of.
 	 * @returns {number} The calculated length of the message.
 	 */
 	calculateMessageLength(message) {
-		// Replace URLs with 27 characters (Bluesky's t.co-like length)
-		const urlAdjusted = message.replace(
-			/https?:\/\/[^\s]+/g,
-			"x".repeat(27),
-		);
+		// Replace URLs with their truncated length (27 chars if longer, original if shorter)
+		const urlAdjusted = message.replace(/https?:\/\/[^\s]+/g, url => {
+			return url.length > 27 ? "x".repeat(27) : url;
+		});
 		return [...urlAdjusted].length;
 	}
 
