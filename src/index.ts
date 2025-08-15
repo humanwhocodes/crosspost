@@ -59,4 +59,11 @@ export {
 	SlackUploadResponse,
 	SlackFile,
 } from "./strategies/slack.js";
+export {
+	FacebookStrategy,
+	FacebookOptions,
+	FacebookPostResponse,
+	FacebookPhotoResponse,
+	FacebookErrorResponse,
+} from "./strategies/facebook.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
