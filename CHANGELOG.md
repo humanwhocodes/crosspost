@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.16.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.15.1...crosspost-v0.16.0) (2025-08-15)
+
+
+### Features
+
+* Implement Bluesky URL truncation ([#131](https://github.com/humanwhocodes/crosspost/issues/131)) ([0653e27](https://github.com/humanwhocodes/crosspost/commit/0653e273772a3737f9f554f9d5ce0736a2cdd77f))
+
+
+### Bug Fixes
+
+* **deps:** update dependency dotenv to v16.6.1 ([#122](https://github.com/humanwhocodes/crosspost/issues/122)) ([44015ea](https://github.com/humanwhocodes/crosspost/commit/44015ea6f365dac7f3f0572fd489c81bb5867ff9))
+* **deps:** update dependency tlds to v1.259.0 ([#123](https://github.com/humanwhocodes/crosspost/issues/123)) ([8ee655c](https://github.com/humanwhocodes/crosspost/commit/8ee655c91342765c53c3e96e6052636f810c1dc0))
+
 ## [0.15.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.15.0...crosspost-v0.15.1) (2025-07-21)
 
 

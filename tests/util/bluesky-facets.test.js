@@ -14,6 +14,7 @@ import {
 	BLUESKY_URL_FACET,
 	BLUESKY_TAG_FACET,
 	BLUESKY_MENTION_FACET,
+	truncateUrl,
 } from "../../src/util/bluesky-facets.js";
 import assert from "node:assert";
 
@@ -71,7 +72,8 @@ describe("detectFacets()", () => {
 		].forEach(uri => {
 			it("should detect a URL all alone", () => {
 				const text = `${uri}`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_URL_FACET,
@@ -79,12 +81,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, uri);
+				assertByteLocation(truncatedText, result, truncateUrl(uri));
 			});
 
 			it("should detect a URL at the start of a string", () => {
 				const text = `${uri} is a test.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_URL_FACET,
@@ -92,12 +95,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, uri);
+				assertByteLocation(truncatedText, result, truncateUrl(uri));
 			});
 
 			it("should detect a URL in the middle of a string", () => {
 				const text = `This is a test ${uri}, of a URL.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_URL_FACET,
@@ -105,12 +109,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, uri);
+				assertByteLocation(truncatedText, result, truncateUrl(uri));
 			});
 
 			it("should detect a URL at the end of a string", () => {
 				const text = `This is a test of a URL ${uri}.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_URL_FACET,
@@ -118,8 +123,61 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, uri);
+				assertByteLocation(truncatedText, result, truncateUrl(uri));
 			});
+		});
+
+		it("should return truncated text and preserve original URI in facets", () => {
+			const longUrl =
+				"https://example.com/some/really/long/path/that/exceeds/twenty-seven-chars";
+			const { facets, text: truncatedText } = detectFacets(longUrl);
+
+			// truncated display should be exactly 27 characters with trailing ...
+			const displayed = truncatedText;
+			assert.strictEqual(displayed.length, 27);
+			assert.strictEqual(displayed.slice(-3), "...");
+
+			// facet should contain the original full URI with protocol
+			assert.strictEqual(facets[0].features[0].uri, longUrl);
+		});
+
+		it("should handle two long URLs with surrounding text", () => {
+			const url1 =
+				"https://example.com/some/really/long/path/that/exceeds/twenty-seven-chars-1";
+			const url2 =
+				"https://example.org/another/really/long/path/that/exceeds/twenty-seven-chars-2";
+			const text = `Start text ${url1} middle text ${url2} end text`;
+
+			const { facets, text: truncatedText } = detectFacets(text);
+
+			// truncatedText should contain two truncated URL displays
+			const occurrences = (truncatedText.match(/\.\.\./g) || []).length;
+			assert.strictEqual(occurrences, 2);
+
+			// Each facet should preserve the original URI
+			const uriFeatures = facets.filter(
+				f => f.features[0].$type === BLUESKY_URL_FACET,
+			);
+			assert.strictEqual(uriFeatures.length, 2);
+			assert.strictEqual(uriFeatures[0].features[0].uri, url1);
+			assert.strictEqual(uriFeatures[1].features[0].uri, url2);
+
+			// full truncated text should match expected constructed with truncateUrl
+			const expected = `Start text ${truncateUrl(url1)} middle text ${truncateUrl(url2)} end text`;
+			assert.strictEqual(truncatedText, expected);
+
+			// Byte ranges should decode to the displayed (possibly truncated)
+			// URL substrings in the posted/truncated text.
+			assertByteLocation(
+				truncatedText,
+				uriFeatures[0],
+				truncateUrl(url1),
+			);
+			assertByteLocation(
+				truncatedText,
+				uriFeatures[1],
+				truncateUrl(url2),
+			);
 		});
 	});
 
@@ -134,7 +192,8 @@ describe("detectFacets()", () => {
 		].forEach(tag => {
 			it("should detect a hashtag all alone", () => {
 				const text = `#${tag}`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_TAG_FACET,
@@ -142,12 +201,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `#${tag}`);
+				assertByteLocation(truncatedText, result, `#${tag}`);
 			});
 
 			it("should detect a hashtag at the start of a string", () => {
 				const text = `#${tag} is a test.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_TAG_FACET,
@@ -155,12 +215,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `#${tag}`);
+				assertByteLocation(truncatedText, result, `#${tag}`);
 			});
 
 			it("should detect a hashtag in the middle of a string", () => {
 				const text = `This is a test #${tag}, of a hashtag.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_TAG_FACET,
@@ -168,12 +229,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `#${tag}`);
+				assertByteLocation(truncatedText, result, `#${tag}`);
 			});
 
 			it("should detect a hashtag at the end of a string", () => {
 				const text = `This is a test of a hashtag #${tag}.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_TAG_FACET,
@@ -181,14 +243,14 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `#${tag}`);
+				assertByteLocation(truncatedText, result, `#${tag}`);
 			});
 		});
 
 		it("should detect both URLs and hashtags in the same text", () => {
 			const text =
 				"Check out https://example.com for #javascript resources!";
-			const results = detectFacets(text);
+			const { facets: results, text: truncatedText } = detectFacets(text);
 
 			// Should have two facets
 			assert.strictEqual(results.length, 2);
@@ -200,7 +262,11 @@ describe("detectFacets()", () => {
 					uri: "https://example.com",
 				},
 			]);
-			assertByteLocation(text, results[0], "https://example.com");
+			assertByteLocation(
+				truncatedText,
+				results[0],
+				truncateUrl("https://example.com"),
+			);
 
 			// Hashtag facet
 			assert.deepEqual(results[1].features, [
@@ -209,12 +275,12 @@ describe("detectFacets()", () => {
 					tag: "javascript",
 				},
 			]);
-			assertByteLocation(text, results[1], "#javascript");
+			assertByteLocation(truncatedText, results[1], "#javascript");
 		});
 
 		it("should not detect invalid hashtags", () => {
 			const text = "#123 #. ## # #!";
-			const results = detectFacets(text);
+			const { facets: results } = detectFacets(text);
 			assert.strictEqual(results.length, 0);
 		});
 	});
@@ -230,7 +296,8 @@ describe("detectFacets()", () => {
 		].forEach(handle => {
 			it("should detect a mention all alone", () => {
 				const text = `@${handle}`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_MENTION_FACET,
@@ -238,12 +305,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `@${handle}`);
+				assertByteLocation(truncatedText, result, `@${handle}`);
 			});
 
 			it("should detect a mention at the start of a string", () => {
 				const text = `@${handle} is a test.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_MENTION_FACET,
@@ -251,12 +319,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `@${handle}`);
+				assertByteLocation(truncatedText, result, `@${handle}`);
 			});
 
 			it("should detect a mention in the middle of a string", () => {
 				const text = `This is a test @${handle}, of a mention.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_MENTION_FACET,
@@ -264,12 +333,13 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `@${handle}`);
+				assertByteLocation(truncatedText, result, `@${handle}`);
 			});
 
 			it("should detect a mention at the end of a string", () => {
 				const text = `This is a test of a mention @${handle}.`;
-				const result = detectFacets(text)[0];
+				const { facets, text: truncatedText } = detectFacets(text);
+				const result = facets[0];
 				assert.deepEqual(result.features, [
 					{
 						$type: BLUESKY_MENTION_FACET,
@@ -277,13 +347,14 @@ describe("detectFacets()", () => {
 					},
 				]);
 
-				assertByteLocation(text, result, `@${handle}`);
+				assertByteLocation(truncatedText, result, `@${handle}`);
 			});
 		});
 
 		it("should detect mentions in parentheses", () => {
 			const text = "Hello (@username) how are you?";
-			const result = detectFacets(text)[0];
+			const { facets, text: truncatedText } = detectFacets(text);
+			const result = facets[0];
 			assert.deepEqual(result.features, [
 				{
 					$type: BLUESKY_MENTION_FACET,
@@ -291,12 +362,12 @@ describe("detectFacets()", () => {
 				},
 			]);
 
-			assertByteLocation(text, result, "@username");
+			assertByteLocation(truncatedText, result, "@username");
 		});
 
 		it("should detect multiple mentions in the same text", () => {
 			const text = "Hello @alice and @bob, how are you?";
-			const results = detectFacets(text);
+			const { facets: results, text: truncatedText } = detectFacets(text);
 
 			// Should have two facets
 			assert.strictEqual(results.length, 2);
@@ -308,7 +379,7 @@ describe("detectFacets()", () => {
 					did: "alice",
 				},
 			]);
-			assertByteLocation(text, results[0], "@alice");
+			assertByteLocation(truncatedText, results[0], "@alice");
 
 			// Second mention
 			assert.deepEqual(results[1].features, [
@@ -317,13 +388,13 @@ describe("detectFacets()", () => {
 					did: "bob",
 				},
 			]);
-			assertByteLocation(text, results[1], "@bob");
+			assertByteLocation(truncatedText, results[1], "@bob");
 		});
 
 		it("should detect mentions, URLs and hashtags in the same text", () => {
 			const text =
 				"Check out https://example.com and mention @user about #javascript!";
-			const results = detectFacets(text);
+			const { facets: results, text: truncatedText } = detectFacets(text);
 
 			// Should have three facets
 			assert.strictEqual(results.length, 3);
@@ -335,7 +406,11 @@ describe("detectFacets()", () => {
 					uri: "https://example.com",
 				},
 			]);
-			assertByteLocation(text, results[0], "https://example.com");
+			assertByteLocation(
+				truncatedText,
+				results[0],
+				truncateUrl("https://example.com"),
+			);
 
 			// Hashtag facet
 			assert.deepEqual(results[1].features, [
@@ -344,7 +419,7 @@ describe("detectFacets()", () => {
 					tag: "javascript",
 				},
 			]);
-			assertByteLocation(text, results[1], "#javascript");
+			assertByteLocation(truncatedText, results[1], "#javascript");
 
 			// Mention facet
 			assert.deepEqual(results[2].features, [
@@ -353,18 +428,18 @@ describe("detectFacets()", () => {
 					did: "user",
 				},
 			]);
-			assertByteLocation(text, results[2], "@user");
+			assertByteLocation(truncatedText, results[2], "@user");
 		});
 
 		it("should not detect mentions without @ symbol", () => {
 			const text = "Hello username how are you?";
-			const results = detectFacets(text);
+			const { facets: results } = detectFacets(text);
 			assert.strictEqual(results.length, 0);
 		});
 
 		it("should not detect invalid mentions", () => {
 			const text = "@ @123 @. @@ @ @!";
-			const results = detectFacets(text);
+			const { facets: results } = detectFacets(text);
 			assert.strictEqual(results.length, 0);
 		});
 	});

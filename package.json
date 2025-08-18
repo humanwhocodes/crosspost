@@ -1,6 +1,6 @@
 {
   "name": "@humanwhocodes/crosspost",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "description": "A utility to post across multiple social networks.",
   "type": "module",
   "main": "dist/index.js",
@@ -78,7 +78,7 @@
     "@eslint/js": "^9.0.0",
     "@tsconfig/node16": "^16.1.1",
     "@types/mocha": "^10.0.3",
-    "@types/node": "^22.16.3",
+    "@types/node": "^22.17.1",
     "@types/ws": "^8.5.13",
     "chai": "^5.1.2",
     "cross-env": "^7.0.3",

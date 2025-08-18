@@ -67,7 +67,8 @@ export const BLUESKY_MENTION_FACET = "app.bsky.richtext.facet#mention";
  */
 
 // const MENTION_REGEX = /(^|\s|\()(@)([a-zA-Z0-9.-]+)(\b)/g
-const MENTION_REGEX = /(^|\s|\()(@)([a-zA-Z][a-zA-Z0-9.-]*[a-zA-Z0-9]|[a-zA-Z])(\b)/g;
+const MENTION_REGEX =
+	/(^|\s|\()(@)([a-zA-Z][a-zA-Z0-9.-]*[a-zA-Z0-9]|[a-zA-Z])(\b)/g;
 const URL_REGEX =
 	/(^|\s|\()((https?:\/\/[\S]+)|((?<domain>[a-z][a-z0-9]*(\.[a-z0-9]+)+)[\S]*))/gim;
 const TRAILING_PUNCTUATION_REGEX = /\p{P}+$/gu;
@@ -196,14 +197,42 @@ function getByteOffsets(text, start, end) {
 }
 
 /**
- * Detects all URLs in the given text and returns an array noting the byte location
- * of the URLs in the text.
+ * Truncates a URL to 27 characters, ensuring the last three characters are '...'.
+ * If the provided URL is 27 characters or shorter, it's returned unchanged.
+ * @param {string} url The URL to truncate.
+ * @returns {string} The truncated URL (27 chars) or the original if shorter.
+ */
+export function truncateUrl(url) {
+	const MAX = 27;
+	const ELLIPSIS = "...";
+
+	if (url.length <= MAX) {
+		return url;
+	}
+
+	// Keep total length at MAX, reserving 3 chars for ellipsis
+	const keep = MAX - ELLIPSIS.length;
+	return url.slice(0, keep) + ELLIPSIS;
+}
+
+/**
+ * Detects all URLs in the given text and returns an object containing the
+ * detected URIs (with byte ranges based on the original text) and a new text
+ * where each URL has been replaced with a truncated representation.
  * @param {string} text The text to search.
- * @returns {URIDetails[]} An array of URIFacet objects.
+ * @returns {{ uris: URIDetails[], text: string }} An object with `uris` and updated `text`.
  */
 function detectURLs(text) {
-	const matches = [];
+	// Reset regex state in case it's been used elsewhere
+	URL_REGEX.lastIndex = 0;
+
+	const uris = [];
 	let match;
+
+	// Build newText incrementally as we process matches so indices remain
+	// correct and truncation uses the original displayed substring.
+	let newText = "";
+	let lastIndex = 0;
 
 	while ((match = URL_REGEX.exec(text)) !== null) {
 		const original = match[2];
@@ -217,11 +246,11 @@ function detectURLs(text) {
 				continue;
 			}
 
-			// we made it here so let's add the protocol before moving on
+			// we made it here so let's add the protocol for the stored URI
 			uri = `https://${uri}`;
 		}
 
-		// now calculate the location of the URL
+		// now calculate the location of the URL (character offsets)
 		let start = match.index;
 
 		// strip any leading whitespace from overall match
@@ -231,19 +260,50 @@ function detectURLs(text) {
 
 		let end = start + original.length;
 
-		// strip any ending punctation
+		// strip any ending punctation for the stored URI. The byte range
+		// will be adjusted later based on the actual matched trailing
+		// punctuation length to avoid double-subtraction.
 		if (TRAILING_PUNCTUATION_REGEX.test(uri)) {
 			uri = uri.replace(TRAILING_PUNCTUATION_REGEX, "");
-			end -= 1;
 		}
 
-		matches.push({
+		// append the segment before this URL
+		newText += text.slice(lastIndex, start);
+
+		// For display/truncation, use the original substring from the
+		// original text but exclude any trailing punctuation that was
+		// removed from the stored URI. This ensures the facet range does
+		// not include punctuation characters.
+		const trailingMatch = match[2].match(TRAILING_PUNCTUATION_REGEX);
+		const trailingLength = trailingMatch ? trailingMatch[0].length : 0;
+
+		const displayText = text.slice(start, end - trailingLength);
+
+		// Determine the displayed/truncated version that will be inserted
+		// into the new text and compute its byte offsets relative to the
+		// truncated text (newText + display).
+		const display = truncateUrl(displayText);
+
+		const displayStartByte = encoder.encode(newText).byteLength;
+		const displayEndByte = encoder.encode(newText + display).byteLength;
+
+		uris.push({
 			uri,
-			byteRange: getByteOffsets(text, start, end),
+			byteRange: {
+				byteStart: displayStartByte,
+				byteEnd: displayEndByte,
+			},
 		});
+
+		newText += display;
+
+		lastIndex = end;
 	}
 
-	return matches;
+	// append any remaining text after the last match
+	newText += text.slice(lastIndex);
+
+	return { uris, text: newText };
 }
 
 /**
@@ -253,6 +313,9 @@ function detectURLs(text) {
  * @returns {TagDetails[]} An array of TagDetails objects.
  */
 function detectTags(text) {
+	// Reset regex state in case it's been used elsewhere
+	TAG_REGEX.lastIndex = 0;
+
 	const matches = [];
 	let match;
 
@@ -297,6 +360,9 @@ function detectTags(text) {
  * @returns {MentionDetails[]} An array of MentionDetails objects.
  */
 function detectMentions(text) {
+	// Reset regex state in case it's been used elsewhere
+	MENTION_REGEX.lastIndex = 0;
+
 	const matches = [];
 	let match;
 
@@ -339,22 +405,32 @@ function detectMentions(text) {
 
 /**
  * Detects rich text facets in the given text.
+ * This function first detects URLs and replaces them with truncated
+ * representations for further detection of tags and mentions. It returns an
+ * object containing the detected facets (with byte ranges calculated against
+ * the original text) and the updated text where URLs are truncated.
  * @param {string} text The text to search.
- * @returns {Array<BlueSkyFacet>} An array of BlueSkyFacet objects.
+ * @returns {{facets: Array<BlueSkyFacet>, text: string}} An object with `facets` (array of BlueSkyFacet)
+ * and `text` (the text with URLs replaced by truncated versions).
  */
 export function detectFacets(text) {
-	return [
-		...detectURLs(text).map(url => ({
+	// detect URLs first and get the text with truncated URLs for further detection
+	const { uris, text: truncatedText } = detectURLs(text);
+
+	const facets = [
+		...uris.map(url => ({
 			index: url.byteRange,
 			features: [new BlueSkyURIFacetFeature(url.uri)],
 		})),
-		...detectTags(text).map(tag => ({
+		...detectTags(truncatedText).map(tag => ({
 			index: tag.byteRange,
 			features: [new BlueSkyTagFacetFeature(tag.tag)],
 		})),
-		...detectMentions(text).map(mention => ({
+		...detectMentions(truncatedText).map(mention => ({
 			index: mention.byteRange,
 			features: [new BlueSkyMentionFacetFeature(mention.handle)],
 		})),
 	];
+
+	return { facets, text: truncatedText };
 }
