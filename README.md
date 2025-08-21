@@ -30,6 +30,7 @@ The API is split into two parts:
     - `DiscordWebhookStrategy`
     - `TelegramStrategy`
     - `DevtoStrategy`
+    - `NostrStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -44,6 +45,7 @@ import {
 	DiscordWebhookStrategy,
 	TelegramStrategy,
 	DevtoStrategy,
+	NostrStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -94,6 +96,12 @@ const devto = new DevtoStrategy({
 	apiKey: "your-api-key",
 });
 
+// Note: Private key (nsec or hex) and relays required
+const nostr = new NostrStrategy({
+	privateKey: "your-private-key", // nsec... or hex format
+	relays: ["wss://relay.damus.io", "wss://nos.lol"], // array of relay URLs
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -105,10 +113,12 @@ const client = new Client({
 		discordWebhook,
 		telegram,
 		devto,
+		nostr,
 	],
 });
 
 // post to all services with up to 4 images (must be PNG, JPEG, or GIF)
+// Note: Nostr doesn't support direct image uploads - images will be ignored for Nostr posts
 await client.post("Hello world!", {
 	images: [
 		{
@@ -174,6 +184,7 @@ Usage: crosspost [options] ["Message to post."]
 --discord-webhook  Post to Discord via webhook.
 --devto         Post to dev.to.
 --telegram      Post to Telegram.
+--nostr, -n     Post to Nostr.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -232,6 +243,9 @@ Each strategy requires a set of environment variables in order to execute:
 - Slack
     - `SLACK_TOKEN`
     - `SLACK_CHANNEL`
+- Nostr
+    - `NOSTR_PRIVATE_KEY`
+    - `NOSTR_RELAYS`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -240,15 +254,15 @@ Tip: You can load environment variables from a `.env` file by setting the enviro
 Crosspost can be run as an MCP (Model Context Protocol) server, which allows it to be used by AI agents:
 
 ```shell
-npx @humanwhocodes/crosspost --mcp -t -m -b
+npx @humanwhocodes/crosspost --mcp -t -m -b -n
 ```
 
-This starts an MCP server that can post to Twitter, Mastodon, and Bluesky. The server provides prompts and tools for posting to all services or individual services. Only the services indicated by the flags are available via the server.
+This starts an MCP server that can post to Twitter, Mastodon, Bluesky, and Nostr. The server provides prompts and tools for posting to all services or individual services. Only the services indicated by the flags are available via the server.
 
 To run the MCP server through the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for debugging purposes, run the following command:
 
 ```shell
-npx run mcp:inspect -- -t -m -b
+npx run mcp:inspect -- -t -m -b -n
 ```
 
 #### Using the MCP Server with Claude Desktop
@@ -267,18 +281,20 @@ Claude will then create a `claude_desktop_config.json` file. Open it and add the
 	"mcpServers": {
 		"crosspost": {
 			"command": "npx",
-			"args": ["@humanwhocodes/crosspost", "-m", "-l", "--mcp"],
+			"args": ["@humanwhocodes/crosspost", "-m", "-l", "-n", "--mcp"],
 			"env": {
 				"LINKEDIN_ACCESS_TOKEN": "abcdefghijklmnop",
 				"MASTODON_ACCESS_TOKEN": "abcdefghijklmnop",
-				"MASTODON_HOST": "mastodon.social"
+				"MASTODON_HOST": "mastodon.social",
+				"NOSTR_PRIVATE_KEY": "nsec1...",
+				"NOSTR_RELAYS": "wss://relay.damus.io,wss://nos.lol"
 			}
 		}
 	}
 }
 ```
 
-This example enables Mastodon and LinkedIn so the `env` key contains the environment variables necessary to post to those services. You can customize the services by passing different command line arguments as you would using the CLI.
+This example enables Mastodon, LinkedIn, and Nostr so the `env` key contains the environment variables necessary to post to those services. You can customize the services by passing different command line arguments as you would using the CLI.
 
 If you'd prefer not to put your environment variables directly into the JSON file, you can create a [`.env` file](https://www.npmjs.com/package/dotenv) and use the `CROSSPOST_DOTENV` environment variable to point to it:
 
@@ -287,7 +303,7 @@ If you'd prefer not to put your environment variables directly into the JSON fil
 	"mcpServers": {
 		"crosspost": {
 			"command": "npx",
-			"args": ["@humanwhocodes/crosspost", "-m", "-l", "-t", "--mcp"],
+			"args": ["@humanwhocodes/crosspost", "-m", "-l", "-t", "-n", "--mcp"],
 			"env": {
 				"CROSSPOST_DOTENV": "/usr/nzakas/settings/.env"
 			}
@@ -301,6 +317,7 @@ Here are some prompts you can try:
 - "Crosspost this message: Hello world!" (posts to all available services)
 - "Post this to Twitter: Hello X!" (posts just to Twitter)
 - "Post this to Mastodon and Bluesky: Hello friends!" (posts to Mastodon and Bluesky)
+- "Post this to Nostr: Hello decentralized world!" (posts just to Nostr)
 
 ## Setting up Strategies
 
@@ -471,6 +488,42 @@ Use the bot token as the `SLACK_TOKEN` environment variable and the channel ID o
 **Note:** The bot must be added to the channel you want to post to. You can do this by mentioning the bot in the channel (e.g., `@your-bot-name`) or by using the `/invite @your-bot-name` command.
 
 **Note:** Your bot can only send messages to users who have previously messaged the bot or added it to a group.
+
+### Nostr
+
+To enable posting to Nostr, you'll need a private key and a list of relays:
+
+1. **Private Key**: You can use either:
+   - An nsec-formatted private key (starts with `nsec1`)
+   - A hex-formatted private key (64-character hex string)
+   
+   To generate a new key pair, you can use any Nostr client or library, or generate one programmatically:
+   ```js
+   import { generateSecretKey } from "nostr-tools/pure";
+   import * as nip19 from "nostr-tools/nip19";
+   
+   const secretKey = generateSecretKey();
+   const nsecKey = nip19.nsecEncode(secretKey);
+   console.log("Your nsec private key:", nsecKey);
+   ```
+
+2. **Relays**: You'll need a list of Nostr relays to publish your notes to. Popular public relays include:
+   - `wss://relay.damus.io`
+   - `wss://nos.lol`
+   - `wss://relay.nostr.band`
+   - `wss://nostr.wine`
+   - `wss://relay.primal.net`
+
+3. **Environment Variables**:
+   - `NOSTR_PRIVATE_KEY`: Your private key (nsec or hex format)
+   - `NOSTR_RELAYS`: Comma-separated list of relay URLs
+
+**Important Security Notes:**
+- Keep your private key secure and never share it publicly
+- Consider using a dedicated key pair for automated posting
+- The private key gives full control over the Nostr identity
+
+**Note:** Nostr doesn't support direct image uploads like other platforms. If you want to include images, upload them to an external service (like a CDN or image hosting service) and include the URLs in your message text.
 
 ## License
 
