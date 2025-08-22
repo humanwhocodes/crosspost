@@ -70,20 +70,12 @@ const options = {
 	image: { type: stringType },
 	"image-alt": { type: stringType },
 	help: { type: booleanType, short: "h" },
-	version: { type: booleanType, short: "v" },
 };
 
 const { values: flags, positionals } = parseArgs({
 	options,
 	allowPositionals: true,
 });
-
-if (flags.version) {
-	const packagePath = new URL("../package.json", import.meta.url);
-	const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-	console.log(packageJson.version);
-	process.exit(0);
-}
 
 if (flags.mcp && flags.file) {
 	console.error("Error: --file cannot be used with --mcp");
@@ -119,7 +111,6 @@ if (
 	console.log("--image		The image file to upload with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
 	console.log("--help, -h	Show this message.");
-	console.log("--version, -v	Show version number.");
 	process.exit(1);
 }
 
