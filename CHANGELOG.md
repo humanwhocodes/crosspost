@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.16.0...crosspost-v0.17.0) (2025-08-22)
+
+
+### Features
+
+* Add -v/--version flags to CLI ([#137](https://github.com/humanwhocodes/crosspost/issues/137)) ([798ebc4](https://github.com/humanwhocodes/crosspost/commit/798ebc48791856d8dcbd21a1f5316af10d818986))
+
+
+### Bug Fixes
+
+* **deps:** update dependency dotenv to v17 ([#126](https://github.com/humanwhocodes/crosspost/issues/126)) ([e84a6bd](https://github.com/humanwhocodes/crosspost/commit/e84a6bddd9e8d0393b22b7ab86c8d4e35ede66de))
+
 ## [0.16.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.15.1...crosspost-v0.16.0) (2025-08-15)
 
 
