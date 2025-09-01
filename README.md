@@ -30,6 +30,7 @@ The API is split into two parts:
     - `DiscordWebhookStrategy`
     - `TelegramStrategy`
     - `DevtoStrategy`
+    - `NostrStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -44,6 +45,7 @@ import {
 	DiscordWebhookStrategy,
 	TelegramStrategy,
 	DevtoStrategy,
+	NostrStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -94,6 +96,12 @@ const devto = new DevtoStrategy({
 	apiKey: "your-api-key",
 });
 
+// Note: Private key and relays required
+const nostr = new NostrStrategy({
+	privateKey: "your-private-key", // hex or bech32 format
+	relays: ["wss://relay.example.com", "wss://relay2.example.com"],
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -105,6 +113,7 @@ const client = new Client({
 		discordWebhook,
 		telegram,
 		devto,
+		nostr,
 	],
 });
 
@@ -232,6 +241,9 @@ Each strategy requires a set of environment variables in order to execute:
 - Slack
     - `SLACK_TOKEN`
     - `SLACK_CHANNEL`
+- Nostr
+    - `NOSTR_PRIVATE_KEY`
+    - `NOSTR_RELAYS`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -471,6 +483,27 @@ Use the bot token as the `SLACK_TOKEN` environment variable and the channel ID o
 **Note:** The bot must be added to the channel you want to post to. You can do this by mentioning the bot in the channel (e.g., `@your-bot-name`) or by using the `/invite @your-bot-name` command.
 
 **Note:** Your bot can only send messages to users who have previously messaged the bot or added it to a group.
+
+### Nostr
+
+To enable posting to Nostr relays:
+
+For the `NOSTR_PRIVATE_KEY` (required):
+
+1. Generate a new private key or use an existing one.
+2. The private key can be in hex format (64 characters) or bech32 format starting with `nsec1`.
+3. Use this key as the `NOSTR_PRIVATE_KEY` environment variable.
+
+For the `NOSTR_RELAYS` (required):
+
+1. Choose one or more Nostr relays to post to.
+2. Relay URLs should use WebSocket protocol (`wss://` for secure or `ws://` for insecure).
+3. Provide multiple relays separated by commas (e.g., `wss://relay.example.com,wss://relay2.example.com`).
+4. Use the relay URLs as the `NOSTR_RELAYS` environment variable.
+
+**Note:** Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. Images are not supported in Nostr text notes.
+
+**Security:** Keep your private key secure and never share it. Consider using a dedicated key for crossposting rather than your main Nostr identity key.
 
 ## License
 
