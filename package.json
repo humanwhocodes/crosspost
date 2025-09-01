@@ -84,6 +84,7 @@
     "lint-staged": "15.4.3",
     "mentoss": "^0.9.2",
     "mocha": "^11.0.0",
+    "msw": "^2.11.1",
     "nock": "^13.5.5",
     "prettier": "^3.3.3",
     "sinon": "^19.0.2",
@@ -93,6 +94,8 @@
   "dependencies": {
     "@humanwhocodes/env": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.8.0",
+    "@noble/secp256k1": "^3.0.0",
+    "bech32": "^2.0.0",
     "dotenv": "^17.0.0",
     "tlds": "^1.255.0",
     "twitter-api-v2": "^1.20.2",
