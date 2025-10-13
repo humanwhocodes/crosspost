@@ -492,14 +492,11 @@ For the `NOSTR_PRIVATE_KEY` (required):
 
 1. Generate a new private key or use an existing one.
 2. The private key can be in hex format (64 characters) or bech32 format starting with `nsec1`.
-3. Use this key as the `NOSTR_PRIVATE_KEY` environment variable.
 
 For the `NOSTR_RELAYS` (required):
 
-1. Choose one or more Nostr relays to post to.
-2. Relay URLs should use WebSocket protocol (`wss://` for secure or `ws://` for insecure).
-3. Provide multiple relays separated by commas (e.g., `wss://relay.example.com,wss://relay2.example.com`).
-4. Use the relay URLs as the `NOSTR_RELAYS` environment variable.
+1. Relay URLs should use WebSocket protocol (`wss://` for secure or `ws://` for insecure).
+2. Provide multiple relays separated by commas (e.g., `"wss://relay.damus.io","wss://relay.nostr.band","wss://nos.lol"`).
 
 **Note:** Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. Images are not supported in Nostr text notes.
 

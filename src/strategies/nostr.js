@@ -3,25 +3,16 @@
  * @author Nicholas C. Zakas
  */
 
-/* global crypto */
+/* global Buffer, WebSocket, setTimeout */
 
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
 
-import { WebSocket } from "ws";
-import { getPublicKey, sign, hashes } from "@noble/secp256k1";
+import { schnorr, hashes } from "@noble/secp256k1";
 import { bech32 } from "bech32";
-import { createHash, createHmac } from "crypto";
+import { createHash, createHmac } from "node:crypto";
 import { validatePostOptions } from "../util/options.js";
-
-// Configure noble/secp256k1 to use Node.js crypto for hashing
-hashes.sha256 = (msg) => createHash("sha256").update(msg).digest();
-hashes.hmacSha256 = (key, ...msgs) => {
-	const hmac = createHmac("sha256", key);
-	for (const msg of msgs) hmac.update(msg);
-	return hmac.digest();
-};
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -58,6 +49,27 @@ hashes.hmacSha256 = (key, ...msgs) => {
 // Helpers
 //-----------------------------------------------------------------------------
 
+/*
+ * Configure noble/secp256k1 to use Node.js crypto for hashing.
+ * This is necessary because the default Web Crypto API in Node.js
+ * does not support synchronous hashing, which noble/secp256k1 requires.
+ */
+hashes.sha256 = /** @type {(message: Uint8Array) => Uint8Array} */ (
+	msg => createHash("sha256").update(msg).digest()
+);
+hashes.hmacSha256 =
+	/** @type {(key: Uint8Array, ...messages: Uint8Array[]) => Uint8Array} */ (
+		(key, ...msgs) => {
+			const hmac = createHmac("sha256", key);
+
+			for (const msg of msgs) {
+				hmac.update(msg);
+			}
+
+			return hmac.digest();
+		}
+	);
+
 /**
  * Converts a private key from bech32 format to hex.
  * @param {string} privateKey The private key in hex or bech32 format.
@@ -77,11 +89,15 @@ function normalizePrivateKey(privateKey) {
 			const keyBytes = bech32.fromWords(words);
 			return Buffer.from(keyBytes).toString("hex");
 		} catch (error) {
-			throw new Error("Invalid bech32 private key format");
+			throw new Error("Invalid bech32 private key format", {
+				cause: error,
+			});
 		}
 	}
 
-	throw new Error("Private key must be 64-character hex string or bech32 format starting with nsec1");
+	throw new Error(
+		"Private key must be 64-character hex string or bech32 format starting with nsec1",
+	);
 }
 
 /**
@@ -91,8 +107,10 @@ function normalizePrivateKey(privateKey) {
  * @returns {NostrEvent} The signed Nostr event.
  */
 function createNostrEvent(privateKeyHex, content) {
-	const privateKeyBytes = Buffer.from(privateKeyHex, "hex");
-	const publicKeyBytes = getPublicKey(privateKeyBytes);
+	const privateKeyBytes = new Uint8Array(Buffer.from(privateKeyHex, "hex"));
+
+	// Get the Schnorr public key (x-only, 32 bytes)
+	const publicKeyBytes = schnorr.getPublicKey(privateKeyBytes);
 	const pubkey = Buffer.from(publicKeyBytes).toString("hex");
 
 	const event = {
@@ -112,12 +130,12 @@ function createNostrEvent(privateKeyHex, content) {
 		event.tags,
 		event.content,
 	]);
-	
+
 	const eventHash = createHash("sha256").update(eventData, "utf8").digest();
 	const id = eventHash.toString("hex");
-	
-	// Sign the event hash
-	const signature = sign(eventHash, privateKeyBytes);
+
+	// Sign the event hash using Schnorr signatures
+	const signature = schnorr.sign(eventHash, privateKeyBytes);
 	const sig = Buffer.from(signature).toString("hex");
 
 	return {
@@ -135,11 +153,11 @@ function createNostrEvent(privateKeyHex, content) {
  * @returns {Promise<{success: boolean, error?: string}>} The result of publishing.
  */
 function publishToRelay(relayUrl, event, signal) {
-	return new Promise((resolve) => {
-		/** @type {import("ws").WebSocket | undefined} */
+	return new Promise(resolve => {
+		/** @type {WebSocket | undefined} */
 		let ws;
 		let resolved = false;
-		
+
 		const cleanup = () => {
 			if (ws) {
 				ws.close();
@@ -147,7 +165,7 @@ function publishToRelay(relayUrl, event, signal) {
 		};
 
 		/** @param {{success: boolean, error?: string}} result */
-		const resolveOnce = (result) => {
+		const resolveOnce = result => {
 			if (!resolved) {
 				resolved = true;
 				cleanup();
@@ -157,7 +175,10 @@ function publishToRelay(relayUrl, event, signal) {
 
 		// Handle abort signal
 		if (signal?.aborted) {
-			return resolveOnce({ success: false, error: "Request was aborted" });
+			return resolveOnce({
+				success: false,
+				error: "Request was aborted",
+			});
 		}
 
 		const abortHandler = () => {
@@ -176,26 +197,43 @@ function publishToRelay(relayUrl, event, signal) {
 				}
 			});
 
-			ws.addEventListener("message", (msgEvent) => {
+			ws.addEventListener("message", msgEvent => {
 				try {
 					const data = JSON.parse(msgEvent.data.toString());
-					if (Array.isArray(data) && data[0] === "OK" && data[1] === event.id) {
+					if (
+						Array.isArray(data) &&
+						data[0] === "OK" &&
+						data[1] === event.id
+					) {
 						const success = data[2] === true;
 						const error = success ? undefined : data[3];
 						resolveOnce({ success, error });
 					}
 				} catch (error) {
-					resolveOnce({ success: false, error: "Invalid response from relay" });
+					const errorMessage =
+						error instanceof Error
+							? error.message
+							: "Unknown error";
+					resolveOnce({
+						success: false,
+						error: "Invalid response from relay: " + errorMessage,
+					});
 				}
 			});
 
 			ws.addEventListener("error", () => {
-				resolveOnce({ success: false, error: "WebSocket connection failed" });
+				resolveOnce({
+					success: false,
+					error: "WebSocket connection failed",
+				});
 			});
 
 			ws.addEventListener("close", () => {
 				if (!resolved) {
-					resolveOnce({ success: false, error: "Connection closed unexpectedly" });
+					resolveOnce({
+						success: false,
+						error: "Connection closed unexpectedly",
+					});
 				}
 			});
 
@@ -203,9 +241,9 @@ function publishToRelay(relayUrl, event, signal) {
 			setTimeout(() => {
 				resolveOnce({ success: false, error: "Request timed out" });
 			}, 10000);
-
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : "Unknown error";
+			const errorMessage =
+				error instanceof Error ? error.message : "Unknown error";
 			resolveOnce({ success: false, error: errorMessage });
 		} finally {
 			signal?.removeEventListener("abort", abortHandler);
@@ -274,7 +312,9 @@ export class NostrStrategy {
 		// Validate relay URLs
 		for (const relay of options.relays) {
 			if (typeof relay !== "string" || !relay.startsWith("ws")) {
-				throw new Error("All relay URLs must be valid WebSocket URLs (ws:// or wss://).");
+				throw new Error(
+					"All relay URLs must be valid WebSocket URLs (ws:// or wss://).",
+				);
 			}
 		}
 
@@ -321,9 +361,9 @@ export class NostrStrategy {
 
 		// Publish to all relays
 		const results = await Promise.allSettled(
-			this.#options.relays.map(relay => 
-				publishToRelay(relay, event, postOptions?.signal)
-			)
+			this.#options.relays.map(relay =>
+				publishToRelay(relay, event, postOptions?.signal),
+			),
 		);
 
 		/** @type {string[]} */
@@ -336,16 +376,19 @@ export class NostrStrategy {
 			if (result.status === "fulfilled" && result.value.success) {
 				successfulRelays.push(relay);
 			} else {
-				const error = result.status === "rejected" 
-					? result.reason.message 
-					: result.value.error;
+				const error =
+					result.status === "rejected"
+						? result.reason.message
+						: result.value.error;
 				errors.push(`${relay}: ${error}`);
 			}
 		});
 
 		// If no relays succeeded, throw an error
 		if (successfulRelays.length === 0) {
-			throw new Error(`Failed to publish to any relays: ${errors.join(", ")}`);
+			throw new Error(
+				`Failed to publish to any relays: ${errors.join(", ")}`,
+			);
 		}
 
 		return {
@@ -367,8 +410,8 @@ export class NostrStrategy {
 		}
 
 		// Use nip19 note format with event ID
-		const noteId = `note1${bech32.encode("note", bech32.toWords(Buffer.from(response.id, "hex")))}`;
-		
+		const noteId = `${bech32.encode("note", bech32.toWords(Buffer.from(response.id, "hex")))}`;
+
 		// Return a generic note URL - in practice, clients would construct their own URLs
 		return `nostr:${noteId}`;
 	}
