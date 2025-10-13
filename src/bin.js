@@ -168,28 +168,68 @@ if (flags.verbose) {
 		if (options?.headers) {
 			/** @type {Record<string, string>} */
 			const filteredHeaders = {};
-			const headers =
-				typeof options.headers === "object" &&
-				options.headers !== null &&
-				typeof options.headers.entries === "function"
-					? Object.fromEntries(options.headers.entries())
-					: options.headers;
+			let headers = options.headers;
 
-			for (const [key, value] of Object.entries(headers)) {
-				if (sensitiveHeaders.has(key.toLowerCase())) {
-					filteredHeaders[key] = "[REDACTED]";
-				} else {
-					filteredHeaders[key] = value;
+			// Convert Headers object to plain object if needed
+			if (
+				typeof headers === "object" &&
+				headers !== null &&
+				typeof headers.entries === "function"
+			) {
+				try {
+					headers = Object.fromEntries(headers.entries());
+				} catch {
+					// If entries() fails, just use the object as-is
+				}
+			}
+
+			// Now iterate over the headers object
+			if (typeof headers === "object" && headers !== null) {
+				for (const [key, value] of Object.entries(headers)) {
+					if (sensitiveHeaders.has(key.toLowerCase())) {
+						filteredHeaders[key] = "[REDACTED]";
+					} else {
+						filteredHeaders[key] = value;
+					}
 				}
 			}
 			console.log("Headers:", JSON.stringify(filteredHeaders, null, 2));
 		}
 
 		if (options?.body) {
-			const bodyStr =
-				typeof options.body === "string"
-					? options.body
-					: JSON.stringify(options.body);
+			let bodyStr;
+			if (typeof options.body === "string") {
+				bodyStr = options.body;
+			} else if (
+				typeof options.body === "object" &&
+				options.body !== null
+			) {
+				// Try to parse as JSON and redact sensitive fields
+				try {
+					const bodyObj = JSON.parse(
+						typeof options.body === "string"
+							? options.body
+							: JSON.stringify(options.body),
+					);
+					// Redact known sensitive fields
+					if (bodyObj.password) {
+						bodyObj.password = "[REDACTED]";
+					}
+					if (bodyObj.access_token) {
+						bodyObj.access_token = "[REDACTED]";
+					}
+					if (bodyObj.api_key) {
+						bodyObj.api_key = "[REDACTED]";
+					}
+					bodyStr = JSON.stringify(bodyObj);
+				} catch {
+					// If we can't parse it, just use the string representation
+					bodyStr = String(options.body);
+				}
+			} else {
+				bodyStr = String(options.body);
+			}
+
 			if (bodyStr.length > MAX_BODY_LENGTH) {
 				console.log(
 					"Body:",
