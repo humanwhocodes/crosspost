@@ -11,7 +11,7 @@
 
 import { schnorr, hashes } from "@noble/secp256k1";
 import { bech32 } from "bech32";
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { validatePostOptions } from "../util/options.js";
 
 //-----------------------------------------------------------------------------
@@ -44,35 +44,6 @@ import { validatePostOptions } from "../util/options.js";
  * @property {string[]} relays Array of relays that accepted the event.
  * @property {string[]} errors Array of relay errors.
  */
-
-//-----------------------------------------------------------------------------
-// Patches
-//-----------------------------------------------------------------------------
-
-/*
- * For some reason, tests are failing for Node.js v18.x on MacOS when trying
- * to access crypto.getRandomValues(). This is a workaround to use
- * Node.js crypto.randomBytes() instead.
- */
-if (
-	typeof globalThis.crypto === "undefined" ||
-	typeof globalThis.crypto.getRandomValues !== "function"
-) {
-	globalThis.crypto = {
-		...globalThis.crypto,
-		getRandomValues: arr => {
-			if (!(arr instanceof Uint8Array)) {
-				throw new TypeError(
-					"Expected Uint8Array, got " +
-						Object.prototype.toString.call(arr),
-				);
-			}
-			const bytes = randomBytes(arr.length);
-			arr.set(bytes);
-			return arr;
-		},
-	};
-}
 
 //-----------------------------------------------------------------------------
 // Helpers
