@@ -352,7 +352,9 @@ Bluesky doesn't require an application for automated posts, only your identifier
 1. Name your app password and click "Next".
 1. Copy the generated password and click "Done".
 
-**Important:** Do not use your login password with the API.
+**Important:** 
+- Do not use your login password with the API.
+- The identifier should be your human-readable username without the `@` symbol (e.g., `username.bsky.social`), not your DID (Decentralized Identifier).
 
 ### LinkedIn
 
