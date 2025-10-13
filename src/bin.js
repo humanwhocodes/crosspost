@@ -23,6 +23,7 @@ import {
 	DevtoStrategy,
 	TelegramStrategy,
 	SlackStrategy,
+	NostrStrategy,
 } from "./index.js";
 import { CrosspostMcpServer } from "./mcp-server.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -65,6 +66,7 @@ const options = {
 	devto: { type: booleanType },
 	telegram: { type: booleanType },
 	slack: { type: booleanType, short: "s" },
+	nostr: { type: booleanType, short: "n" },
 	mcp: { type: booleanType },
 	file: { type: stringType },
 	image: { type: stringType },
@@ -102,6 +104,7 @@ if (
 		!flags.devto &&
 		!flags.telegram &&
 		!flags.slack &&
+		!flags.nostr &&
 		!flags.mcp)
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
@@ -114,6 +117,7 @@ if (
 	console.log("--devto		Post to Dev.to.");
 	console.log("--telegram	Post to Telegram.");
 	console.log("--slack, -s	Post to Slack.");
+	console.log("--nostr, -n	Post to Nostr.");
 	console.log("--mcp		Start MCP server.");
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
@@ -222,6 +226,27 @@ if (flags.slack) {
 		new SlackStrategy({
 			botToken: env.require("SLACK_TOKEN"),
 			channel: env.require("SLACK_CHANNEL"),
+		}),
+	);
+}
+
+if (flags.nostr) {
+	// Nostr support requires Node.js v22 or later
+	const [major] = process.versions.node
+		.split(".")
+		.map(num => parseInt(num, 10));
+	if (major < 22) {
+		console.error("Error: Nostr support requires Node.js v22 or later.");
+		process.exit(1);
+	}
+
+	const relaysList = env.require("NOSTR_RELAYS");
+	const relays = relaysList.split(",").map(relay => relay.trim());
+
+	strategies.push(
+		new NostrStrategy({
+			privateKey: env.require("NOSTR_PRIVATE_KEY"),
+			relays,
 		}),
 	);
 }

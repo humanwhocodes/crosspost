@@ -59,4 +59,10 @@ export {
 	SlackUploadResponse,
 	SlackFile,
 } from "./strategies/slack.js";
+export {
+	NostrStrategy,
+	NostrOptions,
+	NostrEvent,
+	NostrEventResponse,
+} from "./strategies/nostr.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
