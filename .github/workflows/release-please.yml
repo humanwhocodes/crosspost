@@ -4,15 +4,14 @@ on:
             - main
 name: release-please
 
-permissions:
-    contents: write
-    pull-requests: write
-    id-token: write
-    models: read
-
 jobs:
     release-please:
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+            id-token: write
+            models: read
         steps:
             - uses: googleapis/release-please-action@v4
               id: release
@@ -51,7 +50,6 @@ jobs:
 
             # Generates the social media post
             - run: npx @humanwhocodes/social-changelog --org humanwhocodes --repo crosspost --name Crosspost --tag ${{ steps.release.outputs.tag_name }} > social-post.txt
-            - run: npx @humanwhocodes/social-changelog --org humanwhocodes --repo ${{ github.event.repository.name }} --tag ${{ steps.release.outputs.tag_name }} > social-post.txt
               if: ${{ steps.release.outputs.release_created }}
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
