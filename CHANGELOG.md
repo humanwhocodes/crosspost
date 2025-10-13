@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.17.0...crosspost-v1.0.0) (2025-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* Drop support for Node.js 18
+
+### Features
+
+* Add Nostr strategy ([#140](https://github.com/humanwhocodes/crosspost/issues/140)) ([6d4d3a6](https://github.com/humanwhocodes/crosspost/commit/6d4d3a69536ccc04c8d6f458ff1cdfc36442dc55))
+* Drop support for Node.js 18 ([2e2c28e](https://github.com/humanwhocodes/crosspost/commit/2e2c28e0929e821dae4d1120b6f104ea85c3259c))
+
 ## [0.17.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.16.0...crosspost-v0.17.0) (2025-08-22)
 
 
