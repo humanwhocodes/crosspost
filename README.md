@@ -30,7 +30,7 @@ The API is split into two parts:
     - `DiscordWebhookStrategy`
     - `TelegramStrategy`
     - `DevtoStrategy`
-    - `NostrStrategy`
+    - `NostrStrategy` (requires Node.js v22+)
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -498,7 +498,9 @@ For the `NOSTR_RELAYS` (required):
 1. Relay URLs should use WebSocket protocol (`wss://` for secure or `ws://` for insecure).
 2. Provide multiple relays separated by commas (e.g., `"wss://relay.damus.io","wss://relay.nostr.band","wss://nos.lol"`).
 
-**Note:** Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. Images are not supported in Nostr text notes.
+Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. Images are not supported in Nostr text notes.
+
+**Important:** Nostr support only works in Node.js v22+.
 
 **Security:** Keep your private key secure and never share it. Consider using a dedicated key for crossposting rather than your main Nostr identity key.
 

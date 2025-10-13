@@ -231,9 +231,18 @@ if (flags.slack) {
 }
 
 if (flags.nostr) {
+	// Nostr support requires Node.js v22 or later
+	const [major] = process.versions.node
+		.split(".")
+		.map(num => parseInt(num, 10));
+	if (major < 22) {
+		console.error("Error: Nostr support requires Node.js v22 or later.");
+		process.exit(1);
+	}
+
 	const relaysList = env.require("NOSTR_RELAYS");
 	const relays = relaysList.split(",").map(relay => relay.trim());
-	
+
 	strategies.push(
 		new NostrStrategy({
 			privateKey: env.require("NOSTR_PRIVATE_KEY"),
