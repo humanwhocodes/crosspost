@@ -71,6 +71,7 @@ const options = {
 	file: { type: stringType },
 	image: { type: stringType },
 	"image-alt": { type: stringType },
+	verbose: { type: booleanType },
 	help: { type: booleanType, short: "h" },
 	version: { type: booleanType, short: "v" },
 };
@@ -122,6 +123,7 @@ if (
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
+	console.log("--verbose	Show detailed HTTP request and response information.");
 	console.log("--help, -h	Show this message.");
 	console.log("--version, -v	Show version number.");
 	process.exit(1);
@@ -141,6 +143,56 @@ if (process.env.CROSSPOST_DOTENV) {
 }
 
 const env = new Env();
+
+//-----------------------------------------------------------------------------
+// Setup verbose logging if requested
+//-----------------------------------------------------------------------------
+
+if (flags.verbose) {
+	const originalFetch = globalThis.fetch;
+
+	globalThis.fetch = async function verboseFetch(url, options) {
+		console.log("\n--- HTTP Request ---");
+		console.log(`URL: ${url}`);
+		console.log(`Method: ${options?.method || "GET"}`);
+		if (options?.headers) {
+			console.log("Headers:", JSON.stringify(options.headers, null, 2));
+		}
+		if (options?.body) {
+			console.log("Body:", options.body);
+		}
+
+		const response = await originalFetch(url, options);
+
+		// Clone the response so we can read it for logging and still return it
+		const responseClone = response.clone();
+
+		console.log("\n--- HTTP Response ---");
+		console.log(`Status: ${response.status} ${response.statusText}`);
+		console.log(
+			"Headers:",
+			JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2),
+		);
+
+		// Try to read the response body for logging
+		try {
+			const contentType = response.headers.get("content-type");
+			if (contentType?.includes("application/json")) {
+				const json = await responseClone.json();
+				console.log("Body:", JSON.stringify(json, null, 2));
+			} else {
+				const text = await responseClone.text();
+				console.log("Body:", text);
+			}
+		} catch {
+			console.log("Body: (could not read response body)");
+		}
+
+		console.log("--- End Response ---\n");
+
+		return response;
+	};
+}
 
 //-----------------------------------------------------------------------------
 // Determine which strategies to use

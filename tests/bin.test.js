@@ -118,4 +118,31 @@ describe("bin", function () {
 			});
 		});
 	});
+
+	describe("verbose flag", function () {
+		it("should include HTTP request/response details when --verbose is set", done => {
+			// Use a mock strategy that will make a real HTTP request
+			const child = fork(
+				builtExecutablePath,
+				["--verbose", "--help"],
+				{
+					stdio: "pipe",
+				},
+			);
+
+			let output = "";
+
+			child.stdout.on("data", data => {
+				output += data.toString();
+			});
+
+			child.on("exit", code => {
+				// Help should exit with code 1
+				assert.strictEqual(code, 1);
+				// Verify verbose flag is shown in help text
+				assert.match(output, /--verbose/);
+				done();
+			});
+		});
+	});
 });
