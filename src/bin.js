@@ -150,16 +150,54 @@ const env = new Env();
 
 if (flags.verbose) {
 	const originalFetch = globalThis.fetch;
+	const sensitiveHeaders = new Set([
+		"authorization",
+		"cookie",
+		"set-cookie",
+		"x-api-key",
+		"api-key",
+	]);
+	const MAX_BODY_LENGTH = 5000; // Maximum characters to log
 
 	globalThis.fetch = async function verboseFetch(url, options) {
 		console.log("\n--- HTTP Request ---");
 		console.log(`URL: ${url}`);
 		console.log(`Method: ${options?.method || "GET"}`);
+
+		// Filter sensitive headers
 		if (options?.headers) {
-			console.log("Headers:", JSON.stringify(options.headers, null, 2));
+			/** @type {Record<string, string>} */
+			const filteredHeaders = {};
+			const headers =
+				typeof options.headers === "object" &&
+				options.headers !== null &&
+				typeof options.headers.entries === "function"
+					? Object.fromEntries(options.headers.entries())
+					: options.headers;
+
+			for (const [key, value] of Object.entries(headers)) {
+				if (sensitiveHeaders.has(key.toLowerCase())) {
+					filteredHeaders[key] = "[REDACTED]";
+				} else {
+					filteredHeaders[key] = value;
+				}
+			}
+			console.log("Headers:", JSON.stringify(filteredHeaders, null, 2));
 		}
+
 		if (options?.body) {
-			console.log("Body:", options.body);
+			const bodyStr =
+				typeof options.body === "string"
+					? options.body
+					: JSON.stringify(options.body);
+			if (bodyStr.length > MAX_BODY_LENGTH) {
+				console.log(
+					"Body:",
+					bodyStr.substring(0, MAX_BODY_LENGTH) + "... (truncated)",
+				);
+			} else {
+				console.log("Body:", bodyStr);
+			}
 		}
 
 		const response = await originalFetch(url, options);
@@ -169,20 +207,43 @@ if (flags.verbose) {
 
 		console.log("\n--- HTTP Response ---");
 		console.log(`Status: ${response.status} ${response.statusText}`);
-		console.log(
-			"Headers:",
-			JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2),
-		);
+
+		// Filter sensitive response headers
+		/** @type {Record<string, string>} */
+		const filteredResponseHeaders = {};
+		for (const [key, value] of response.headers.entries()) {
+			if (sensitiveHeaders.has(key.toLowerCase())) {
+				filteredResponseHeaders[key] = "[REDACTED]";
+			} else {
+				filteredResponseHeaders[key] = value;
+			}
+		}
+		console.log("Headers:", JSON.stringify(filteredResponseHeaders, null, 2));
 
 		// Try to read the response body for logging
 		try {
 			const contentType = response.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				const json = await responseClone.json();
-				console.log("Body:", JSON.stringify(json, null, 2));
+				const jsonStr = JSON.stringify(json, null, 2);
+				if (jsonStr.length > MAX_BODY_LENGTH) {
+					console.log(
+						"Body:",
+						jsonStr.substring(0, MAX_BODY_LENGTH) + "... (truncated)",
+					);
+				} else {
+					console.log("Body:", jsonStr);
+				}
 			} else {
 				const text = await responseClone.text();
-				console.log("Body:", text);
+				if (text.length > MAX_BODY_LENGTH) {
+					console.log(
+						"Body:",
+						text.substring(0, MAX_BODY_LENGTH) + "... (truncated)",
+					);
+				} else {
+					console.log("Body:", text);
+				}
 			}
 		} catch {
 			console.log("Body: (could not read response body)");

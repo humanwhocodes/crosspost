@@ -121,7 +121,7 @@ describe("bin", function () {
 
 	describe("verbose flag", function () {
 		it("should include HTTP request/response details when --verbose is set", done => {
-			// Use a mock strategy that will make a real HTTP request
+			// Test that the verbose flag is recognized and shown in help
 			const child = fork(
 				builtExecutablePath,
 				["--verbose", "--help"],
