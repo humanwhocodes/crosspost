@@ -183,11 +183,14 @@ Usage: crosspost [options] ["Message to post."]
 --discord-webhook  Post to Discord via webhook.
 --devto         Post to dev.to.
 --telegram      Post to Telegram.
+--slack, -s     Post to Slack.
+--nostr, -n     Post to Nostr.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
---image-alt     Alt text for the image (defaults: filename).
+--image-alt     Alt text for the image (default: filename).
 --help, -h      Show this message.
+--version, -v   Show version number.
 ```
 
 Examples:
