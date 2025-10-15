@@ -98,7 +98,9 @@ describe("bin", function () {
 		it("should display correct version from package.json", done => {
 			// Read the actual version from package.json
 			const packagePath = path.resolve("package.json");
-			const packageJson = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+			const packageJson = JSON.parse(
+				fs.readFileSync(packagePath, "utf8"),
+			);
 			const expectedVersion = packageJson.version;
 
 			const child = fork(builtExecutablePath, ["--version"], {
