@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.0...crosspost-v1.0.1) (2025-10-15)
+
+
+### Bug Fixes
+
+* Downgrade dotenv to avoid console.log that breaks MCP output ([5a14a0c](https://github.com/humanwhocodes/crosspost/commit/5a14a0c47a1448c96b51b596be2dab2e305c95f8))
+
 ## [1.0.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v0.17.0...crosspost-v1.0.0) (2025-10-13)
 
 
