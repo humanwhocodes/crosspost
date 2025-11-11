@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.1...crosspost-v1.0.2) (2025-11-11)
+
+
+### Bug Fixes
+
+* Drop dotenv package and use native process.loadEnvFile ([#152](https://github.com/humanwhocodes/crosspost/issues/152)) ([2476d1d](https://github.com/humanwhocodes/crosspost/commit/2476d1d7bb4c9da043c579184ee8ebb060e9257e))
+
 ## [1.0.1](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.0...crosspost-v1.0.1) (2025-10-15)
 
 
