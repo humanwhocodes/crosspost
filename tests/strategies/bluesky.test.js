@@ -665,9 +665,9 @@ describe("BlueskyStrategy", function () {
 					headers: {
 						"content-type": "application/json",
 					},
-					body: {
+					body: { 
 						error: "InvalidRequest",
-						message: "Handle not found",
+						message: "Handle not found"
 					},
 				},
 			);
@@ -802,8 +802,7 @@ describe("BlueskyStrategy", function () {
 		});
 
 		it("should truncate long URLs to 27 characters in posted text while preserving original URLs in facets", async function () {
-			const longUrl =
-				"https://example.com/very/long/path/that/should/be/truncated/because/it/exceeds/the/limit";
+			const longUrl = "https://example.com/very/long/path/that/should/be/truncated/because/it/exceeds/the/limit";
 			const text = `Check this out: ${longUrl}`;
 			const expectedTruncatedUrl = longUrl.substring(0, 24) + "...";
 			const expectedTruncatedText = `Check this out: ${expectedTruncatedUrl}`;
@@ -940,8 +939,7 @@ describe("BlueskyStrategy", function () {
 
 		it("should handle multiple URLs with mixed truncation", async function () {
 			const shortUrl = "https://example.com";
-			const longUrl =
-				"https://example.org/very/long/path/that/should/be/truncated/because/it/exceeds/the/limit";
+			const longUrl = "https://example.org/very/long/path/that/should/be/truncated/because/it/exceeds/the/limit";
 			const text = `Short: ${shortUrl} and long: ${longUrl}`;
 			const expectedTruncatedUrl = longUrl.substring(0, 24) + "...";
 			const expectedText = `Short: ${shortUrl} and long: ${expectedTruncatedUrl}`;
