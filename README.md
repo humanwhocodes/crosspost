@@ -295,7 +295,7 @@ Claude will then create a `claude_desktop_config.json` file. Open it and add the
 
 This example enables Mastodon and LinkedIn so the `env` key contains the environment variables necessary to post to those services. You can customize the services by passing different command line arguments as you would using the CLI.
 
-If you'd prefer not to put your environment variables directly into the JSON file, you can create a [`.env` file](https://www.npmjs.com/package/dotenv) and use the `CROSSPOST_DOTENV` environment variable to point to it:
+If you'd prefer not to put your environment variables directly into the JSON file, you can create a `.env` file and use the `CROSSPOST_DOTENV` environment variable to point to it:
 
 ```json
 {
