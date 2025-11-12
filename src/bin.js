@@ -70,6 +70,7 @@ const options = {
 	file: { type: stringType },
 	image: { type: stringType },
 	"image-alt": { type: stringType },
+	verbose: { type: booleanType },
 	help: { type: booleanType, short: "h" },
 	version: { type: booleanType, short: "v" },
 };
@@ -121,6 +122,7 @@ if (
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
+	console.log("--verbose	Show detailed HTTP request and response information.");
 	console.log("--help, -h	Show this message.");
 	console.log("--version, -v	Show version number.");
 	process.exit(1);
@@ -146,6 +148,157 @@ if (process.env.CROSSPOST_DOTENV) {
 }
 
 const env = new Env();
+
+//-----------------------------------------------------------------------------
+// Setup verbose logging if requested
+//-----------------------------------------------------------------------------
+
+if (flags.verbose) {
+	const originalFetch = globalThis.fetch;
+	const sensitiveHeaders = new Set([
+		"authorization",
+		"cookie",
+		"set-cookie",
+		"x-api-key",
+		"api-key",
+	]);
+	const MAX_BODY_LENGTH = 5000; // Maximum characters to log
+
+	globalThis.fetch = async function verboseFetch(url, options) {
+		console.log("\n--- HTTP Request ---");
+		console.log(`URL: ${url}`);
+		console.log(`Method: ${options?.method || "GET"}`);
+
+		// Filter sensitive headers
+		if (options?.headers) {
+			/** @type {Record<string, string>} */
+			const filteredHeaders = {};
+			let headers = options.headers;
+
+			// Convert Headers object to plain object if needed
+			if (
+				typeof headers === "object" &&
+				headers !== null &&
+				typeof headers.entries === "function"
+			) {
+				try {
+					headers = Object.fromEntries(headers.entries());
+				} catch {
+					// If entries() fails, just use the object as-is
+				}
+			}
+
+			// Now iterate over the headers object
+			if (typeof headers === "object" && headers !== null) {
+				for (const [key, value] of Object.entries(headers)) {
+					if (sensitiveHeaders.has(key.toLowerCase())) {
+						filteredHeaders[key] = "[REDACTED]";
+					} else {
+						filteredHeaders[key] = value;
+					}
+				}
+			}
+			console.log("Headers:", JSON.stringify(filteredHeaders, null, 2));
+		}
+
+		if (options?.body) {
+			let bodyStr;
+			if (typeof options.body === "string") {
+				bodyStr = options.body;
+			} else if (
+				typeof options.body === "object" &&
+				options.body !== null
+			) {
+				// Try to parse as JSON and redact sensitive fields
+				try {
+					const bodyObj = JSON.parse(
+						typeof options.body === "string"
+							? options.body
+							: JSON.stringify(options.body),
+					);
+					// Redact known sensitive fields
+					if (bodyObj.password) {
+						bodyObj.password = "[REDACTED]";
+					}
+					if (bodyObj.access_token) {
+						bodyObj.access_token = "[REDACTED]";
+					}
+					if (bodyObj.api_key) {
+						bodyObj.api_key = "[REDACTED]";
+					}
+					bodyStr = JSON.stringify(bodyObj);
+				} catch {
+					// If we can't parse it, just use the string representation
+					bodyStr = String(options.body);
+				}
+			} else {
+				bodyStr = String(options.body);
+			}
+
+			if (bodyStr.length > MAX_BODY_LENGTH) {
+				console.log(
+					"Body:",
+					bodyStr.substring(0, MAX_BODY_LENGTH) + "... (truncated)",
+				);
+			} else {
+				console.log("Body:", bodyStr);
+			}
+		}
+
+		const response = await originalFetch(url, options);
+
+		// Clone the response so we can read it for logging and still return it
+		const responseClone = response.clone();
+
+		console.log("\n--- HTTP Response ---");
+		console.log(`Status: ${response.status} ${response.statusText}`);
+
+		// Filter sensitive response headers
+		/** @type {Record<string, string>} */
+		const filteredResponseHeaders = {};
+		for (const [key, value] of response.headers.entries()) {
+			if (sensitiveHeaders.has(key.toLowerCase())) {
+				filteredResponseHeaders[key] = "[REDACTED]";
+			} else {
+				filteredResponseHeaders[key] = value;
+			}
+		}
+		console.log("Headers:", JSON.stringify(filteredResponseHeaders, null, 2));
+
+		// Try to read the response body for logging
+		try {
+			const contentType = response.headers.get("content-type");
+			if (contentType?.includes("application/json")) {
+				const json = await responseClone.json();
+				const jsonStr = JSON.stringify(json, null, 2);
+				if (jsonStr.length > MAX_BODY_LENGTH) {
+					console.log(
+						"Body:",
+						jsonStr.substring(0, MAX_BODY_LENGTH) + "... (truncated)",
+					);
+				} else {
+					console.log("Body:", jsonStr);
+				}
+			} else {
+				const text = await responseClone.text();
+				if (text.length > MAX_BODY_LENGTH) {
+					console.log(
+						"Body:",
+						text.substring(0, MAX_BODY_LENGTH) + "... (truncated)",
+					);
+				} else {
+					console.log("Body:", text);
+				}
+			}
+		} catch {
+			console.log("Body: (could not read response body)");
+		}
+
+		console.log("--- End Response ---\n");
+
+		return response;
+	};
+}
 
 //-----------------------------------------------------------------------------
 // Determine which strategies to use
