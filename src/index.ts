@@ -33,6 +33,14 @@ export {
 	TwitterMediaIdArray,
 } from "./strategies/twitter.js";
 
+export {
+	InstagramStrategy,
+	InstagramOptions,
+	InstagramMediaContainerResponse,
+	InstagramPublishResponse,
+	InstagramErrorResponse,
+} from "./strategies/instagram.js";
+
 export * from "./strategies/linkedin.js";
 export { DiscordStrategy } from "./strategies/discord.js";
 export { DiscordWebhookStrategy } from "./strategies/discord-webhook.js";
