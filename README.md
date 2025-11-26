@@ -31,6 +31,7 @@ The API is split into two parts:
     - `TelegramStrategy`
     - `DevtoStrategy`
     - `NostrStrategy` (requires Node.js v22+)
+    - `OrgSocialStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -46,6 +47,7 @@ import {
 	TelegramStrategy,
 	DevtoStrategy,
 	NostrStrategy,
+	OrgSocialStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -102,6 +104,13 @@ const nostr = new NostrStrategy({
 	relays: ["wss://relay.example.com", "wss://relay2.example.com"],
 });
 
+// Note: vfile and public URL required (from Org Social Host signup)
+const orgSocial = new OrgSocialStrategy({
+	vfile: "http://host.org-social.org/vfile?token=YOUR_TOKEN&ts=TIMESTAMP&sig=SIGNATURE",
+	publicUrl: "http://host.org-social.org/your-nick/social.org",
+	host: "host.org-social.org", // optional, defaults to "host.org-social.org"
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -114,6 +123,7 @@ const client = new Client({
 		telegram,
 		devto,
 		nostr,
+		orgSocial,
 	],
 });
 
@@ -185,6 +195,7 @@ Usage: crosspost [options] ["Message to post."]
 --telegram      Post to Telegram.
 --slack, -s     Post to Slack.
 --nostr, -n     Post to Nostr.
+--orgsocial, -o Post to Org Social.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -247,6 +258,10 @@ Each strategy requires a set of environment variables in order to execute:
 - Nostr
     - `NOSTR_PRIVATE_KEY`
     - `NOSTR_RELAYS`
+- Org Social
+    - `ORGSOCIAL_VFILE`
+    - `ORGSOCIAL_PUBLIC_URL`
+    - `ORGSOCIAL_HOST` (optional)
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -506,6 +521,66 @@ Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. I
 **Important:** Nostr support only works in Node.js v22+.
 
 **Security:** Keep your private key secure and never share it. Consider using a dedicated key for crossposting rather than your main Nostr identity key.
+
+### Org Social
+
+To enable posting to Org Social:
+
+Org Social is a decentralized social network that runs on Org Mode files over HTTP. To use it with Crosspost, you need to sign up at an Org Social Host instance.
+
+1. Sign up at an Org Social Host instance (e.g., [host.org-social.org](https://host.org-social.org/)):
+
+    ```bash
+    curl -X POST https://host.org-social.org/signup \
+      -H "Content-Type: application/json" \
+      -d '{"nick": "your-nickname"}'
+    ```
+
+2. You'll receive two important values:
+
+    - **`vfile`**: A virtual file URL with authentication (format: `http://host.org-social.org/vfile?token=...&ts=...&sig=...`)
+    - **`public-url`**: Your public social.org file URL (format: `http://host.org-social.org/your-nick/social.org`)
+
+3. Use these values with the `OrgSocialStrategy`:
+    ```js
+    const orgSocial = new OrgSocialStrategy({
+    	vfile: "YOUR_VFILE_URL",
+    	publicUrl: "YOUR_PUBLIC_URL",
+    	host: "host.org-social.org", // optional
+    });
+    ```
+
+For the `ORGSOCIAL_VFILE` (required):
+
+- The virtual file URL you received during signup
+- Contains authentication tokens to update your social.org file
+- Keep this URL secure and never share it
+
+For the `ORGSOCIAL_PUBLIC_URL` (required):
+
+- Your public social.org file URL that others can access
+- This is what you share with followers
+
+For the `ORGSOCIAL_HOST` (optional):
+
+- The Org Social Host instance domain
+- Defaults to `host.org-social.org` if not provided
+
+**Important Notes:**
+
+- Images are not supported in Org Social text posts. Include image links in the message text instead.
+- Org Social has no character limit - you can write posts of any length.
+- Org Social files use Org Mode format with rich text features like bold, italic, code blocks, tables, and more.
+- Posts are appended at the end of your social.org file, after the last post.
+- The first post after `* Posts` has no blank line before it, but subsequent posts have one blank line separator.
+- Each post gets a unique RFC 3339 timestamp ID. If posting multiple times quickly, the strategy waits to ensure unique IDs.
+- If you don't update your social.org at least once a month on the default host, you may lose your nickname.
+
+**Learn more:**
+
+- [Org Social Specification](https://github.com/tanrax/org-social)
+- [Org Social Host Documentation](https://github.com/tanrax/org-social-host)
+- [Org Social Community](https://org-social.org/social.org)
 
 ## License
 

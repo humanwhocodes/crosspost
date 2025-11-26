@@ -65,4 +65,11 @@ export {
 	NostrEvent,
 	NostrEventResponse,
 } from "./strategies/nostr.js";
+export {
+	OrgSocialStrategy,
+	OrgSocialOptions,
+	OrgSocialErrorResponse,
+	OrgSocialSuccessResponse,
+	OrgSocialPost,
+} from "./strategies/orgsocial.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
