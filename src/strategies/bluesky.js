@@ -510,8 +510,9 @@ export class BlueskyStrategy {
 			postOptions?.signal?.throwIfAborted();
 
 			// Detect facets from the message
-			const { facets: rawFacets, text: truncatedMessage } =
-				detectFacets(entry.message);
+			const { facets: rawFacets, text: truncatedMessage } = detectFacets(
+				entry.message,
+			);
 
 			// Resolve mention handles to DIDs in facets
 			const facets = await resolveMentionFacets(
@@ -592,10 +593,9 @@ export class BlueskyStrategy {
 				);
 			}
 
-			const postResponse =
-				/** @type {BlueskyCreateRecordResponse} */ (
-					await response.json()
-				);
+			const postResponse = /** @type {BlueskyCreateRecordResponse} */ (
+				await response.json()
+			);
 			responses.push(postResponse);
 			previousPost = postResponse;
 		}
