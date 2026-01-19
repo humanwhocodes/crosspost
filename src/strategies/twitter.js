@@ -246,6 +246,7 @@ export class TwitterStrategy {
 			}
 
 			// Build tweet options
+			/** @type {Object<string, any>} */
 			const tweetOptions = {};
 			if (previousTweetId) {
 				tweetOptions.reply = {
