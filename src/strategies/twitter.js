@@ -261,9 +261,7 @@ export class TwitterStrategy {
 
 			const response = await client.v2.tweet(
 				entry.message,
-				Object.keys(tweetOptions).length > 0
-					? tweetOptions
-					: undefined,
+				Object.keys(tweetOptions).length > 0 ? tweetOptions : undefined,
 			);
 
 			responses.push(response);

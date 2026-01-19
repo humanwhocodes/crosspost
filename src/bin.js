@@ -133,7 +133,9 @@ if (
 // load environment variables from .env file if present
 if (process.env.CROSSPOST_DOTENV) {
 	const filePath =
-		process.env.CROSSPOST_DOTENV === "1" ? ".env" : process.env.CROSSPOST_DOTENV;
+		process.env.CROSSPOST_DOTENV === "1"
+			? ".env"
+			: process.env.CROSSPOST_DOTENV;
 	try {
 		process.loadEnvFile(filePath);
 	} catch (err) {

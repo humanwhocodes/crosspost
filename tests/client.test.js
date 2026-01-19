@@ -791,7 +791,10 @@ describe("Client", function () {
 
 			assert.strictEqual(results.length, 1);
 			assert.ok(results[0] instanceof SuccessResponse);
-			assert.strictEqual(results[0].url, "https://example.com/thread/123");
+			assert.strictEqual(
+				results[0].url,
+				"https://example.com/thread/123",
+			);
 		});
 	});
 });
