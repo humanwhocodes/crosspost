@@ -17,6 +17,8 @@ import { getImageMimeType } from "../util/images.js";
 
 /**
  * @typedef {import("../types.js").PostOptions} PostOptions
+ * @typedef {import("../types.js").PostThreadEntry} PostThreadEntry
+ * @typedef {import("../types.js").PostThreadOptions} PostThreadOptions
  */
 
 /**
@@ -274,5 +276,75 @@ export class MastodonStrategy {
 		const statusId = uriParts[uriParts.length - 1]; // Extract status ID from URI
 
 		return `https://${this.#options.host}/@${username}/${statusId}`;
+	}
+
+	/**
+	 * Posts a thread of messages to Mastodon.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<Object>>} A promise that resolves with an array of post data for each message in the thread.
+	 */
+	async postThread(entries, postOptions) {
+		if (!entries || entries.length === 0) {
+			throw new TypeError("Expected at least one entry.");
+		}
+
+		const { accessToken, host } = this.#options;
+		const url = `https://${host}/api/v1/statuses`;
+		const responses = [];
+		let previousStatusId;
+
+		for (const entry of entries) {
+			if (!entry.message) {
+				throw new TypeError("Missing message in thread entry.");
+			}
+
+			postOptions?.signal?.throwIfAborted();
+
+			const data = new FormData();
+			data.append("status", entry.message);
+
+			// Add reply information for subsequent posts in the thread
+			if (previousStatusId) {
+				data.append("in_reply_to_id", previousStatusId);
+			}
+
+			// Upload images if present
+			if (entry.images?.length) {
+				const mediaIds = await Promise.all(
+					entry.images.map(image =>
+						uploadMedia(this.#options, image, postOptions?.signal),
+					),
+				);
+
+				data.append("media_ids[]", mediaIds.join(","));
+			}
+
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+				},
+				body: data,
+				signal: postOptions?.signal,
+			});
+
+			if (!response.ok) {
+				const { error } = /**@type {MastodonErrorResponse} */ (
+					await response.json()
+				);
+				throw new Error(
+					`Failed to post message: ${response.status} ${response.statusText}${error ? `: ${error}` : ""}`,
+				);
+			}
+
+			const postResponse = /**@type {MastodonPostResponse} */ (
+				await response.json()
+			);
+			responses.push(postResponse);
+			previousStatusId = postResponse.id;
+		}
+
+		return responses;
 	}
 }

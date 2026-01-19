@@ -33,6 +33,8 @@ import { getImageMimeType } from "../util/images.js";
 /** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 //-----------------------------------------------------------------------------
 // Exports
@@ -175,6 +177,100 @@ export class TwitterStrategy {
 
 		// This format works without knowing the username - Twitter will redirect appropriately
 		return `https://x.com/i/web/status/${response.data.id}`;
+	}
+
+	/**
+	 * Posts a thread of messages to Twitter.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<object>>} A promise that resolves with an array of tweet data for each message in the thread.
+	 */
+	async postThread(entries, postOptions) {
+		if (!entries || entries.length === 0) {
+			throw new TypeError("Expected at least one entry.");
+		}
+
+		const {
+			accessTokenKey,
+			accessTokenSecret,
+			apiConsumerKey,
+			apiConsumerSecret,
+		} = this.#options;
+
+		const client = new TwitterApi({
+			appKey: apiConsumerKey,
+			appSecret: apiConsumerSecret,
+			accessToken: accessTokenKey,
+			accessSecret: accessTokenSecret,
+		});
+
+		const responses = [];
+		let previousTweetId;
+
+		for (const entry of entries) {
+			if (!entry.message) {
+				throw new TypeError("Missing message in thread entry.");
+			}
+
+			postOptions?.signal?.throwIfAborted();
+
+			// Upload images if present
+			let mediaIds;
+			if (entry.images?.length) {
+				mediaIds = await Promise.all(
+					entry.images.map(image =>
+						client.v2
+							.uploadMedia(Buffer.from(image.data), {
+								media_type: getImageMimeType(image.data),
+							})
+							.then(mediaId => {
+								if (image.alt) {
+									return client.v2
+										.post("media/metadata", {
+											id: mediaId,
+											metadata: {
+												alt_text: {
+													text: image.alt,
+												},
+											},
+										})
+										.then(() => mediaId);
+								}
+
+								return mediaId;
+							}),
+					),
+				);
+
+				postOptions?.signal?.throwIfAborted();
+			}
+
+			// Build tweet options
+			const tweetOptions = {};
+			if (previousTweetId) {
+				tweetOptions.reply = {
+					in_reply_to_tweet_id: previousTweetId,
+				};
+			}
+
+			if (mediaIds) {
+				tweetOptions.media = {
+					media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
+				};
+			}
+
+			const response = await client.v2.tweet(
+				entry.message,
+				Object.keys(tweetOptions).length > 0
+					? tweetOptions
+					: undefined,
+			);
+
+			responses.push(response);
+			previousTweetId = response.data.id;
+		}
+
+		return responses;
 	}
 
 	/**
