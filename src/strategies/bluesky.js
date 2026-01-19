@@ -58,6 +58,13 @@ import { validatePostOptions } from "../util/options.js";
  * @property {Object} [record.embed] The embedded content in the post.
  * @property {string} record.embed.$type The type of embedded content.
  * @property {Array<Object>} [record.embed.images] The images to embed.
+ * @property {Object} [record.reply] Reply information for threading.
+ * @property {Object} record.reply.root The root post of the thread.
+ * @property {string} record.reply.root.uri The URI of the root post.
+ * @property {string} record.reply.root.cid The CID of the root post.
+ * @property {Object} record.reply.parent The parent post in the thread.
+ * @property {string} record.reply.parent.uri The URI of the parent post.
+ * @property {string} record.reply.parent.cid The CID of the parent post.
  *
  */
 
