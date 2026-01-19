@@ -11,6 +11,8 @@
 /** @typedef {import("./types.js").PostOptions} PostOptions */
 /** @typedef {import("./types.js").PostToOptions} PostToOptions */
 /** @typedef {import("./types.js").PostToEntry} PostToEntry */
+/** @typedef {import("./types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("./types.js").PostThreadOptions} PostThreadOptions */
 /**
  * @typedef {Object} ClientOptions
  * @property {Array<Strategy>} strategies An array of strategies to use.
@@ -208,6 +210,59 @@ export class Client {
 				);
 			} else {
 				return new FailureResponse(strategy.name, result.reason);
+			}
+		});
+	}
+
+	/**
+	 * Posts a thread of messages using all strategies.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<SuccessResponse|FailureResponse>>} A promise that resolves with an array of results.
+	 * @throws {TypeError} When `entries` is not an array.
+	 * @throws {TypeError} When `entries` is an empty array.
+	 */
+	async postThread(entries, postOptions) {
+		if (!Array.isArray(entries)) {
+			throw new TypeError("Expected an array argument.");
+		}
+
+		if (entries.length === 0) {
+			throw new TypeError("Expected at least one entry.");
+		}
+
+		return (
+			await Promise.allSettled(
+				this.#strategies.map(async strategy => {
+					// If strategy has native postThread support, use it
+					if (strategy.postThread) {
+						return strategy.postThread(entries, postOptions);
+					}
+
+					// Otherwise, post each message individually
+					const responses = [];
+					for (const entry of entries) {
+						const response = await strategy.post(entry.message, {
+							images: entry.images,
+							signal: postOptions?.signal,
+						});
+						responses.push(response);
+					}
+					return responses;
+				}),
+			)
+		).map((result, i) => {
+			if (result.status === "fulfilled") {
+				return new SuccessResponse(
+					this.#strategies[i].name,
+					result.value,
+					this.#strategies[i].getUrlFromResponse?.(result.value),
+				);
+			} else {
+				return new FailureResponse(
+					this.#strategies[i].name,
+					result.reason,
+				);
 			}
 		});
 	}

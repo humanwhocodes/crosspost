@@ -17,6 +17,8 @@ import { validatePostOptions } from "../util/options.js";
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 /**
  * @typedef {Object} BlueskyOptions
@@ -478,5 +480,122 @@ export class BlueskyStrategy {
 		 * assume the web host is always bsky.app.
 		 */
 		return `https://bsky.app/profile/${this.#options.identifier}/post/${recordId}`;
+	}
+
+	/**
+	 * Posts a thread of messages to Bluesky.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<BlueskyCreateRecordResponse>>} A promise that resolves with an array of post data for each message in the thread.
+	 */
+	async postThread(entries, postOptions) {
+		if (!entries || entries.length === 0) {
+			throw new TypeError("Expected at least one entry.");
+		}
+
+		const session = await createSession(this.#options, postOptions?.signal);
+		const url = getPostMessageUrl(this.#options);
+		const responses = [];
+		let previousPost;
+
+		for (const entry of entries) {
+			if (!entry.message) {
+				throw new TypeError("Missing message in thread entry.");
+			}
+
+			postOptions?.signal?.throwIfAborted();
+
+			// Detect facets from the message
+			const { facets: rawFacets, text: truncatedMessage } =
+				detectFacets(entry.message);
+
+			// Resolve mention handles to DIDs in facets
+			const facets = await resolveMentionFacets(
+				this.#options,
+				rawFacets,
+				postOptions?.signal,
+			);
+
+			/** @type {BlueskyPostBody} */
+			const body = {
+				repo: session.did,
+				collection: "app.bsky.feed.post",
+				record: {
+					$type: "app.bsky.feed.post",
+					text: truncatedMessage,
+					facets,
+					createdAt: new Date().toISOString(),
+				},
+			};
+
+			// Add reply information for subsequent posts in the thread
+			if (previousPost) {
+				body.record.reply = {
+					root: {
+						uri: responses[0].uri,
+						cid: responses[0].cid,
+					},
+					parent: {
+						uri: previousPost.uri,
+						cid: previousPost.cid,
+					},
+				};
+			}
+
+			// Add image embeds if present
+			if (entry.images?.length) {
+				const images = [];
+
+				for (const image of entry.images) {
+					const result = await uploadImage(
+						this.#options,
+						session,
+						image.data,
+						postOptions?.signal,
+					);
+
+					images.push({
+						alt: image.alt || "",
+						image: result.blob,
+					});
+				}
+
+				if (images.length) {
+					body.record.embed = {
+						$type: "app.bsky.embed.images",
+						images,
+					};
+				}
+			}
+
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${session.accessJwt}`,
+				},
+				body: JSON.stringify(body),
+				signal: postOptions?.signal,
+			});
+
+			if (!response.ok) {
+				const errorBody = /** @type {BlueskyErrorResponse} */ (
+					await response.json()
+				);
+
+				throw new Error(
+					`${response.status} ${response.statusText}: Failed to post message:\n${errorBody.error} - ${errorBody.message}`,
+				);
+			}
+
+			const postResponse =
+				/** @type {BlueskyCreateRecordResponse} */ (
+					await response.json()
+				);
+			responses.push(postResponse);
+			previousPost = postResponse;
+		}
+
+		return responses;
 	}
 }
