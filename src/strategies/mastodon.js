@@ -192,9 +192,10 @@ export class MastodonStrategy {
 	 * Posts a message to Mastodon.
 	 * @param {string} message The message to post.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {string} [inReplyToId] The ID of the status to reply to.
 	 * @returns {Promise<Object>} A promise that resolves with the post data.
 	 */
-	async post(message, postOptions) {
+	async post(message, postOptions, inReplyToId) {
 		if (!message) {
 			throw new Error("Missing message to toot.");
 		}
@@ -221,6 +222,11 @@ export class MastodonStrategy {
 		const url = `https://${host}/api/v1/statuses`;
 		const data = new FormData();
 		data.append("status", message);
+
+		// Add reply information if provided
+		if (inReplyToId) {
+			data.append("in_reply_to_id", inReplyToId);
+		}
 
 		// Upload images first if present
 		if (postOptions?.images?.length) {
@@ -289,8 +295,6 @@ export class MastodonStrategy {
 			throw new TypeError("Expected at least one entry.");
 		}
 
-		const { accessToken, host } = this.#options;
-		const url = `https://${host}/api/v1/statuses`;
 		const responses = [];
 		let previousStatusId;
 
@@ -301,46 +305,17 @@ export class MastodonStrategy {
 
 			postOptions?.signal?.throwIfAborted();
 
-			const data = new FormData();
-			data.append("status", entry.message);
-
-			// Add reply information for subsequent posts in the thread
-			if (previousStatusId) {
-				data.append("in_reply_to_id", previousStatusId);
-			}
-
-			// Upload images if present
-			if (entry.images?.length) {
-				const mediaIds = await Promise.all(
-					entry.images.map(image =>
-						uploadMedia(this.#options, image, postOptions?.signal),
-					),
-				);
-
-				data.append("media_ids[]", mediaIds.join(","));
-			}
-
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${accessToken}`,
-				},
-				body: data,
-				signal: postOptions?.signal,
-			});
-
-			if (!response.ok) {
-				const { error } = /**@type {MastodonErrorResponse} */ (
-					await response.json()
-				);
-				throw new Error(
-					`Failed to post message: ${response.status} ${response.statusText}${error ? `: ${error}` : ""}`,
-				);
-			}
-
 			const postResponse = /**@type {MastodonPostResponse} */ (
-				await response.json()
+				await this.post(
+					entry.message,
+					{
+						images: entry.images,
+						signal: postOptions?.signal,
+					},
+					previousStatusId,
+				)
 			);
+
 			responses.push(postResponse);
 			previousStatusId = postResponse.id;
 		}

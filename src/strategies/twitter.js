@@ -27,7 +27,7 @@ import { getImageMimeType } from "../util/images.js";
  * @property {Object} data The data of the posted tweet.
  * @property {string} data.id The ID of the tweet.
  * @property {string} data.text The text content of the tweet.
- * @property {string[]} data.edit_history_tweet_ids The edit history tweet IDs.
+ * @property {string[]} [data.edit_history_tweet_ids] The edit history tweet IDs.
  */
 
 /** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
@@ -97,18 +97,10 @@ export class TwitterStrategy {
 	}
 
 	/**
-	 * Posts a message to Twitter.
-	 * @param {string} message The message to tweet.
-	 * @param {PostOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<object>} A promise that resolves with the tweet data.
+	 * Creates a Twitter API client.
+	 * @returns {TwitterApi} A Twitter API client instance.
 	 */
-	async post(message, postOptions) {
-		if (!message) {
-			throw new TypeError("Missing message to tweet.");
-		}
-
-		validatePostOptions(postOptions);
-
+	#createClient() {
 		const {
 			accessTokenKey,
 			accessTokenSecret,
@@ -116,53 +108,98 @@ export class TwitterStrategy {
 			apiConsumerSecret,
 		} = this.#options;
 
-		const client = new TwitterApi({
+		return new TwitterApi({
 			appKey: apiConsumerKey,
 			appSecret: apiConsumerSecret,
 			accessToken: accessTokenKey,
 			accessSecret: accessTokenSecret,
 		});
+	}
+
+	/**
+	 * Uploads images and returns media IDs.
+	 * @param {TwitterApi} client The Twitter API client.
+	 * @param {Array<import("../types.js").ImageEmbed>} images The images to upload.
+	 * @param {AbortSignal} [signal] The abort signal.
+	 * @returns {Promise<Array<string>>} A promise that resolves with media IDs.
+	 */
+	async #uploadImages(client, images, signal) {
+		const mediaIds = await Promise.all(
+			images.map(image =>
+				client.v2
+					.uploadMedia(Buffer.from(image.data), {
+						media_type: getImageMimeType(image.data),
+					})
+					.then(mediaId => {
+						if (image.alt) {
+							// https://docs.x.com/x-api/media/metadata-create
+							return client.v2
+								.post("media/metadata", {
+									id: mediaId,
+									metadata: {
+										alt_text: {
+											text: image.alt,
+										},
+									},
+								})
+								.then(() => mediaId);
+						}
+
+						return mediaId;
+					}),
+			),
+		);
+
+		signal?.throwIfAborted();
+
+		return mediaIds;
+	}
+
+	/**
+	 * Posts a message to Twitter.
+	 * @param {string} message The message to tweet.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {string} [replyToTweetId] The ID of the tweet to reply to.
+	 * @returns {Promise<TwitterPostResponse>} A promise that resolves with the tweet data.
+	 */
+	async post(message, postOptions, replyToTweetId) {
+		if (!message) {
+			throw new TypeError("Missing message to tweet.");
+		}
+
+		validatePostOptions(postOptions);
+
+		const client = this.#createClient();
 
 		postOptions?.signal?.throwIfAborted();
 
-		// if there are images, upload them first
-		if (postOptions?.images?.length) {
-			const mediaIds = await Promise.all(
-				postOptions.images.map(image =>
-					client.v2
-						.uploadMedia(Buffer.from(image.data), {
-							media_type: getImageMimeType(image.data),
-						})
-						.then(mediaId => {
-							if (image.alt) {
-								// https://docs.x.com/x-api/media/metadata-create
-								return client.v2
-									.post("media/metadata", {
-										id: mediaId,
-										metadata: {
-											alt_text: {
-												text: image.alt,
-											},
-										},
-									})
-									.then(() => mediaId);
-							}
+		/** @type {Object<string, any>} */
+		const tweetOptions = {};
 
-							return mediaId;
-						}),
-				),
-			);
-
-			postOptions?.signal?.throwIfAborted();
-
-			return client.v2.tweet(message, {
-				media: {
-					media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
-				},
-			});
+		// Add reply information if provided
+		if (replyToTweetId) {
+			tweetOptions.reply = {
+				in_reply_to_tweet_id: replyToTweetId,
+			};
 		}
 
-		return client.v2.tweet(message);
+		// if there are images, upload them first
+		if (postOptions?.images?.length) {
+			const mediaIds = await this.#uploadImages(
+				client,
+				postOptions.images,
+				postOptions?.signal,
+			);
+
+			tweetOptions.media = {
+				media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
+			};
+		}
+
+		return client.v2.tweet(
+			message,
+			Object.keys(tweetOptions).length > 0 ? tweetOptions : undefined,
+		);
 	}
 
 	/**
@@ -183,26 +220,12 @@ export class TwitterStrategy {
 	 * Posts a thread of messages to Twitter.
 	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
 	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<Array<object>>} A promise that resolves with an array of tweet data for each message in the thread.
+	 * @returns {Promise<Array<TwitterPostResponse>>} A promise that resolves with an array of tweet data for each message in the thread.
 	 */
 	async postThread(entries, postOptions) {
 		if (!entries || entries.length === 0) {
 			throw new TypeError("Expected at least one entry.");
 		}
-
-		const {
-			accessTokenKey,
-			accessTokenSecret,
-			apiConsumerKey,
-			apiConsumerSecret,
-		} = this.#options;
-
-		const client = new TwitterApi({
-			appKey: apiConsumerKey,
-			appSecret: apiConsumerSecret,
-			accessToken: accessTokenKey,
-			accessSecret: accessTokenSecret,
-		});
 
 		const responses = [];
 		let previousTweetId;
@@ -212,57 +235,13 @@ export class TwitterStrategy {
 				throw new TypeError("Missing message in thread entry.");
 			}
 
-			postOptions?.signal?.throwIfAborted();
-
-			// Upload images if present
-			let mediaIds;
-			if (entry.images?.length) {
-				mediaIds = await Promise.all(
-					entry.images.map(image =>
-						client.v2
-							.uploadMedia(Buffer.from(image.data), {
-								media_type: getImageMimeType(image.data),
-							})
-							.then(mediaId => {
-								if (image.alt) {
-									return client.v2
-										.post("media/metadata", {
-											id: mediaId,
-											metadata: {
-												alt_text: {
-													text: image.alt,
-												},
-											},
-										})
-										.then(() => mediaId);
-								}
-
-								return mediaId;
-							}),
-					),
-				);
-
-				postOptions?.signal?.throwIfAborted();
-			}
-
-			// Build tweet options
-			/** @type {Object<string, any>} */
-			const tweetOptions = {};
-			if (previousTweetId) {
-				tweetOptions.reply = {
-					in_reply_to_tweet_id: previousTweetId,
-				};
-			}
-
-			if (mediaIds) {
-				tweetOptions.media = {
-					media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
-				};
-			}
-
-			const response = await client.v2.tweet(
+			const response = await this.post(
 				entry.message,
-				Object.keys(tweetOptions).length > 0 ? tweetOptions : undefined,
+				{
+					images: entry.images,
+					signal: postOptions?.signal,
+				},
+				previousTweetId,
 			);
 
 			responses.push(response);
