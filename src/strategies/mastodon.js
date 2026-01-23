@@ -189,35 +189,13 @@ export class MastodonStrategy {
 	}
 
 	/**
-	 * Posts a message to Mastodon.
+	 * Posts a message to Mastodon with optional reply information.
 	 * @param {string} message The message to post.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @param {string} [inReplyToId] The ID of the status to reply to.
 	 * @returns {Promise<Object>} A promise that resolves with the post data.
 	 */
-	async post(message, postOptions, inReplyToId) {
-		if (!message) {
-			throw new Error("Missing message to toot.");
-		}
-
-		// Validate postOptions if provided
-		if (postOptions) {
-			if (postOptions.images && !Array.isArray(postOptions.images)) {
-				throw new TypeError("images must be an array.");
-			}
-
-			if (postOptions.images) {
-				for (const image of postOptions.images) {
-					if (!image.data) {
-						throw new TypeError("Image must have data.");
-					}
-					if (!(image.data instanceof Uint8Array)) {
-						throw new TypeError("Image data must be a Uint8Array.");
-					}
-				}
-			}
-		}
-
+	async #postStatus(message, postOptions, inReplyToId) {
 		const { accessToken, host } = this.#options;
 		const url = `https://${host}/api/v1/statuses`;
 		const data = new FormData();
@@ -258,6 +236,38 @@ export class MastodonStrategy {
 		}
 
 		return /**@type {Object} */ (await response.json());
+	}
+
+	/**
+	 * Posts a message to Mastodon.
+	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Object>} A promise that resolves with the post data.
+	 */
+	async post(message, postOptions) {
+		if (!message) {
+			throw new Error("Missing message to toot.");
+		}
+
+		// Validate postOptions if provided
+		if (postOptions) {
+			if (postOptions.images && !Array.isArray(postOptions.images)) {
+				throw new TypeError("images must be an array.");
+			}
+
+			if (postOptions.images) {
+				for (const image of postOptions.images) {
+					if (!image.data) {
+						throw new TypeError("Image must have data.");
+					}
+					if (!(image.data instanceof Uint8Array)) {
+						throw new TypeError("Image data must be a Uint8Array.");
+					}
+				}
+			}
+		}
+
+		return this.#postStatus(message, postOptions);
 	}
 
 	/**
@@ -306,7 +316,7 @@ export class MastodonStrategy {
 			postOptions?.signal?.throwIfAborted();
 
 			const postResponse = /**@type {MastodonPostResponse} */ (
-				await this.post(
+				await this.#postStatus(
 					entry.message,
 					{
 						images: entry.images,

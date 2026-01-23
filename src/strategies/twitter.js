@@ -27,7 +27,6 @@ import { getImageMimeType } from "../util/images.js";
  * @property {Object} data The data of the posted tweet.
  * @property {string} data.id The ID of the tweet.
  * @property {string} data.text The text content of the tweet.
- * @property {string[]} [data.edit_history_tweet_ids] The edit history tweet IDs.
  */
 
 /** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
@@ -156,21 +155,14 @@ export class TwitterStrategy {
 	}
 
 	/**
-	 * Posts a message to Twitter.
+	 * Posts a single tweet with optional reply information.
+	 * @param {TwitterApi} client The Twitter API client.
 	 * @param {string} message The message to tweet.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
 	 * @param {string} [replyToTweetId] The ID of the tweet to reply to.
 	 * @returns {Promise<TwitterPostResponse>} A promise that resolves with the tweet data.
 	 */
-	async post(message, postOptions, replyToTweetId) {
-		if (!message) {
-			throw new TypeError("Missing message to tweet.");
-		}
-
-		validatePostOptions(postOptions);
-
-		const client = this.#createClient();
-
+	async #postTweet(client, message, postOptions, replyToTweetId) {
 		postOptions?.signal?.throwIfAborted();
 
 		/** @type {Object<string, any>} */
@@ -203,6 +195,24 @@ export class TwitterStrategy {
 	}
 
 	/**
+	 * Posts a message to Twitter.
+	 * @param {string} message The message to tweet.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<TwitterPostResponse>} A promise that resolves with the tweet data.
+	 */
+	async post(message, postOptions) {
+		if (!message) {
+			throw new TypeError("Missing message to tweet.");
+		}
+
+		validatePostOptions(postOptions);
+
+		const client = this.#createClient();
+
+		return this.#postTweet(client, message, postOptions);
+	}
+
+	/**
 	 * Extracts a URL from a Twitter API response.
 	 * @param {TwitterPostResponse} response The response from the Twitter API post request.
 	 * @returns {string} The URL for the tweet.
@@ -227,6 +237,7 @@ export class TwitterStrategy {
 			throw new TypeError("Expected at least one entry.");
 		}
 
+		const client = this.#createClient();
 		const responses = [];
 		let previousTweetId;
 
@@ -235,7 +246,8 @@ export class TwitterStrategy {
 				throw new TypeError("Missing message in thread entry.");
 			}
 
-			const response = await this.post(
+			const response = await this.#postTweet(
+				client,
 				entry.message,
 				{
 					images: entry.images,
