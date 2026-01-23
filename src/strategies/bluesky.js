@@ -301,9 +301,16 @@ async function createSession(options, signal) {
  * @param {BlueskySession} session The session data.
  * @param {string} message The message to post.
  * @param {PostOptions} [postOptions] Additional options for the post.
+ * @param {Object} [replyInfo] Reply information for threading.
+ * @param {Object} replyInfo.root The root post of the thread.
+ * @param {string} replyInfo.root.uri The URI of the root post.
+ * @param {string} replyInfo.root.cid The CID of the root post.
+ * @param {Object} replyInfo.parent The parent post in the thread.
+ * @param {string} replyInfo.parent.uri The URI of the parent post.
+ * @param {string} replyInfo.parent.cid The CID of the parent post.
  * @returns {Promise<BlueskyCreateRecordResponse>} A promise that resolves with the post data.
  */
-async function postMessage(options, session, message, postOptions) {
+async function postMessage(options, session, message, postOptions, replyInfo) {
 	const url = getPostMessageUrl(options);
 
 	// Detect facets from the truncated message; detectFacets now returns { facets, text }
@@ -327,6 +334,11 @@ async function postMessage(options, session, message, postOptions) {
 			createdAt: new Date().toISOString(),
 		},
 	};
+
+	// Add reply information if provided
+	if (replyInfo) {
+		body.record.reply = replyInfo;
+	}
 
 	// add image embeds if present
 	if (postOptions?.images?.length) {
@@ -505,7 +517,6 @@ export class BlueskyStrategy {
 		}
 
 		const session = await createSession(this.#options, postOptions?.signal);
-		const url = getPostMessageUrl(this.#options);
 		const responses = [];
 		let previousPost;
 
@@ -516,93 +527,31 @@ export class BlueskyStrategy {
 
 			postOptions?.signal?.throwIfAborted();
 
-			// Detect facets from the message
-			const { facets: rawFacets, text: truncatedMessage } = detectFacets(
-				entry.message,
-			);
+			// Build reply information for subsequent posts in the thread
+			const replyInfo = previousPost
+				? {
+						root: {
+							uri: responses[0].uri,
+							cid: responses[0].cid,
+						},
+						parent: {
+							uri: previousPost.uri,
+							cid: previousPost.cid,
+						},
+					}
+				: undefined;
 
-			// Resolve mention handles to DIDs in facets
-			const facets = await resolveMentionFacets(
+			const postResponse = await postMessage(
 				this.#options,
-				rawFacets,
-				postOptions?.signal,
+				session,
+				entry.message,
+				{
+					images: entry.images,
+					signal: postOptions?.signal,
+				},
+				replyInfo,
 			);
 
-			/** @type {BlueskyPostBody} */
-			const body = {
-				repo: session.did,
-				collection: "app.bsky.feed.post",
-				record: {
-					$type: "app.bsky.feed.post",
-					text: truncatedMessage,
-					facets,
-					createdAt: new Date().toISOString(),
-				},
-			};
-
-			// Add reply information for subsequent posts in the thread
-			if (previousPost) {
-				body.record.reply = {
-					root: {
-						uri: responses[0].uri,
-						cid: responses[0].cid,
-					},
-					parent: {
-						uri: previousPost.uri,
-						cid: previousPost.cid,
-					},
-				};
-			}
-
-			// Add image embeds if present
-			if (entry.images?.length) {
-				const images = [];
-
-				for (const image of entry.images) {
-					const result = await uploadImage(
-						this.#options,
-						session,
-						image.data,
-						postOptions?.signal,
-					);
-
-					images.push({
-						alt: image.alt || "",
-						image: result.blob,
-					});
-				}
-
-				if (images.length) {
-					body.record.embed = {
-						$type: "app.bsky.embed.images",
-						images,
-					};
-				}
-			}
-
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${session.accessJwt}`,
-				},
-				body: JSON.stringify(body),
-				signal: postOptions?.signal,
-			});
-
-			if (!response.ok) {
-				const errorBody = /** @type {BlueskyErrorResponse} */ (
-					await response.json()
-				);
-
-				throw new Error(
-					`${response.status} ${response.statusText}: Failed to post message:\n${errorBody.error} - ${errorBody.message}`,
-				);
-			}
-
-			const postResponse = /** @type {BlueskyCreateRecordResponse} */ (
-				await response.json()
-			);
 			responses.push(postResponse);
 			previousPost = postResponse;
 		}
