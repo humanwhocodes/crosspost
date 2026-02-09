@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.2...crosspost-v1.0.3) (2026-02-09)
+
+
+### Bug Fixes
+
+* missing aspect ratio for Bluesky images ([#159](https://github.com/humanwhocodes/crosspost/issues/159)) ([57b0e38](https://github.com/humanwhocodes/crosspost/commit/57b0e38b9365f218f4981b88a9bdcb23d00e1243))
+
 ## [1.0.2](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.1...crosspost-v1.0.2) (2025-11-11)
 
 
