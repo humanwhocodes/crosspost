@@ -38,4 +38,26 @@ export function validatePostOptions(options) {
 			}
 		}
 	}
+
+	if (options.images && options.cardPreview) {
+		throw new TypeError("images and cardPreview cannot be used together.");
+	}
+
+	if (options.cardPreview) {
+		if (!options.cardPreview.uri) {
+			throw new TypeError("Card preview must have a uri.");
+		}
+		if (!options.cardPreview.title) {
+			throw new TypeError("Card preview must have a title.");
+		}
+		if (!options.cardPreview.description) {
+			throw new TypeError("Card preview must have a description.");
+		}
+		if (
+			options.cardPreview.thumb &&
+			!(options.cardPreview.thumb instanceof Uint8Array)
+		) {
+			throw new TypeError("Card preview thumb must be a Uint8Array.");
+		}
+	}
 }

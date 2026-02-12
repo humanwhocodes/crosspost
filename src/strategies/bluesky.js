@@ -57,6 +57,7 @@ import { validatePostOptions } from "../util/options.js";
  * @property {Object} [record.embed] The embedded content in the post.
  * @property {string} record.embed.$type The type of embedded content.
  * @property {Array<Object>} [record.embed.images] The images to embed.
+ * @property {Object} [record.embed.external] The external link card to embed.
  *
  */
 
@@ -346,6 +347,26 @@ async function postMessage(options, session, message, postOptions) {
 				images,
 			};
 		}
+	} else if (postOptions?.cardPreview) {
+		const { uri, title, description, thumb } = postOptions.cardPreview;
+
+		/** @type {{uri: string, title: string, description: string, thumb?: Object}} */
+		const external = { uri, title, description };
+
+		if (thumb) {
+			const result = await uploadImage(
+				options,
+				session,
+				thumb,
+				postOptions?.signal,
+			);
+			external.thumb = result.blob;
+		}
+
+		body.record.embed = {
+			$type: "app.bsky.embed.external",
+			external,
+		};
 	}
 
 	const response = await fetch(url, {

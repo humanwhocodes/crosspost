@@ -49,4 +49,77 @@ describe("validatePostOptions()", () => {
 		};
 		assert.doesNotThrow(() => validatePostOptions(options));
 	});
+
+	it("should throw error when cardPreview has no uri", () => {
+		assert.throws(
+			() =>
+				validatePostOptions({
+					cardPreview: { title: "t", description: "d" },
+				}),
+			new TypeError("Card preview must have a uri."),
+		);
+	});
+
+	it("should throw error when cardPreview has no title", () => {
+		assert.throws(
+			() =>
+				validatePostOptions({
+					cardPreview: {
+						uri: "https://example.com",
+						description: "d",
+					},
+				}),
+			new TypeError("Card preview must have a title."),
+		);
+	});
+
+	it("should throw error when cardPreview has no description", () => {
+		assert.throws(
+			() =>
+				validatePostOptions({
+					cardPreview: { uri: "https://example.com", title: "t" },
+				}),
+			new TypeError("Card preview must have a description."),
+		);
+	});
+
+	it("should throw error when cardPreview thumb is not Uint8Array", () => {
+		assert.throws(
+			() =>
+				validatePostOptions({
+					cardPreview: {
+						uri: "https://example.com",
+						title: "t",
+						description: "d",
+						thumb: "not bytes",
+					},
+				}),
+			new TypeError("Card preview thumb must be a Uint8Array."),
+		);
+	});
+
+	it("should not throw error when cardPreview is valid", () => {
+		assert.doesNotThrow(() =>
+			validatePostOptions({
+				cardPreview: {
+					uri: "https://example.com",
+					title: "Example",
+					description: "An example",
+				},
+			}),
+		);
+	});
+
+	it("should not throw error when cardPreview has valid thumb", () => {
+		assert.doesNotThrow(() =>
+			validatePostOptions({
+				cardPreview: {
+					uri: "https://example.com",
+					title: "Example",
+					description: "An example",
+					thumb: new Uint8Array(),
+				},
+			}),
+		);
+	});
 });

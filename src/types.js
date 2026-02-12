@@ -18,8 +18,17 @@
  */
 
 /**
+ * @typedef {Object} CardPreview
+ * @property {string} uri The URL of the card.
+ * @property {string} title The title of the card.
+ * @property {string} description The description of the card.
+ * @property {Uint8Array} [thumb] The thumbnail image data.
+ */
+
+/**
  * @typedef {Object} PostOptions
  * @property {ImageEmbedArray} [images] An array of images to include.
+ * @property {CardPreview} [cardPreview] A card preview (external link embed) to include.
  * @property {AbortSignal} [signal] Signal for aborting operations.
  */
 
@@ -33,6 +42,7 @@
  * @property {string} message The message to post.
  * @property {string} strategyId The ID of the strategy to use for posting.
  * @property {ImageEmbedArray} [images] An array of images to include.
+ * @property {CardPreview} [cardPreview] A card preview (external link embed) to include.
  */
 
 /**

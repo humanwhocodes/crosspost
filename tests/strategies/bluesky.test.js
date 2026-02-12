@@ -715,6 +715,173 @@ describe("BlueskyStrategy", function () {
 		});
 	});
 
+	describe("post with card preview", function () {
+		let strategy;
+
+		beforeEach(function () {
+			strategy = new BlueskyStrategy(options);
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(() => {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should successfully post a message with a card preview without thumb", async function () {
+			const text = "Check this out!";
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							embed: {
+								$type: "app.bsky.embed.external",
+								external: {
+									uri: "https://example.com/article",
+									title: "Example Article",
+									description: "An interesting article",
+								},
+							},
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text, {
+				cardPreview: {
+					uri: "https://example.com/article",
+					title: "Example Article",
+					description: "An interesting article",
+				},
+			});
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should successfully post a message with a card preview with thumb", async function () {
+			const text = "Check this out!";
+			const thumbData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // PNG magic bytes
+
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: UPLOAD_BLOB_URL,
+					headers: {
+						"content-type": "*/*",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: thumbData.buffer,
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: UPLOAD_BLOB_RESPONSE,
+				},
+			);
+
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							embed: {
+								$type: "app.bsky.embed.external",
+								external: {
+									uri: "https://example.com/article",
+									title: "Example Article",
+									description: "An interesting article",
+									thumb: UPLOAD_BLOB_RESPONSE.blob,
+								},
+							},
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text, {
+				cardPreview: {
+					uri: "https://example.com/article",
+					title: "Example Article",
+					description: "An interesting article",
+					thumb: thumbData,
+				},
+			});
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+	});
+
 	describe("getUrlFromResponse", function () {
 		let strategy;
 
