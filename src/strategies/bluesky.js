@@ -9,9 +9,13 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { detectFacets } from "../util/bluesky-facets.js";
+import { detectFacets, BLUESKY_URL_FACET } from "../util/bluesky-facets.js";
 import { imageSize } from "image-size";
 import { validatePostOptions } from "../util/options.js";
+import metascraper from "metascraper";
+import metascraperDescription from "metascraper-description";
+import metascraperImage from "metascraper-image";
+import metascraperTitle from "metascraper-title";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -57,6 +61,7 @@ import { validatePostOptions } from "../util/options.js";
  * @property {Object} [record.embed] The embedded content in the post.
  * @property {string} record.embed.$type The type of embedded content.
  * @property {Array<Object>} [record.embed.images] The images to embed.
+ * @property {Object} [record.embed.external] The external link card to embed.
  *
  */
 
@@ -94,6 +99,101 @@ import { validatePostOptions } from "../util/options.js";
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
+
+const scraper = metascraper([
+	metascraperDescription(),
+	metascraperImage(),
+	metascraperTitle(),
+]);
+
+/**
+ * Fetches Open Graph metadata from a URL using metascraper.
+ * @param {string} url The URL to fetch metadata from.
+ * @param {AbortSignal} [signal] An optional abort signal.
+ * @returns {Promise<{title: string, description: string, image: string|null}>} The extracted metadata.
+ */
+async function fetchOpenGraphData(url, signal) {
+	const response = await fetch(url, {
+		headers: { "User-Agent": "crosspost-bot/1.0" },
+		redirect: "follow",
+		signal,
+	});
+
+	const html = await response.text();
+	const metadata = await scraper({ html, url });
+
+	return {
+		title: metadata.title ?? "",
+		description: metadata.description ?? "",
+		image: metadata.image ?? null,
+	};
+}
+
+/**
+ * Creates an external card embed from the first URL found in the post facets.
+ * Fetches Open Graph metadata and optionally uploads a thumbnail image.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @param {BlueskySession} session The session data.
+ * @param {Array<{index: Object, features: Array<{$type: string, uri?: string}>}>} facets The detected facets.
+ * @param {AbortSignal} [signal] The abort signal for the request.
+ * @returns {Promise<{$type: string, external: Object}|null>} The embed object, or null if no card could be generated.
+ */
+async function createCardEmbed(options, session, facets, signal) {
+	const firstUrlFeature =
+		/** @type {{uri: string, $type: string} | undefined} */ (
+			facets
+				.flatMap(f => f.features)
+				.find(feat => feat.$type === BLUESKY_URL_FACET)
+		);
+
+	if (!firstUrlFeature) {
+		return null;
+	}
+
+	try {
+		const ogData = await fetchOpenGraphData(firstUrlFeature.uri, signal);
+
+		if (!ogData.title) {
+			return null;
+		}
+
+		/** @type {{uri: string, title: string, description: string, thumb?: Object}} */
+		const external = {
+			uri: firstUrlFeature.uri,
+			title: ogData.title,
+			description: ogData.description,
+		};
+
+		if (ogData.image) {
+			try {
+				const imageResponse = await fetch(ogData.image, { signal });
+
+				if (imageResponse.ok) {
+					const imageBuffer = new Uint8Array(
+						await imageResponse.arrayBuffer(),
+					);
+					const result = await uploadImage(
+						options,
+						session,
+						imageBuffer,
+						signal,
+					);
+					external.thumb = result.blob;
+				}
+			} catch {
+				// Ignore image fetch failures
+			}
+		}
+
+		return {
+			$type: "app.bsky.embed.external",
+			external,
+		};
+	} catch {
+		// Silently ignore OG data fetch failures
+		return null;
+	}
+}
 
 /**
  * Gets the URL for creating a session.
@@ -345,6 +445,18 @@ async function postMessage(options, session, message, postOptions) {
 				$type: "app.bsky.embed.images",
 				images,
 			};
+		}
+	} else {
+		// Auto-generate card preview from the first URL in the post
+		const embed = await createCardEmbed(
+			options,
+			session,
+			rawFacets,
+			postOptions?.signal,
+		);
+
+		if (embed) {
+			body.record.embed = embed;
 		}
 	}
 

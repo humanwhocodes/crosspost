@@ -98,6 +98,10 @@
     "@noble/secp256k1": "^3.0.0",
     "bech32": "^2.0.0",
     "image-size": "^2.0.2",
+    "metascraper": "^5.49.24",
+    "metascraper-description": "^5.49.24",
+    "metascraper-image": "^5.49.24",
+    "metascraper-title": "^5.49.24",
     "tlds": "^1.255.0",
     "twitter-api-v2": "^1.20.2",
     "zod": "^3.24.2"
