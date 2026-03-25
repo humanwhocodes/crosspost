@@ -132,6 +132,14 @@ function parseOpenGraphData(html) {
 		}
 	}
 
+	// Fall back to <title> tag if og:title is not present
+	if (!ogData.title) {
+		const titleMatch = /<title[^>]*>([^<]*)<\/title>/i.exec(html);
+		if (titleMatch) {
+			ogData.title = titleMatch[1].trim();
+		}
+	}
+
 	return {
 		title: ogData.title ?? "",
 		description: ogData.description ?? "",

@@ -1043,6 +1043,89 @@ describe("BlueskyStrategy", function () {
 			const response = await strategy.post(text);
 			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
 		});
+
+		it("should use <title> as fallback when og:title is not present", async function () {
+			const text = "Check this out https://example.com/article";
+
+			// Mock the OG data fetch - page has <title> but no og:title
+			externalServer.get(
+				{ url: "/article" },
+				{
+					status: 200,
+					headers: { "content-type": "text/html" },
+					body: `<html><head>
+						<title>Page Title Fallback</title>
+						<meta property="og:description" content="An interesting article" />
+					</head><body></body></html>`,
+				},
+			);
+
+			// Mock Bluesky session
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: { "content-type": "application/json" },
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock post creation with embed using <title> as title
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 15,
+										byteEnd: 42,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: "https://example.com/article",
+										},
+									],
+								},
+							],
+							embed: {
+								$type: "app.bsky.embed.external",
+								external: {
+									uri: "https://example.com/article",
+									title: "Page Title Fallback",
+									description: "An interesting article",
+								},
+							},
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
 	});
 
 	describe("getUrlFromResponse", function () {
