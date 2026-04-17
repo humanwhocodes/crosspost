@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.3...crosspost-v1.0.4) (2026-04-17)
+
+
+### Bug Fixes
+
+* Update LinkedIn strategy with new API ([be6b5ae](https://github.com/humanwhocodes/crosspost/commit/be6b5ae9d7001faee4287bc517b44545b30dbf1f))
+* Upgrade MCP server SDK ([9b6bd08](https://github.com/humanwhocodes/crosspost/commit/9b6bd0853a85baa09e97c7ce70276700d6bb2963))
+
 ## [1.0.3](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.2...crosspost-v1.0.3) (2026-02-09)
 
 
