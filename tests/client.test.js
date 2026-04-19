@@ -515,4 +515,286 @@ describe("Client", function () {
 			assert.strictEqual(results[0].name, "Strategy 1");
 		});
 	});
+
+	describe("postThread", function () {
+		it("should throw a TypeError if entries is not an array", function () {
+			const strategies = [{ name: "test", id: "test1", post() {} }];
+			const client = new Client({ strategies });
+
+			assert.rejects(
+				async () => {
+					await client.postThread("not an array");
+				},
+				TypeError,
+				"Expected an array argument.",
+			);
+		});
+
+		it("should throw a TypeError if entries array is empty", function () {
+			const strategies = [{ name: "test", id: "test1", post() {} }];
+			const client = new Client({ strategies });
+
+			assert.rejects(
+				async () => {
+					await client.postThread([]);
+				},
+				TypeError,
+				"Expected at least one entry.",
+			);
+		});
+
+		it("should call postThread on strategies that have it", async function () {
+			const strategies = [
+				{
+					name: "Strategy with Thread",
+					id: "thread-strategy",
+					post() {
+						assert.fail("post should not be called");
+					},
+					postThread(entries) {
+						return Promise.resolve(
+							entries.map(e => `threaded: ${e.message}`),
+						);
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [
+				{ message: "First message" },
+				{ message: "Second message" },
+			];
+
+			const results = await client.postThread(entries);
+
+			assert.strictEqual(results.length, 1);
+			assert.ok(results[0] instanceof SuccessResponse);
+			assert.deepStrictEqual(results[0].response, [
+				"threaded: First message",
+				"threaded: Second message",
+			]);
+		});
+
+		it("should call post multiple times for strategies without postThread", async function () {
+			const postCalls = [];
+			const strategies = [
+				{
+					name: "Strategy without Thread",
+					id: "no-thread-strategy",
+					post(message, options) {
+						postCalls.push({ message, options });
+						return Promise.resolve(`posted: ${message}`);
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [
+				{ message: "First message" },
+				{ message: "Second message" },
+			];
+
+			const results = await client.postThread(entries);
+
+			assert.strictEqual(results.length, 1);
+			assert.ok(results[0] instanceof SuccessResponse);
+			assert.strictEqual(postCalls.length, 2);
+			assert.strictEqual(postCalls[0].message, "First message");
+			assert.strictEqual(postCalls[1].message, "Second message");
+			assert.deepStrictEqual(results[0].response, [
+				"posted: First message",
+				"posted: Second message",
+			]);
+		});
+
+		it("should handle mixed strategies with and without postThread", async function () {
+			const strategies = [
+				{
+					name: "With Thread",
+					id: "with-thread",
+					postThread(entries) {
+						return Promise.resolve(`thread of ${entries.length}`);
+					},
+				},
+				{
+					name: "Without Thread",
+					id: "without-thread",
+					post(message) {
+						return Promise.resolve(`single: ${message}`);
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [
+				{ message: "First message" },
+				{ message: "Second message" },
+			];
+
+			const results = await client.postThread(entries);
+
+			assert.strictEqual(results.length, 2);
+			assert.ok(results[0] instanceof SuccessResponse);
+			assert.ok(results[1] instanceof SuccessResponse);
+			assert.strictEqual(results[0].response, "thread of 2");
+			assert.deepStrictEqual(results[1].response, [
+				"single: First message",
+				"single: Second message",
+			]);
+		});
+
+		it("should pass images to strategies", async function () {
+			const receivedEntries = [];
+			const testImages = [
+				{ data: new Uint8Array([1, 2, 3]), alt: "test image" },
+			];
+
+			const strategies = [
+				{
+					name: "Strategy",
+					id: "strategy1",
+					postThread(entries) {
+						receivedEntries.push(...entries);
+						return Promise.resolve("success");
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [
+				{ message: "First", images: testImages },
+				{ message: "Second" },
+			];
+
+			await client.postThread(entries);
+
+			assert.strictEqual(receivedEntries.length, 2);
+			assert.deepStrictEqual(receivedEntries[0].images, testImages);
+			assert.strictEqual(receivedEntries[1].images, undefined);
+		});
+
+		it("should pass signal to strategies with postThread", async function () {
+			const controller = new AbortController();
+			const receivedOptions = [];
+
+			const strategies = [
+				{
+					name: "Strategy",
+					id: "strategy1",
+					postThread(entries, options) {
+						receivedOptions.push(options);
+						return Promise.resolve("success");
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [{ message: "Test" }];
+
+			await client.postThread(entries, { signal: controller.signal });
+
+			assert.strictEqual(receivedOptions.length, 1);
+			assert.strictEqual(receivedOptions[0].signal, controller.signal);
+		});
+
+		it("should pass signal to strategies without postThread", async function () {
+			const controller = new AbortController();
+			const receivedOptions = [];
+
+			const strategies = [
+				{
+					name: "Strategy",
+					id: "strategy1",
+					post(message, options) {
+						receivedOptions.push(options);
+						return Promise.resolve("success");
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [{ message: "First" }, { message: "Second" }];
+
+			await client.postThread(entries, { signal: controller.signal });
+
+			assert.strictEqual(receivedOptions.length, 2);
+			assert.strictEqual(receivedOptions[0].signal, controller.signal);
+			assert.strictEqual(receivedOptions[1].signal, controller.signal);
+		});
+
+		it("should return failure response when strategy fails", async function () {
+			const strategies = [
+				{
+					name: "Failing Strategy",
+					id: "fail",
+					postThread() {
+						return Promise.reject(new Error("Thread failed"));
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [{ message: "Test" }];
+
+			const results = await client.postThread(entries);
+
+			assert.strictEqual(results.length, 1);
+			assert.ok(results[0] instanceof FailureResponse);
+			assert.strictEqual(results[0].name, "Failing Strategy");
+			assert.match(results[0].reason.message, /Thread failed/);
+		});
+
+		it("should handle failures in strategies without postThread", async function () {
+			const strategies = [
+				{
+					name: "Failing Strategy",
+					id: "fail",
+					post(message) {
+						if (message === "Second") {
+							return Promise.reject(new Error("Post failed"));
+						}
+						return Promise.resolve("success");
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [{ message: "First" }, { message: "Second" }];
+
+			const results = await client.postThread(entries);
+
+			assert.strictEqual(results.length, 1);
+			assert.ok(results[0] instanceof FailureResponse);
+			assert.match(results[0].reason.message, /Post failed/);
+		});
+
+		it("should call getUrlFromResponse when available", async function () {
+			const url1 = "https://example.com/thread";
+
+			const strategies = [
+				{
+					name: "Strategy",
+					id: "strategy1",
+					postThread() {
+						return Promise.resolve({ id: "123" });
+					},
+					getUrlFromResponse(response) {
+						return `${url1}/${response.id}`;
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const entries = [{ message: "Test" }];
+
+			const results = await client.postThread(entries);
+
+			assert.strictEqual(results.length, 1);
+			assert.ok(results[0] instanceof SuccessResponse);
+			assert.strictEqual(
+				results[0].url,
+				"https://example.com/thread/123",
+			);
+		});
+	});
 });
