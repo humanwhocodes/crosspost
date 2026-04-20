@@ -31,6 +31,7 @@ The API is split into two parts:
     - `TelegramStrategy`
     - `DevtoStrategy`
     - `NostrStrategy` (requires Node.js v22+)
+    - `RedditStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -46,6 +47,7 @@ import {
 	TelegramStrategy,
 	DevtoStrategy,
 	NostrStrategy,
+	RedditStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -102,6 +104,12 @@ const nostr = new NostrStrategy({
 	relays: ["wss://relay.example.com", "wss://relay2.example.com"],
 });
 
+// Note: OAuth token and subreddit required
+const reddit = new RedditStrategy({
+	accessToken: "your-access-token",
+	subreddit: "javascript",
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -114,6 +122,7 @@ const client = new Client({
 		telegram,
 		devto,
 		nostr,
+		reddit,
 	],
 });
 
@@ -185,6 +194,7 @@ Usage: crosspost [options] ["Message to post."]
 --telegram      Post to Telegram.
 --slack, -s     Post to Slack.
 --nostr, -n     Post to Nostr.
+--reddit, -r    Post to Reddit.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -247,6 +257,9 @@ Each strategy requires a set of environment variables in order to execute:
 - Nostr
     - `NOSTR_PRIVATE_KEY`
     - `NOSTR_RELAYS`
+- Reddit
+    - `REDDIT_ACCESS_TOKEN`
+    - `REDDIT_SUBREDDIT`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
