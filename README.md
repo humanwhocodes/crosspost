@@ -31,6 +31,7 @@ The API is split into two parts:
     - `TelegramStrategy`
     - `DevtoStrategy`
     - `NostrStrategy` (requires Node.js v22+)
+    - `RedditStrategy`
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -46,6 +47,7 @@ import {
 	TelegramStrategy,
 	DevtoStrategy,
 	NostrStrategy,
+	RedditStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -102,6 +104,12 @@ const nostr = new NostrStrategy({
 	relays: ["wss://relay.example.com", "wss://relay2.example.com"],
 });
 
+// Note: OAuth token and subreddit required
+const reddit = new RedditStrategy({
+	accessToken: "your-access-token",
+	subreddit: "javascript",
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -114,6 +122,7 @@ const client = new Client({
 		telegram,
 		devto,
 		nostr,
+		reddit,
 	],
 });
 
@@ -185,6 +194,7 @@ Usage: crosspost [options] ["Message to post."]
 --telegram      Post to Telegram.
 --slack, -s     Post to Slack.
 --nostr, -n     Post to Nostr.
+--reddit, -r    Post to Reddit.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -247,6 +257,9 @@ Each strategy requires a set of environment variables in order to execute:
 - Nostr
     - `NOSTR_PRIVATE_KEY`
     - `NOSTR_RELAYS`
+- Reddit
+    - `REDDIT_ACCESS_TOKEN`
+    - `REDDIT_SUBREDDIT`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -506,6 +519,30 @@ Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. I
 **Important:** Nostr support only works in Node.js v22+.
 
 **Security:** Keep your private key secure and never share it. Consider using a dedicated key for crossposting rather than your main Nostr identity key.
+
+### Reddit
+
+To enable posting to Reddit:
+
+1. Go to [Reddit Apps](https://www.reddit.com/prefs/apps) and click "create another app...".
+2. Enter a name for your app and choose **script** as the app type.
+3. Set `http://localhost:8080` as the redirect URI and click "create app".
+4. Note the app's client ID and secret from the app details.
+5. Generate an OAuth access token for your script app (see the [Reddit OAuth API docs](https://www.reddit.com/dev/api/oauth)). Example:
+
+   ```shell
+   curl -u "<CLIENT_ID>:<CLIENT_SECRET>" \
+     -d "grant_type=password&username=<REDDIT_USERNAME>&password=<REDDIT_PASSWORD>" \
+     -A "Crosspost by u/<REDDIT_USERNAME>" \
+     https://www.reddit.com/api/v1/access_token
+   ```
+
+   Copy the `access_token` value from the JSON response and set it as `REDDIT_ACCESS_TOKEN`.
+6. Set `REDDIT_SUBREDDIT` to the target community name (without `r/`).
+
+Reddit submissions created by this strategy are self/text posts. The first line before the first newline character (`\n`) is used as the post title and remaining lines are used as the post body.
+
+For example, `"Post title\n\nPost body"` sends `Post title` as the title and `Post body` as the body. If there is only one line, then only the title is sent and the body is empty.
 
 ## License
 
