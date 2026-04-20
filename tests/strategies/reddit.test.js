@@ -249,12 +249,14 @@ describe("RedditStrategy", () => {
 
 	describe("MAX_MESSAGE_LENGTH", () => {
 		let strategy;
+
 		beforeEach(() => {
 			strategy = new RedditStrategy({
 				accessToken: ACCESS_TOKEN,
 				subreddit: SUBREDDIT,
 			});
 		});
+
 		it("should have a MAX_MESSAGE_LENGTH property", () => {
 			assert.ok(
 				Object.prototype.hasOwnProperty.call(
@@ -269,12 +271,14 @@ describe("RedditStrategy", () => {
 
 	describe("calculateMessageLength", () => {
 		let strategy;
+
 		beforeEach(() => {
 			strategy = new RedditStrategy({
 				accessToken: ACCESS_TOKEN,
 				subreddit: SUBREDDIT,
 			});
 		});
+
 		it("should calculate length of plain text correctly", () => {
 			const msg = "Hello world!";
 			assert.strictEqual(
@@ -282,9 +286,9 @@ describe("RedditStrategy", () => {
 				msg.length,
 			);
 		});
-		it("should count URLs as their actual length", () => {
-			const msg =
-				"Check this out: https://example.com/abcde and http://foo.bar";
+
+		it("should count all Unicode characters correctly", () => {
+			const msg = "Hello 🌍\nこんにちは";
 			assert.strictEqual(
 				strategy.calculateMessageLength(msg),
 				[...msg].length,
