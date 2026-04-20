@@ -520,6 +520,30 @@ Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. I
 
 **Security:** Keep your private key secure and never share it. Consider using a dedicated key for crossposting rather than your main Nostr identity key.
 
+### Reddit
+
+To enable posting to Reddit:
+
+1. Go to [Reddit Apps](https://www.reddit.com/prefs/apps) and click "create another app...".
+2. Enter a name for your app and choose **script** as the app type.
+3. Set `http://localhost:8080` as the redirect URI and click "create app".
+4. Note the app's client ID and secret from the app details.
+5. Generate an OAuth access token for your script app (see the [Reddit OAuth API docs](https://www.reddit.com/dev/api/oauth)). Example:
+
+   ```shell
+   curl -u "<CLIENT_ID>:<CLIENT_SECRET>" \
+     -d "grant_type=password&username=<REDDIT_USERNAME>&password=<REDDIT_PASSWORD>" \
+     -A "Crosspost by u/<REDDIT_USERNAME>" \
+     https://www.reddit.com/api/v1/access_token
+   ```
+
+   Copy the `access_token` value from the JSON response and set it as `REDDIT_ACCESS_TOKEN`.
+6. Set `REDDIT_SUBREDDIT` to the target community name (without `r/`).
+
+Reddit submissions created by this strategy are self/text posts. The first line before the first newline character (`\n`) is used as the post title and remaining lines are used as the post body.
+
+For example, `"Post title\n\nPost body"` sends `Post title` as the title and `Post body` as the body. If there is only one line, then only the title is sent and the body is empty.
+
 ## License
 
 Copyright 2024-2025 Nicholas C. Zakas
