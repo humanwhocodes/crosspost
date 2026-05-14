@@ -67,7 +67,7 @@ import { getImageMimeType } from "../util/images.js";
  *
  * @typedef {Object} DevtoImageResponse
  * @property {string} image_of The type of entity the image belongs to.
- * @property {string} url The URL of the uploaded image.
+ * @property {string|null} url The URL of the uploaded image.
  * @property {string|null} error The error message, if any.
  *
  * @typedef {Object} DevtoErrorResponse
@@ -85,6 +85,12 @@ import { getImageMimeType } from "../util/images.js";
 
 const API_URL = "https://dev.to/api";
 
+const MIME_TO_EXT = {
+	"image/png": ".png",
+	"image/jpeg": ".jpg",
+	"image/gif": ".gif",
+};
+
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
@@ -94,14 +100,14 @@ const API_URL = "https://dev.to/api";
  * @param {string} apiKey The Dev.to API key.
  * @param {Uint8Array} imageData The image binary data.
  * @param {string} mimeType The MIME type of the image.
- * @param {string} [filename] The filename for the upload.
  * @param {AbortSignal} [signal] An optional abort signal.
  * @returns {Promise<string|null>} The URL of the uploaded image, or null if upload failed.
  */
-async function uploadImage(apiKey, imageData, mimeType, filename, signal) {
+async function uploadImage(apiKey, imageData, mimeType, signal) {
+	const ext = MIME_TO_EXT[mimeType] ?? ".png";
 	const blob = new Blob([imageData], { type: mimeType });
 	const formData = new FormData();
-	formData.append("image", blob, filename || "image.png");
+	formData.append("image", blob, `image${ext}`);
 
 	const response = await fetch(`${API_URL}/images`, {
 		method: "POST",
@@ -118,6 +124,7 @@ async function uploadImage(apiKey, imageData, mimeType, filename, signal) {
 		return data.url || null;
 	}
 
+	await response.body?.cancel();
 	return null;
 }
 
@@ -139,11 +146,17 @@ async function postArticle(apiKey, content, postOptions) {
 				apiKey,
 				image.data,
 				mimeType,
-				image.alt,
 				postOptions?.signal,
 			);
-		} catch {
-			// If upload fails, proceed without image
+			if (!mainImage) {
+				process.emitWarning(
+					"Dev.to image upload failed; posting article without cover image.",
+				);
+			}
+		} catch (err) {
+			process.emitWarning(
+				`Dev.to image upload error: ${/** @type {Error} */ (err).message}; posting article without cover image.`,
+			);
 		}
 	}
 
