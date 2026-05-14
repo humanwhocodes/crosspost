@@ -268,25 +268,35 @@ describe("DevtoStrategy", () => {
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
 		});
 
-		it("should upload a JPEG image using the correct file extension", async () => {
+		it("should upload a JPEG image with a .jpg filename in the multipart request", async () => {
 			const content = "Hello World\n\nThis is a test post.";
 			const imageData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
 			const jpegImageUrl =
 				"https://res.cloudinary.com/dev/image/upload/test.jpg";
+
+			let uploadedFilename;
 
 			server.post(
 				{
 					url: "/api/images",
 					headers: { "api-key": API_KEY },
 				},
-				{
-					status: 200,
-					headers: { "content-type": "application/json" },
-					body: {
-						image_of: "article",
-						url: jpegImageUrl,
-						error: null,
-					},
+				async req => {
+					const formData = await req.formData();
+					const file = formData.get("image");
+					uploadedFilename =
+						file instanceof File ? file.name : undefined;
+					return new Response(
+						JSON.stringify({
+							image_of: "article",
+							url: jpegImageUrl,
+							error: null,
+						}),
+						{
+							status: 200,
+							headers: { "content-type": "application/json" },
+						},
+					);
 				},
 			);
 
@@ -318,6 +328,10 @@ describe("DevtoStrategy", () => {
 			});
 
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+			assert.ok(
+				uploadedFilename?.endsWith(".jpg"),
+				`Expected filename to end in .jpg, got: ${uploadedFilename}`,
+			);
 		});
 
 		it("should post without main_image when image upload fails", async () => {

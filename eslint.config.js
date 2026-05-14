@@ -33,6 +33,8 @@ export default [
 				setTimeout: false,
 				AbortSignal: false,
 				AbortController: false,
+				Response: false,
+				File: false,
 			},
 		},
 	},

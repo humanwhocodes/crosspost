@@ -321,15 +321,19 @@ describe("MastodonStrategy", () => {
 				},
 			);
 
+			let capturedMediaIds;
 			server.post(
 				{
 					url: "/api/v1/statuses",
 					request: { headers: { authorization: "Bearer token" } },
 				},
-				{
-					status: 200,
-					headers: { "content-type": "application/json" },
-					body: statusResponse,
+				async req => {
+					const formData = await req.formData();
+					capturedMediaIds = formData.getAll("media_ids[]");
+					return new Response(JSON.stringify(statusResponse), {
+						status: 200,
+						headers: { "content-type": "application/json" },
+					});
 				},
 			);
 
@@ -341,6 +345,7 @@ describe("MastodonStrategy", () => {
 			});
 
 			assert.deepStrictEqual(result, statusResponse);
+			assert.deepStrictEqual(capturedMediaIds, ["111", "222"]);
 		});
 
 		it("should handle media upload errors", async () => {
