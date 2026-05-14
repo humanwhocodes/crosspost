@@ -86,7 +86,7 @@ import { getImageMimeType } from "../util/images.js";
  * @throws {Error} If the upload fails.
  */
 async function uploadMedia({ accessToken, host }, image, signal) {
-	const url = `https://${host}/api/v1/media`;
+	const url = `https://${host}/api/v2/media`;
 	const type = getImageMimeType(image.data);
 
 	if (!type) {
@@ -173,7 +173,11 @@ export class MastodonStrategy {
 			throw new TypeError("Missing Mastodon host.");
 		}
 
-		this.#options = options;
+		this.#options = {
+			...options,
+			accessToken: accessToken.trim(),
+			host: host.trim().replace(/\/+$/, ""),
+		};
 	}
 
 	/**
@@ -228,7 +232,9 @@ export class MastodonStrategy {
 				),
 			);
 
-			data.append("media_ids[]", mediaIds.join(","));
+			for (const id of mediaIds) {
+				data.append("media_ids[]", id);
+			}
 		}
 
 		const response = await fetch(url, {

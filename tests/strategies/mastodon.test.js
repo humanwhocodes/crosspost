@@ -50,6 +50,14 @@ describe("MastodonStrategy", () => {
 			assert(instance instanceof MastodonStrategy);
 		});
 
+		it("should trim whitespace and trailing slashes from host and accessToken", () => {
+			const instance = new MastodonStrategy({
+				accessToken: "  token\n",
+				host: "mastodon.social/",
+			});
+			assert(instance instanceof MastodonStrategy);
+		});
+
 		it("should create an instance with correct id and name", () => {
 			const options = { accessToken: "token", host: "mastodon.social" };
 			const instance = new MastodonStrategy(options);
@@ -215,7 +223,7 @@ describe("MastodonStrategy", () => {
 			// Mock the media upload endpoint
 			server.post(
 				{
-					url: "/api/v1/media",
+					url: "/api/v2/media",
 					request: {
 						headers: {
 							authorization: "Bearer token",
@@ -261,6 +269,62 @@ describe("MastodonStrategy", () => {
 			assert.deepStrictEqual(result, statusResponse);
 		});
 
+		it("should upload multiple images and attach all media IDs to the status", async () => {
+			const options = { accessToken: "token", host: "mastodon.social" };
+			const instance = new MastodonStrategy(options);
+			const message = "Hello, Mastodon!";
+			const imagePath = path.join(FIXTURES_DIR, "smiley.png");
+			const imageData = new Uint8Array(await fs.readFile(imagePath));
+			const statusResponse = { id: "12345" };
+
+			// First image upload
+			server.post(
+				{
+					url: "/api/v2/media",
+					request: { headers: { authorization: "Bearer token" } },
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: { id: "111", type: "image", url: null },
+				},
+			);
+
+			// Second image upload
+			server.post(
+				{
+					url: "/api/v2/media",
+					request: { headers: { authorization: "Bearer token" } },
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: { id: "222", type: "image", url: null },
+				},
+			);
+
+			server.post(
+				{
+					url: "/api/v1/statuses",
+					request: { headers: { authorization: "Bearer token" } },
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: statusResponse,
+				},
+			);
+
+			const result = await instance.post(message, {
+				images: [
+					{ alt: "first", data: imageData },
+					{ alt: "second", data: imageData },
+				],
+			});
+
+			assert.deepStrictEqual(result, statusResponse);
+		});
+
 		it("should handle media upload errors", async () => {
 			const options = { accessToken: "token", host: "mastodon.social" };
 			const instance = new MastodonStrategy(options);
@@ -271,7 +335,7 @@ describe("MastodonStrategy", () => {
 			// Mock failed media upload
 			server.post(
 				{
-					url: "/api/v1/media",
+					url: "/api/v2/media",
 					request: {
 						headers: {
 							authorization: "Bearer token",
