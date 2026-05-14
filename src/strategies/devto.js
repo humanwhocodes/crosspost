@@ -84,6 +84,7 @@ import { getImageMimeType } from "../util/images.js";
 //-----------------------------------------------------------------------------
 
 const API_URL = "https://dev.to/api";
+const USER_AGENT = "Crosspost v0.7.0"; // x-release-please-version
 
 const MIME_TO_EXT = {
 	"image/png": ".png",
@@ -113,7 +114,7 @@ async function uploadImage(apiKey, imageData, mimeType, signal) {
 		method: "POST",
 		headers: {
 			"api-key": apiKey,
-			"User-Agent": "Crosspost v0.7.0", // x-release-please-version
+			"User-Agent": USER_AGENT,
 		},
 		body: formData,
 		signal,
@@ -137,26 +138,37 @@ async function uploadImage(apiKey, imageData, mimeType, signal) {
  */
 async function postArticle(apiKey, content, postOptions) {
 	let mainImage = null;
+	let articleContent = content;
 
 	if (postOptions?.images?.length) {
-		const image = postOptions.images[0];
-		try {
-			const mimeType = getImageMimeType(image.data);
-			mainImage = await uploadImage(
-				apiKey,
-				image.data,
-				mimeType,
-				postOptions?.signal,
-			);
-			if (!mainImage) {
-				process.emitWarning(
-					"Dev.to image upload failed; posting article without cover image.",
+		/** @type {Array<{url: string, alt: string}>} */
+		const uploaded = [];
+
+		for (const image of postOptions.images) {
+			try {
+				const mimeType = getImageMimeType(image.data);
+				const url = await uploadImage(
+					apiKey,
+					image.data,
+					mimeType,
+					postOptions?.signal,
 				);
+				if (url) {
+					uploaded.push({ url, alt: image.alt || "" });
+				}
+			} catch {
+				// Upload failed; skip this image
 			}
-		} catch (err) {
-			process.emitWarning(
-				`Dev.to image upload error: ${/** @type {Error} */ (err).message}; posting article without cover image.`,
-			);
+		}
+
+		if (uploaded.length > 0) {
+			mainImage = uploaded[0].url;
+			if (uploaded.length > 1) {
+				articleContent += "\n\n";
+				for (const { url, alt } of uploaded.slice(1)) {
+					articleContent += `![${alt}](${url})\n\n`;
+				}
+			}
 		}
 	}
 
@@ -165,12 +177,12 @@ async function postArticle(apiKey, content, postOptions) {
 		headers: {
 			"Content-Type": "application/json",
 			"api-key": apiKey,
-			"User-Agent": "Crosspost v0.7.0", // x-release-please-version
+			"User-Agent": USER_AGENT,
 		},
 		body: JSON.stringify({
 			article: {
 				title: content.split(/\r?\n/g)[0],
-				body_markdown: content,
+				body_markdown: articleContent,
 				published: true,
 				...(mainImage && { main_image: mainImage }),
 			},

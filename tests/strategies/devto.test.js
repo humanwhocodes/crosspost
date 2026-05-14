@@ -18,6 +18,7 @@ import { MockServer, FetchMocker } from "mentoss";
 const API_URL = "https://dev.to";
 const API_KEY = "abc123";
 const IMAGE_URL = "https://res.cloudinary.com/dev/image/upload/test.png";
+const IMAGE_URL_2 = "https://res.cloudinary.com/dev/image/upload/test2.jpg";
 
 const CREATE_ARTICLE_RESPONSE = {
 	title: "Hello World",
@@ -196,23 +197,96 @@ describe("DevtoStrategy", () => {
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
 		});
 
-		it("should only upload the first image when multiple images are provided", async () => {
+		it("should upload all images: first as main_image, rest embedded in body", async () => {
 			const content = "Hello World\n\nThis is a test post.";
-			const imageData = new Uint8Array([137, 80, 78, 71]); // PNG header
+			const pngData = new Uint8Array([137, 80, 78, 71]); // PNG header
+			const jpegData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
+
+			// First image upload
+			server.post(
+				{
+					url: "/api/images",
+					headers: { "api-key": API_KEY },
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: UPLOAD_IMAGE_RESPONSE,
+				},
+			);
+
+			// Second image upload
+			server.post(
+				{
+					url: "/api/images",
+					headers: { "api-key": API_KEY },
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: {
+						image_of: "article",
+						url: IMAGE_URL_2,
+						error: null,
+					},
+				},
+			);
+
+			const expectedBody =
+				content + "\n\n" + `![Second image](${IMAGE_URL_2})\n\n`;
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: expectedBody,
+							published: true,
+							main_image: IMAGE_URL,
+						},
+					},
+				},
+				{
+					status: 201,
+					headers: { "content-type": "application/json" },
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(content, {
+				images: [
+					{ alt: "First image", data: pngData },
+					{ alt: "Second image", data: jpegData },
+				],
+			});
+
+			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+		});
+
+		it("should upload a JPEG image using the correct file extension", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const imageData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
+			const jpegImageUrl =
+				"https://res.cloudinary.com/dev/image/upload/test.jpg";
 
 			server.post(
 				{
 					url: "/api/images",
-					headers: {
-						"api-key": API_KEY,
-					},
+					headers: { "api-key": API_KEY },
 				},
 				{
 					status: 200,
-					headers: {
-						"content-type": "application/json",
+					headers: { "content-type": "application/json" },
+					body: {
+						image_of: "article",
+						url: jpegImageUrl,
+						error: null,
 					},
-					body: UPLOAD_IMAGE_RESPONSE,
 				},
 			);
 
@@ -228,24 +302,19 @@ describe("DevtoStrategy", () => {
 							title: "Hello World",
 							body_markdown: content,
 							published: true,
-							main_image: IMAGE_URL,
+							main_image: jpegImageUrl,
 						},
 					},
 				},
 				{
 					status: 201,
-					headers: {
-						"content-type": "application/json",
-					},
+					headers: { "content-type": "application/json" },
 					body: CREATE_ARTICLE_RESPONSE,
 				},
 			);
 
 			const response = await strategy.post(content, {
-				images: [
-					{ alt: "First image", data: imageData },
-					{ alt: "Second image", data: imageData },
-				],
+				images: [{ alt: "Test JPEG", data: imageData }],
 			});
 
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
