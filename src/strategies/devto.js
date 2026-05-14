@@ -84,7 +84,7 @@ import { getImageMimeType } from "../util/images.js";
 //-----------------------------------------------------------------------------
 
 const API_URL = "https://dev.to/api";
-const USER_AGENT = "Crosspost v0.7.0"; // x-release-please-version
+const USER_AGENT = "Crosspost v1.0.4"; // x-release-please-version
 
 const MIME_TO_EXT = {
 	"image/png": ".png",
@@ -141,11 +141,8 @@ async function postArticle(apiKey, content, postOptions) {
 	let articleContent = content;
 
 	if (postOptions?.images?.length) {
-		/** @type {Array<{url: string, alt: string}>} */
-		const uploaded = [];
-
-		for (const image of postOptions.images) {
-			try {
+		const results = await Promise.allSettled(
+			postOptions.images.map(async image => {
 				const mimeType = getImageMimeType(image.data);
 				const url = await uploadImage(
 					apiKey,
@@ -153,13 +150,14 @@ async function postArticle(apiKey, content, postOptions) {
 					mimeType,
 					postOptions?.signal,
 				);
-				if (url) {
-					uploaded.push({ url, alt: image.alt || "" });
-				}
-			} catch {
-				// Upload failed; skip this image
-			}
-		}
+				return url ? { url, alt: image.alt || "" } : null;
+			}),
+		);
+
+		/** @type {Array<{url: string, alt: string}>} */
+		const uploaded = results
+			.filter(r => r.status === "fulfilled" && r.value !== null)
+			.map(r => /** @type {{url: string, alt: string}} */ (r.value));
 
 		if (uploaded.length > 0) {
 			mainImage = uploaded[0].url;

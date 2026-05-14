@@ -50,14 +50,6 @@ describe("MastodonStrategy", () => {
 			assert(instance instanceof MastodonStrategy);
 		});
 
-		it("should trim whitespace and trailing slashes from host and accessToken", () => {
-			const instance = new MastodonStrategy({
-				accessToken: "  token\n",
-				host: "mastodon.social/",
-			});
-			assert(instance instanceof MastodonStrategy);
-		});
-
 		it("should create an instance with correct id and name", () => {
 			const options = { accessToken: "token", host: "mastodon.social" };
 			const instance = new MastodonStrategy(options);
@@ -79,6 +71,32 @@ describe("MastodonStrategy", () => {
 		afterEach(() => {
 			fetchMocker.unmockGlobal();
 			server.clear();
+		});
+
+		it("should trim whitespace and slashes from host and accessToken before use", async () => {
+			const instance = new MastodonStrategy({
+				accessToken: "  token\n",
+				host: "mastodon.social/",
+			});
+			const message = "Hello, Mastodon!";
+
+			server.post(
+				{
+					url: "/api/v1/statuses",
+					request: {
+						headers: { authorization: "Bearer token" },
+						body: { status: message },
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: { id: "12345" },
+				},
+			);
+
+			const result = await instance.post(message);
+			assert.strictEqual(result.id, "12345");
 		});
 
 		it("should throw an error if message is missing", async () => {

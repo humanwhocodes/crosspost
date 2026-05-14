@@ -163,7 +163,8 @@ export class MastodonStrategy {
 	 * @throws {Error} When options are missing.
 	 */
 	constructor(options) {
-		const { accessToken, host } = options;
+		const accessToken = (options.accessToken ?? "").trim();
+		const host = (options.host ?? "").trim().replace(/\/+$/, "");
 
 		if (!accessToken) {
 			throw new TypeError("Missing Mastodon access token.");
@@ -173,11 +174,7 @@ export class MastodonStrategy {
 			throw new TypeError("Missing Mastodon host.");
 		}
 
-		this.#options = {
-			...options,
-			accessToken: accessToken.trim(),
-			host: host.trim().replace(/\/+$/, ""),
-		};
+		this.#options = { ...options, accessToken, host };
 	}
 
 	/**
