@@ -132,7 +132,7 @@ describe("DevtoStrategy", () => {
 			}, /422 Unprocessable Entity: Failed to post article/);
 		});
 
-		it("should post without images when images are provided (Dev.to has no public image upload API)", async () => {
+		it("should post article without images when images are provided", async () => {
 			const content = "Hello World\n\nThis is a test post.";
 			const imageData = new Uint8Array([137, 80, 78, 71]); // PNG header
 
