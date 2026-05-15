@@ -181,16 +181,6 @@ describe("MastodonStrategy", () => {
 			}, /images must be an array/);
 		});
 
-		it("should throw a TypeError if image is missing data", async () => {
-			const options = { accessToken: "token", host: "mastodon.social" };
-			const instance = new MastodonStrategy(options);
-			await assert.rejects(async () => {
-				await instance.post("Hello world", {
-					images: [{ alt: "test" }],
-				});
-			}, /Image must have data/);
-		});
-
 		it("should throw a TypeError if image data is not a Uint8Array", async () => {
 			const options = { accessToken: "token", host: "mastodon.social" };
 			const instance = new MastodonStrategy(options);

@@ -132,7 +132,7 @@ describe("DevtoStrategy", () => {
 			}, /422 Unprocessable Entity: Failed to post article/);
 		});
 
-		it("should post article without images when images are provided", async () => {
+		it("should post article without main_image when only binary image data is provided", async () => {
 			const content = "Hello World\n\nThis is a test post.";
 			const imageData = new Uint8Array([137, 80, 78, 71]); // PNG header
 
@@ -165,6 +165,48 @@ describe("DevtoStrategy", () => {
 					{
 						alt: "Test image",
 						data: imageData,
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+		});
+
+		it("should post article with main_image when an image URL is provided", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const imageUrl =
+				"https://opengraph.githubassets.com/abc/owner/repo/releases/tag/v1.0.0";
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: content,
+							published: true,
+							main_image: imageUrl,
+						},
+					},
+				},
+				{
+					status: 201,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(content, {
+				images: [
+					{
+						alt: "Release image",
+						url: imageUrl,
 					},
 				],
 			});

@@ -169,26 +169,28 @@ export class DiscordWebhookStrategy {
 			 * 2. As an embed image in the payload
 			 * 3. As an attachment in the payload
 			 */
-			postOptions.images.forEach((image, index) => {
-				const type = getImageMimeType(image.data);
-				const filename = `image${index + 1}.${type.split("/")[1]}`;
-				const description = image.alt || filename;
-				const file = new Blob([image.data], { type });
-				formData.append(`files[${index}]`, file, filename);
+			postOptions.images
+				.filter(image => image.data)
+				.forEach((image, index) => {
+					const type = getImageMimeType(/** @type {Uint8Array} */ (image.data));
+					const filename = `image${index + 1}.${type.split("/")[1]}`;
+					const description = image.alt || filename;
+					const file = new Blob([/** @type {Uint8Array} */ (image.data)], { type });
+					formData.append(`files[${index}]`, file, filename);
 
-				payload.attachments?.push({
-					id: index,
-					description,
-					filename,
-				});
+					payload.attachments?.push({
+						id: index,
+						description,
+						filename,
+					});
 
-				payload.embeds?.push({
-					description,
-					image: {
-						url: `attachment://${filename}`,
-					},
+					payload.embeds?.push({
+						description,
+						image: {
+							url: `attachment://${filename}`,
+						},
+					});
 				});
-			});
 		}
 
 		// Add payload as JSON string

@@ -324,6 +324,10 @@ async function postMessage(options, session, message, postOptions) {
 		const images = [];
 
 		for (const image of postOptions.images) {
+			if (!image.data) {
+				continue;
+			}
+
 			const result = await uploadImage(
 				options,
 				session,

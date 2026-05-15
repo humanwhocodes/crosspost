@@ -126,29 +126,31 @@ export class TwitterStrategy {
 		// if there are images, upload them first
 		if (postOptions?.images?.length) {
 			const mediaIds = await Promise.all(
-				postOptions.images.map(image =>
-					client.v2
-						.uploadMedia(Buffer.from(image.data), {
-							media_type: getImageMimeType(image.data),
-						})
-						.then(mediaId => {
-							if (image.alt) {
-								// https://docs.x.com/x-api/media/metadata-create
-								return client.v2
-									.post("media/metadata", {
-										id: mediaId,
-										metadata: {
-											alt_text: {
-												text: image.alt,
+				postOptions.images
+					.filter(image => image.data)
+					.map(image =>
+						client.v2
+							.uploadMedia(Buffer.from(/** @type {Uint8Array} */ (image.data)), {
+								media_type: getImageMimeType(/** @type {Uint8Array} */ (image.data)),
+							})
+							.then(mediaId => {
+								if (image.alt) {
+									// https://docs.x.com/x-api/media/metadata-create
+									return client.v2
+										.post("media/metadata", {
+											id: mediaId,
+											metadata: {
+												alt_text: {
+													text: image.alt,
+												},
 											},
-										},
-									})
-									.then(() => mediaId);
-							}
+										})
+										.then(() => mediaId);
+								}
 
-							return mediaId;
-						}),
-				),
+								return mediaId;
+							}),
+					),
 			);
 
 			postOptions?.signal?.throwIfAborted();

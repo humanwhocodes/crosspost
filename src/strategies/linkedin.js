@@ -232,14 +232,14 @@ async function createPost(options, personUrn, message, postOptions) {
 
 	// handle image uploads if present
 	if (postOptions?.images?.length) {
-		const images = postOptions.images;
+		const images = postOptions.images.filter(image => image.data);
 
 		const imageUrns = await Promise.all(
 			images.map(image =>
 				uploadImage(
 					options.accessToken,
 					personUrn,
-					image.data,
+					/** @type {Uint8Array} */ (image.data),
 					postOptions?.signal,
 				),
 			),

@@ -238,6 +238,10 @@ export class TelegramStrategy {
 
 			// Then send each image
 			for (const image of postOptions.images) {
+				if (!image.data) {
+					continue;
+				}
+
 				const imageResult = await this.#sendImage(
 					chatId,
 					image.data,

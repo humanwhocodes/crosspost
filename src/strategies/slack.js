@@ -346,11 +346,12 @@ export class SlackStrategy {
 		// Handle images if provided
 		if (postOptions?.images?.length) {
 			// For images, we need to upload them first and then share them
-			const uploadPromises = postOptions.images.map(
-				async (image, index) => {
-					const filename = `image${index + 1}.${getImageMimeType(image.data).split("/")[1]}`;
+			const uploadPromises = postOptions.images
+				.filter(image => image.data)
+				.map(async (image, index) => {
+					const filename = `image${index + 1}.${getImageMimeType(/** @type {Uint8Array} */ (image.data)).split("/")[1]}`;
 					const uploadResult = await this.#uploadImage(
-						image.data,
+						/** @type {Uint8Array} */ (image.data),
 						filename,
 						image.alt,
 						postOptions,

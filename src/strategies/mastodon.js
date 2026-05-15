@@ -218,10 +218,7 @@ export class MastodonStrategy {
 
 			if (postOptions.images) {
 				for (const image of postOptions.images) {
-					if (!image.data) {
-						throw new TypeError("Image must have data.");
-					}
-					if (!(image.data instanceof Uint8Array)) {
+					if (image.data && !(image.data instanceof Uint8Array)) {
 						throw new TypeError("Image data must be a Uint8Array.");
 					}
 				}
@@ -236,9 +233,15 @@ export class MastodonStrategy {
 		// Upload images first if present
 		if (postOptions?.images?.length) {
 			const mediaIds = await Promise.all(
-				postOptions.images.map(image =>
-					uploadMedia(this.#options, image, postOptions?.signal),
-				),
+				postOptions.images
+					.filter(image => image.data)
+					.map(image =>
+						uploadMedia(
+							this.#options,
+							/** @type {{ data: Uint8Array; alt?: string }} */ (image),
+							postOptions?.signal,
+						),
+					),
 			);
 
 			for (const id of mediaIds) {
