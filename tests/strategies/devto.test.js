@@ -17,8 +17,6 @@ import { MockServer, FetchMocker } from "mentoss";
 
 const API_URL = "https://dev.to";
 const API_KEY = "abc123";
-const IMAGE_URL = "https://res.cloudinary.com/dev/image/upload/test.png";
-const IMAGE_URL_2 = "https://res.cloudinary.com/dev/image/upload/test2.jpg";
 
 const CREATE_ARTICLE_RESPONSE = {
 	title: "Hello World",
@@ -28,12 +26,6 @@ const CREATE_ARTICLE_RESPONSE = {
 	url: "https://dev.to/test/hello-world-123",
 	canonical_url: "https://dev.to/test/hello-world-123",
 	id: 123456,
-};
-
-const UPLOAD_IMAGE_RESPONSE = {
-	image_of: "article",
-	url: IMAGE_URL,
-	error: null,
 };
 
 const server = new MockServer(API_URL);
@@ -140,25 +132,9 @@ describe("DevtoStrategy", () => {
 			}, /422 Unprocessable Entity: Failed to post article/);
 		});
 
-		it("should upload image and set main_image when posting with images", async () => {
+		it("should post without images when images are provided (Dev.to has no public image upload API)", async () => {
 			const content = "Hello World\n\nThis is a test post.";
 			const imageData = new Uint8Array([137, 80, 78, 71]); // PNG header
-
-			server.post(
-				{
-					url: "/api/images",
-					headers: {
-						"api-key": API_KEY,
-					},
-				},
-				{
-					status: 200,
-					headers: {
-						"content-type": "application/json",
-					},
-					body: UPLOAD_IMAGE_RESPONSE,
-				},
-			);
 
 			server.post(
 				{
@@ -172,7 +148,6 @@ describe("DevtoStrategy", () => {
 							title: "Hello World",
 							body_markdown: content,
 							published: true,
-							main_image: IMAGE_URL,
 						},
 					},
 				},
@@ -192,186 +167,6 @@ describe("DevtoStrategy", () => {
 						data: imageData,
 					},
 				],
-			});
-
-			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
-		});
-
-		it("should upload all images: first as main_image, rest embedded in body", async () => {
-			const content = "Hello World\n\nThis is a test post.";
-			const pngData = new Uint8Array([137, 80, 78, 71]); // PNG header
-			const jpegData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
-
-			// First image upload
-			server.post(
-				{
-					url: "/api/images",
-					headers: { "api-key": API_KEY },
-				},
-				{
-					status: 200,
-					headers: { "content-type": "application/json" },
-					body: UPLOAD_IMAGE_RESPONSE,
-				},
-			);
-
-			// Second image upload
-			server.post(
-				{
-					url: "/api/images",
-					headers: { "api-key": API_KEY },
-				},
-				{
-					status: 200,
-					headers: { "content-type": "application/json" },
-					body: {
-						image_of: "article",
-						url: IMAGE_URL_2,
-						error: null,
-					},
-				},
-			);
-
-			const expectedBody =
-				content + "\n\n" + `![Second image](${IMAGE_URL_2})\n\n`;
-
-			server.post(
-				{
-					url: "/api/articles",
-					headers: {
-						"content-type": "application/json",
-						"api-key": API_KEY,
-					},
-					body: {
-						article: {
-							title: "Hello World",
-							body_markdown: expectedBody,
-							published: true,
-							main_image: IMAGE_URL,
-						},
-					},
-				},
-				{
-					status: 201,
-					headers: { "content-type": "application/json" },
-					body: CREATE_ARTICLE_RESPONSE,
-				},
-			);
-
-			const response = await strategy.post(content, {
-				images: [
-					{ alt: "First image", data: pngData },
-					{ alt: "Second image", data: jpegData },
-				],
-			});
-
-			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
-		});
-
-		it("should upload a JPEG image with a .jpg filename in the multipart request", async () => {
-			const content = "Hello World\n\nThis is a test post.";
-			const imageData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
-			const jpegImageUrl =
-				"https://res.cloudinary.com/dev/image/upload/test.jpg";
-
-			let uploadedFilename;
-
-			server.post(
-				{
-					url: "/api/images",
-					headers: { "api-key": API_KEY },
-				},
-				async req => {
-					const formData = await req.formData();
-					const file = formData.get("image");
-					uploadedFilename =
-						file instanceof File ? file.name : undefined;
-					return new Response(
-						JSON.stringify({
-							image_of: "article",
-							url: jpegImageUrl,
-							error: null,
-						}),
-						{
-							status: 200,
-							headers: { "content-type": "application/json" },
-						},
-					);
-				},
-			);
-
-			server.post(
-				{
-					url: "/api/articles",
-					headers: {
-						"content-type": "application/json",
-						"api-key": API_KEY,
-					},
-					body: {
-						article: {
-							title: "Hello World",
-							body_markdown: content,
-							published: true,
-							main_image: jpegImageUrl,
-						},
-					},
-				},
-				{
-					status: 201,
-					headers: { "content-type": "application/json" },
-					body: CREATE_ARTICLE_RESPONSE,
-				},
-			);
-
-			const response = await strategy.post(content, {
-				images: [{ alt: "Test JPEG", data: imageData }],
-			});
-
-			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
-			assert.ok(
-				uploadedFilename?.endsWith(".jpg"),
-				`Expected filename to end in .jpg, got: ${uploadedFilename}`,
-			);
-		});
-
-		it("should post without main_image when image upload fails", async () => {
-			const content = "Hello World\n\nThis is a test post.";
-			const imageData = new Uint8Array([137, 80, 78, 71]); // PNG header
-
-			server.post("/api/images", {
-				status: 422,
-				headers: {
-					"content-type": "application/json",
-				},
-				body: { error: "Upload failed", url: null },
-			});
-
-			server.post(
-				{
-					url: "/api/articles",
-					headers: {
-						"content-type": "application/json",
-						"api-key": API_KEY,
-					},
-					body: {
-						article: {
-							title: "Hello World",
-							body_markdown: content,
-							published: true,
-						},
-					},
-				},
-				{
-					status: 201,
-					headers: {
-						"content-type": "application/json",
-					},
-					body: CREATE_ARTICLE_RESPONSE,
-				},
-			);
-
-			const response = await strategy.post(content, {
-				images: [{ alt: "Test image", data: imageData }],
 			});
 
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
@@ -510,3 +305,4 @@ describe("DevtoStrategy", () => {
 		});
 	});
 });
+

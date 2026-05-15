@@ -3,13 +3,7 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch, Blob, FormData */
-
-//-----------------------------------------------------------------------------
-// Imports
-//-----------------------------------------------------------------------------
-
-import { getImageMimeType } from "../util/images.js";
+/* global fetch */
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -24,7 +18,6 @@ import { getImageMimeType } from "../util/images.js";
  * @property {string} body_markdown The markdown content of the article.
  * @property {boolean} published Whether the article is published.
  * @property {string[]} tags The tags for the article.
- * @property {string} [main_image] The cover image URL for the article.
  *
  * @typedef {Object} DevToUser
  * @property {string} name The name of the user.
@@ -65,11 +58,6 @@ import { getImageMimeType } from "../util/images.js";
  * @property {string} body_markdown The markdown content of the article.
  * @property {DevToUser} user The user who created the article.
  *
- * @typedef {Object} DevtoImageResponse
- * @property {string} image_of The type of entity the image belongs to.
- * @property {string|null} url The URL of the uploaded image.
- * @property {string|null} error The error message, if any.
- *
  * @typedef {Object} DevtoErrorResponse
  * @property {string} error The error message.
  * @property {string} status The error status.
@@ -86,48 +74,9 @@ import { getImageMimeType } from "../util/images.js";
 const API_URL = "https://dev.to/api";
 const USER_AGENT = "Crosspost v1.0.4"; // x-release-please-version
 
-const MIME_TO_EXT = {
-	"image/png": ".png",
-	"image/jpeg": ".jpg",
-	"image/gif": ".gif",
-};
-
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
-
-/**
- * Uploads an image to Dev.to and returns the hosted URL.
- * @param {string} apiKey The Dev.to API key.
- * @param {Uint8Array} imageData The image binary data.
- * @param {string} mimeType The MIME type of the image.
- * @param {AbortSignal} [signal] An optional abort signal.
- * @returns {Promise<string|null>} The URL of the uploaded image, or null if upload failed.
- */
-async function uploadImage(apiKey, imageData, mimeType, signal) {
-	const ext = MIME_TO_EXT[mimeType] ?? ".png";
-	const blob = new Blob([imageData], { type: mimeType });
-	const formData = new FormData();
-	formData.append("image", blob, `image${ext}`);
-
-	const response = await fetch(`${API_URL}/images`, {
-		method: "POST",
-		headers: {
-			"api-key": apiKey,
-			"User-Agent": USER_AGENT,
-		},
-		body: formData,
-		signal,
-	});
-
-	if (response.ok) {
-		const data = /** @type {DevtoImageResponse} */ (await response.json());
-		return data.url || null;
-	}
-
-	await response.body?.cancel();
-	return null;
-}
 
 /**
  * Posts an article to Dev.to.
@@ -137,39 +86,6 @@ async function uploadImage(apiKey, imageData, mimeType, signal) {
  * @returns {Promise<DevtoArticle>} A promise that resolves with the article data.
  */
 async function postArticle(apiKey, content, postOptions) {
-	let mainImage = null;
-	let articleContent = content;
-
-	if (postOptions?.images?.length) {
-		const results = await Promise.allSettled(
-			postOptions.images.map(async image => {
-				const mimeType = getImageMimeType(image.data);
-				const url = await uploadImage(
-					apiKey,
-					image.data,
-					mimeType,
-					postOptions?.signal,
-				);
-				return url ? { url, alt: image.alt || "" } : null;
-			}),
-		);
-
-		/** @type {Array<{url: string, alt: string}>} */
-		const uploaded = results
-			.filter(r => r.status === "fulfilled" && r.value !== null)
-			.map(r => /** @type {{url: string, alt: string}} */ (r.value));
-
-		if (uploaded.length > 0) {
-			mainImage = uploaded[0].url;
-			if (uploaded.length > 1) {
-				articleContent += "\n\n";
-				for (const { url, alt } of uploaded.slice(1)) {
-					articleContent += `![${alt}](${url})\n\n`;
-				}
-			}
-		}
-	}
-
 	const response = await fetch(`${API_URL}/articles`, {
 		method: "POST",
 		headers: {
@@ -180,9 +96,8 @@ async function postArticle(apiKey, content, postOptions) {
 		body: JSON.stringify({
 			article: {
 				title: content.split(/\r?\n/g)[0],
-				body_markdown: articleContent,
+				body_markdown: content,
 				published: true,
-				...(mainImage && { main_image: mainImage }),
 			},
 		}),
 		signal: postOptions?.signal,
