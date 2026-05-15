@@ -214,6 +214,50 @@ describe("DevtoStrategy", () => {
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
 		});
 
+		it("should use the image URL as main_image when image has both url and data", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const imageUrl =
+				"https://opengraph.githubassets.com/abc/owner/repo/releases/tag/v1.0.0";
+			const imageData = new Uint8Array([137, 80, 78, 71]); // PNG header
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: content,
+							published: true,
+							main_image: imageUrl,
+						},
+					},
+				},
+				{
+					status: 201,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(content, {
+				images: [
+					{
+						alt: "Release image",
+						url: imageUrl,
+						data: imageData,
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+		});
+
 		it("should abort when signal is triggered", async () => {
 			const content = "Hello World\n\nThis is a test post.";
 			const controller = new AbortController();

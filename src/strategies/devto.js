@@ -86,6 +86,7 @@ const USER_AGENT = "Crosspost v1.0.4"; // x-release-please-version
  * @returns {Promise<DevtoArticle>} A promise that resolves with the article data.
  */
 async function postArticle(apiKey, content, postOptions) {
+	// Dev.to's main_image field accepts a single URL; only the first image's URL is used.
 	const imageUrl = postOptions?.images?.[0]?.url;
 
 	/** @type {Record<string, unknown>} */
