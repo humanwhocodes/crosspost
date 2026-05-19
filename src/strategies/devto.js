@@ -3,16 +3,10 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch, Buffer */
+/* global fetch */
 
 //-----------------------------------------------------------------------------
 // Imports
-//-----------------------------------------------------------------------------
-
-import { getImageMimeType } from "../util/images.js";
-
-//-----------------------------------------------------------------------------
-// Type Definitions
 //-----------------------------------------------------------------------------
 
 /**
@@ -95,11 +89,16 @@ async function postArticle(apiKey, content, postOptions) {
 
 	// if there are images, append them to the content
 	if (postOptions?.images?.length) {
-		articleContent += "\n\n";
+		const articleImages = [];
+
 		for (const image of postOptions.images) {
-			const base64 = Buffer.from(image.data).toString("base64");
-			const mimeType = getImageMimeType(image.data);
-			articleContent += `![${image.alt || ""}](data:${mimeType};base64,${base64})\n\n`;
+			if (image.url) {
+				articleImages.push(`![${image.alt || ""}](${image.url})`);
+			}
+		}
+
+		if (articleImages.length) {
+			articleContent += `\n\n${articleImages.join("\n\n")}\n\n`;
 		}
 	}
 

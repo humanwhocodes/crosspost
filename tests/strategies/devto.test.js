@@ -135,13 +135,6 @@ describe("DevtoStrategy", () => {
 		it("should successfully post an article with images", async () => {
 			const content = "Hello World\n\nThis is a test post.";
 			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
-			const base64Data = "iVBORw=="; // Example base64 of the image data
-
-			const expectedContent =
-				content +
-				"\n\n" +
-				`![Test image](data:image/png;base64,${base64Data})\n\n` +
-				`![Another image](data:image/png;base64,${base64Data})\n\n`;
 
 			server.post(
 				{
@@ -153,7 +146,7 @@ describe("DevtoStrategy", () => {
 					body: {
 						article: {
 							title: "Hello World",
-							body_markdown: expectedContent,
+							body_markdown: content,
 							published: true,
 						},
 					},
@@ -183,15 +176,13 @@ describe("DevtoStrategy", () => {
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
 		});
 
-		it("should successfully post an article with JPEG images", async () => {
+		it("should successfully post an article with image URLs", async () => {
 			const content = "Hello World\n\nThis is a test post.";
-			const imageData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
-			const base64Data = "/9j/"; // Example base64 of the image data
+			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
+			const imageUrl = "https://example.com/image.png";
 
 			const expectedContent =
-				content +
-				"\n\n" +
-				`![Test image](data:image/jpeg;base64,${base64Data})\n\n`;
+				content + "\n\n" + `![Test image](${imageUrl})\n\n`;
 
 			server.post(
 				{
@@ -222,6 +213,7 @@ describe("DevtoStrategy", () => {
 					{
 						alt: "Test image",
 						data: imageData,
+						url: imageUrl,
 					},
 				],
 			});
@@ -229,15 +221,9 @@ describe("DevtoStrategy", () => {
 			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
 		});
 
-		it("should successfully post an article with images without alt text", async () => {
+		it("should successfully post an article with JPEG images", async () => {
 			const content = "Hello World\n\nThis is a test post.";
-			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
-			const base64Data = "iVBORw=="; // Example base64 of the image data
-
-			const expectedContent =
-				content +
-				"\n\n" +
-				`![](data:image/png;base64,${base64Data})\n\n`;
+			const imageData = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG header
 
 			server.post(
 				{
@@ -249,7 +235,47 @@ describe("DevtoStrategy", () => {
 					body: {
 						article: {
 							title: "Hello World",
-							body_markdown: expectedContent,
+							body_markdown: content,
+							published: true,
+						},
+					},
+				},
+				{
+					status: 201,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(content, {
+				images: [
+					{
+						alt: "Test image",
+						data: imageData,
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+		});
+
+		it("should successfully post an article with images without alt text", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: content,
 							published: true,
 						},
 					},

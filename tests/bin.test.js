@@ -120,4 +120,61 @@ describe("bin", function () {
 			});
 		});
 	});
+
+	describe("image-url flag", function () {
+		it("should display image-url help", done => {
+			const child = fork(builtExecutablePath, ["--help"], {
+				stdio: "pipe",
+			});
+
+			let output = "";
+
+			child.stdout.on("data", data => {
+				output += data.toString();
+			});
+
+			child.on("exit", code => {
+				assert.strictEqual(code, 1);
+				assert.match(output, /--image-url\s+A public URL/);
+				done();
+			});
+		});
+
+		it("should reject image-url without image for multiple strategies", done => {
+			const child = fork(
+				builtExecutablePath,
+				[
+					"--devto",
+					"--mastodon",
+					"--image-url",
+					"https://example.com/image.png",
+					"Hello world",
+				],
+				{
+					env: {
+						...process.env,
+						DEVTO_API_KEY: "devto-key",
+						MASTODON_ACCESS_TOKEN: "mastodon-token",
+						MASTODON_HOST: "mastodon.social",
+					},
+					stdio: "pipe",
+				},
+			);
+
+			let errorOutput = "";
+
+			child.stderr.on("data", data => {
+				errorOutput += data.toString();
+			});
+
+			child.on("exit", code => {
+				assert.strictEqual(code, 1);
+				assert.match(
+					errorOutput,
+					/--image-url without --image can only be used with --devto/,
+				);
+				done();
+			});
+		});
+	});
 });

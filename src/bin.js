@@ -69,6 +69,7 @@ const options = {
 	mcp: { type: booleanType },
 	file: { type: stringType },
 	image: { type: stringType },
+	"image-url": { type: stringType },
 	"image-alt": { type: stringType },
 	help: { type: booleanType, short: "h" },
 	version: { type: booleanType, short: "v" },
@@ -120,6 +121,7 @@ if (
 	console.log("--mcp		Start MCP server.");
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
+	console.log("--image-url	A public URL to include with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
 	console.log("--help, -h	Show this message.");
 	console.log("--version, -v	Show version number.");
@@ -273,6 +275,16 @@ if (flags.mcp) {
 		"MCP server started. You can now send messages to it via stdin.",
 	);
 } else {
+	const imageUrl = flags["image-url"];
+	const isOnlyDevto = strategies.length === 1 && strategies[0].id === "devto";
+
+	if (imageUrl && !flags.image && !isOnlyDevto) {
+		console.error(
+			"Error: --image-url without --image can only be used with --devto.",
+		);
+		process.exit(1);
+	}
+
 	// if an image is specified, read it and add to options
 	if (flags.image) {
 		try {
@@ -282,6 +294,7 @@ if (flags.mcp) {
 			postOptions.images = [
 				{
 					data: new Uint8Array(imageData),
+					url: imageUrl,
 					alt: flags["image-alt"] || basename,
 				},
 			];
@@ -290,6 +303,16 @@ if (flags.mcp) {
 			console.error(`Error reading image file: ${fileError.message}`);
 			process.exit(1);
 		}
+	} else if (imageUrl) {
+		const basename = imageUrl.split(/[\\/]/).pop() || imageUrl;
+
+		postOptions.images = [
+			{
+				data: new Uint8Array(),
+				url: imageUrl,
+				alt: flags["image-alt"] || basename,
+			},
+		];
 	}
 
 	/*
