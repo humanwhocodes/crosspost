@@ -308,7 +308,7 @@ if (flags.mcp) {
 			const response = await fetch(imageUrl);
 
 			if (!response.body) {
-				console.error("Error downloading image: Response body is empty.");
+				console.error("Error downloading image: The server returned an empty response.");
 				process.exit(1);
 			}
 
@@ -322,12 +322,14 @@ if (flags.mcp) {
 
 			const arrayBuffer = await response.arrayBuffer();
 			const imageData = new Uint8Array(arrayBuffer);
+			const imageFilename =
+				new URL(imageUrl).pathname.split("/").pop() || imageUrl;
 
 			postOptions.images = [
 				{
 					data: imageData,
 					url: imageUrl,
-					alt: flags["image-alt"] || imageUrl,
+					alt: flags["image-alt"] || imageFilename,
 				},
 			];
 		} catch (error) {
