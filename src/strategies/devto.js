@@ -97,9 +97,13 @@ async function postArticle(apiKey, content, postOptions) {
 	if (postOptions?.images?.length) {
 		articleContent += "\n\n";
 		for (const image of postOptions.images) {
-			const base64 = Buffer.from(image.data).toString("base64");
-			const mimeType = getImageMimeType(image.data);
-			articleContent += `![${image.alt || ""}](data:${mimeType};base64,${base64})\n\n`;
+			if (image.url) {
+				articleContent += `![${image.alt || ""}](${image.url})\n\n`;
+			} else {
+				const base64 = Buffer.from(image.data).toString("base64");
+				const mimeType = getImageMimeType(image.data);
+				articleContent += `![${image.alt || ""}](data:${mimeType};base64,${base64})\n\n`;
+			}
 		}
 	}
 

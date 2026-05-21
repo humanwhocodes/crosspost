@@ -4,6 +4,8 @@
  * @author Nicholas C. Zakas
  */
 
+/* global fetch */
+
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -69,6 +71,7 @@ const options = {
 	mcp: { type: booleanType },
 	file: { type: stringType },
 	image: { type: stringType },
+	"image-url": { type: stringType },
 	"image-alt": { type: stringType },
 	help: { type: booleanType, short: "h" },
 	version: { type: booleanType, short: "v" },
@@ -88,6 +91,11 @@ if (flags.version) {
 
 if (flags.mcp && flags.file) {
 	console.error("Error: --file cannot be used with --mcp");
+	process.exit(1);
+}
+
+if (flags.image && flags["image-url"]) {
+	console.error("Error: --image and --image-url cannot be used together.");
 	process.exit(1);
 }
 
@@ -120,6 +128,7 @@ if (
 	console.log("--mcp		Start MCP server.");
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
+	console.log("--image-url	The URL of an image to upload with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
 	console.log("--help, -h	Show this message.");
 	console.log("--version, -v	Show version number.");
@@ -288,6 +297,44 @@ if (flags.mcp) {
 		} catch (error) {
 			const fileError = /** @type {Error} */ (error);
 			console.error(`Error reading image file: ${fileError.message}`);
+			process.exit(1);
+		}
+	}
+
+	// if an image URL is specified, download it and add to options
+	if (flags["image-url"]) {
+		try {
+			const imageUrl = flags["image-url"];
+			const response = await fetch(imageUrl);
+
+			if (!response.body) {
+				console.error("Error downloading image: The server returned an empty response.");
+				process.exit(1);
+			}
+
+			const contentType = response.headers.get("content-type") || "";
+			if (!contentType.startsWith("image/")) {
+				console.error(
+					`Error downloading image: URL did not return an image (content-type: ${contentType}).`,
+				);
+				process.exit(1);
+			}
+
+			const arrayBuffer = await response.arrayBuffer();
+			const imageData = new Uint8Array(arrayBuffer);
+			const imageFilename =
+				new URL(imageUrl).pathname.split("/").pop() || imageUrl;
+
+			postOptions.images = [
+				{
+					data: imageData,
+					url: imageUrl,
+					alt: flags["image-alt"] || imageFilename,
+				},
+			];
+		} catch (error) {
+			const fetchError = /** @type {Error} */ (error);
+			console.error(`Error downloading image: ${fetchError.message}`);
 			process.exit(1);
 		}
 	}
