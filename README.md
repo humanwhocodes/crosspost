@@ -188,6 +188,7 @@ Usage: crosspost [options] ["Message to post."]
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
+--image-url     The URL of an image to upload with the message.
 --image-alt     Alt text for the image (default: filename).
 --help, -h      Show this message.
 --version, -v   Show version number.
@@ -199,8 +200,11 @@ Examples:
 # Post a message to multiple services
 npx @humanwhocodes/crosspost -t -m -b "Check out this beach!"
 
-# Post a message with an image to multiple services
+# Post a message with an image file to multiple services
 npx @humanwhocodes/crosspost -t -m -b --image ./photo.jpg --image-alt "A beautiful sunset" "Check out this beach!"
+
+# Post a message with an image URL to multiple services
+npx @humanwhocodes/crosspost -t -m -b --image-url https://example.com/photo.jpg --image-alt "A beautiful sunset" "Check out this beach!"
 ```
 
 This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky with an attached image. You can choose to post to any combination by specifying the appropriate command line options.
