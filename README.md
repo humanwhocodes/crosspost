@@ -31,6 +31,7 @@ The API is split into two parts:
     - `TelegramStrategy`
     - `DevtoStrategy`
     - `NostrStrategy` (requires Node.js v22+)
+    - `InstagramStrategy` (requires an image)
 
 Each strategy requires its own parameters that are specific to the service. If you only want to post to a particular service, you can just directly use the strategy for that service.
 
@@ -46,6 +47,7 @@ import {
 	TelegramStrategy,
 	DevtoStrategy,
 	NostrStrategy,
+	InstagramStrategy,
 } from "@humanwhocodes/crosspost";
 
 // Note: Use an app password, not your login password!
@@ -102,6 +104,12 @@ const nostr = new NostrStrategy({
 	relays: ["wss://relay.example.com", "wss://relay2.example.com"],
 });
 
+// Note: Access token and account ID required; an image is required when posting
+const instagram = new InstagramStrategy({
+	accessToken: "your-access-token",
+	accountId: "your-instagram-account-id",
+});
+
 // create a client that will post to all services
 const client = new Client({
 	strategies: [
@@ -114,6 +122,7 @@ const client = new Client({
 		telegram,
 		devto,
 		nostr,
+		instagram,
 	],
 });
 
@@ -185,6 +194,7 @@ Usage: crosspost [options] ["Message to post."]
 --telegram      Post to Telegram.
 --slack, -s     Post to Slack.
 --nostr, -n     Post to Nostr.
+--instagram, -i Post to Instagram.
 --mcp           Start MCP server.
 --file          The file to read the message from.
 --image         The image file to upload with the message.
@@ -247,6 +257,9 @@ Each strategy requires a set of environment variables in order to execute:
 - Nostr
     - `NOSTR_PRIVATE_KEY`
     - `NOSTR_RELAYS`
+- Instagram
+    - `INSTAGRAM_ACCESS_TOKEN`
+    - `INSTAGRAM_ACCOUNT_ID`
 
 Tip: You can load environment variables from a `.env` file by setting the environment variable `CROSSPOST_DOTENV`. Set it to `1` to use `.env` in the current working directory, or set it to a specific filepath to use a different location.
 
@@ -506,6 +519,18 @@ Nostr posts are "short text notes" (kind 1 events) with a 280 character limit. I
 **Important:** Nostr support only works in Node.js v22+.
 
 **Security:** Keep your private key secure and never share it. Consider using a dedicated key for crossposting rather than your main Nostr identity key.
+
+### Instagram
+
+To enable posting to Instagram, you need an Instagram professional (Business or Creator) account connected to a Facebook Page, along with a Meta app that has the Instagram Graph API enabled:
+
+1. Convert your Instagram account to a Business or Creator account and connect it to a Facebook Page.
+2. Create an app at [Meta for Developers](https://developers.facebook.com/) and add the Instagram Graph API product.
+3. Request the `instagram_basic`, `instagram_content_publish`, and `pages_show_list` permissions.
+4. Generate a long-lived user access token with those permissions and use it as the value for the `INSTAGRAM_ACCESS_TOKEN` environment variable.
+5. Retrieve your Instagram professional account ID (for example, via `GET /me/accounts` followed by `GET /{page-id}?fields=instagram_business_account`) and use it as the value for the `INSTAGRAM_ACCOUNT_ID` environment variable.
+
+**Important:** Instagram requires an image to publish a post, so you must provide at least one image (PNG or JPEG). When multiple images are provided, only the first one is used. The message is used as the post caption (maximum 2200 characters).
 
 ## License
 
