@@ -11,6 +11,7 @@
 import { TwitterApi } from "twitter-api-v2";
 import { validatePostOptions } from "../util/options.js";
 import { getImageMimeType } from "../util/images.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -27,6 +28,7 @@ import { getImageMimeType } from "../util/images.js";
  * @property {Object} data The data of the posted tweet.
  * @property {string} data.id The ID of the tweet.
  * @property {string} data.text The text content of the tweet.
+ * @property {string[]} [data.edit_history_tweet_ids] The edit history tweet IDs.
  */
 
 /** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
@@ -231,36 +233,25 @@ export class TwitterStrategy {
 	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
 	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<Array<TwitterPostResponse>>} A promise that resolves with an array of tweet data for each message in the thread.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a tweet fails to post.
 	 */
 	async postThread(entries, postOptions) {
-		if (!entries || entries.length === 0) {
-			throw new TypeError("Expected at least one entry.");
-		}
+		validateThreadEntries(entries);
 
 		const client = this.#createClient();
-		const responses = [];
-		let previousTweetId;
 
-		for (const entry of entries) {
-			if (!entry.message) {
-				throw new TypeError("Missing message in thread entry.");
-			}
-
-			const response = await this.#postTweet(
+		return postThreadEntries(entries, postOptions, (entry, previous) =>
+			this.#postTweet(
 				client,
 				entry.message,
 				{
 					images: entry.images,
 					signal: postOptions?.signal,
 				},
-				previousTweetId,
-			);
-
-			responses.push(response);
-			previousTweetId = response.data.id;
-		}
-
-		return responses;
+				previous.at(-1)?.data.id,
+			),
+		);
 	}
 
 	/**

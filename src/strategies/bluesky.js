@@ -12,6 +12,7 @@
 import { detectFacets } from "../util/bluesky-facets.js";
 import { imageSize } from "image-size";
 import { validatePostOptions } from "../util/options.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -510,38 +511,28 @@ export class BlueskyStrategy {
 	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
 	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
 	 * @returns {Promise<Array<BlueskyCreateRecordResponse>>} A promise that resolves with an array of post data for each message in the thread.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a post fails to post.
 	 */
 	async postThread(entries, postOptions) {
-		if (!entries || entries.length === 0) {
-			throw new TypeError("Expected at least one entry.");
-		}
+		validateThreadEntries(entries);
 
 		const session = await createSession(this.#options, postOptions?.signal);
-		const responses = [];
-		let previousPost;
 
-		for (const entry of entries) {
-			if (!entry.message) {
-				throw new TypeError("Missing message in thread entry.");
-			}
+		return postThreadEntries(entries, postOptions, (entry, previous) => {
+			const root = previous[0];
+			const parent = previous.at(-1);
 
-			postOptions?.signal?.throwIfAborted();
+			// every reply points to both the first post and the one before it
+			const replyInfo =
+				root && parent
+					? {
+							root: { uri: root.uri, cid: root.cid },
+							parent: { uri: parent.uri, cid: parent.cid },
+						}
+					: undefined;
 
-			// Build reply information for subsequent posts in the thread
-			const replyInfo = previousPost
-				? {
-						root: {
-							uri: responses[0].uri,
-							cid: responses[0].cid,
-						},
-						parent: {
-							uri: previousPost.uri,
-							cid: previousPost.cid,
-						},
-					}
-				: undefined;
-
-			const postResponse = await postMessage(
+			return postMessage(
 				this.#options,
 				session,
 				entry.message,
@@ -551,11 +542,6 @@ export class BlueskyStrategy {
 				},
 				replyInfo,
 			);
-
-			responses.push(postResponse);
-			previousPost = postResponse;
-		}
-
-		return responses;
+		});
 	}
 }

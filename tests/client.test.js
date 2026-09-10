@@ -9,6 +9,7 @@
 
 import { strict as assert } from "node:assert";
 import { Client, SuccessResponse, FailureResponse } from "../src/client.js";
+import { ThreadError } from "../src/util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Tests
@@ -517,29 +518,48 @@ describe("Client", function () {
 	});
 
 	describe("postThread", function () {
-		it("should throw a TypeError if entries is not an array", function () {
+		it("should throw a TypeError if entries is not an array", async function () {
 			const strategies = [{ name: "test", id: "test1", post() {} }];
 			const client = new Client({ strategies });
 
-			assert.rejects(
-				async () => {
-					await client.postThread("not an array");
-				},
-				TypeError,
-				"Expected an array argument.",
+			await assert.rejects(
+				client.postThread("not an array"),
+				new TypeError("Expected an array argument."),
 			);
 		});
 
-		it("should throw a TypeError if entries array is empty", function () {
+		it("should throw a TypeError if entries array is empty", async function () {
 			const strategies = [{ name: "test", id: "test1", post() {} }];
 			const client = new Client({ strategies });
 
-			assert.rejects(
-				async () => {
-					await client.postThread([]);
+			await assert.rejects(
+				client.postThread([]),
+				new TypeError("Expected at least one entry."),
+			);
+		});
+
+		it("should throw a TypeError without posting when an entry is invalid", async function () {
+			const strategies = [
+				{
+					name: "With Thread",
+					id: "with-thread",
+					postThread() {
+						assert.fail("postThread should not be called");
+					},
 				},
-				TypeError,
-				"Expected at least one entry.",
+				{
+					name: "Without Thread",
+					id: "without-thread",
+					post() {
+						assert.fail("post should not be called");
+					},
+				},
+			];
+			const client = new Client({ strategies });
+
+			await assert.rejects(
+				client.postThread([{ message: "First" }, { message: "" }]),
+				new TypeError("Missing message in thread entry 2."),
 			);
 		});
 
@@ -575,8 +595,10 @@ describe("Client", function () {
 			]);
 		});
 
-		it("should call post multiple times for strategies without postThread", async function () {
+		it("should post the thread as one message for strategies without postThread", async function () {
 			const postCalls = [];
+			const image1 = { data: new Uint8Array([1]), alt: "One" };
+			const image2 = { data: new Uint8Array([2]), alt: "Two" };
 			const strategies = [
 				{
 					name: "Strategy without Thread",
@@ -590,20 +612,25 @@ describe("Client", function () {
 
 			const client = new Client({ strategies });
 			const entries = [
-				{ message: "First message" },
-				{ message: "Second message" },
+				{ message: "First message", images: [image1] },
+				{ message: "Second message", images: [image2] },
 			];
 
 			const results = await client.postThread(entries);
 
 			assert.strictEqual(results.length, 1);
 			assert.ok(results[0] instanceof SuccessResponse);
-			assert.strictEqual(postCalls.length, 2);
-			assert.strictEqual(postCalls[0].message, "First message");
-			assert.strictEqual(postCalls[1].message, "Second message");
+			assert.strictEqual(postCalls.length, 1);
+			assert.strictEqual(
+				postCalls[0].message,
+				"First message\n\nSecond message",
+			);
+			assert.deepStrictEqual(postCalls[0].options.images, [
+				image1,
+				image2,
+			]);
 			assert.deepStrictEqual(results[0].response, [
-				"posted: First message",
-				"posted: Second message",
+				"posted: First message\n\nSecond message",
 			]);
 		});
 
@@ -613,7 +640,9 @@ describe("Client", function () {
 					name: "With Thread",
 					id: "with-thread",
 					postThread(entries) {
-						return Promise.resolve(`thread of ${entries.length}`);
+						return Promise.resolve(
+							entries.map(entry => `reply: ${entry.message}`),
+						);
 					},
 				},
 				{
@@ -636,10 +665,12 @@ describe("Client", function () {
 			assert.strictEqual(results.length, 2);
 			assert.ok(results[0] instanceof SuccessResponse);
 			assert.ok(results[1] instanceof SuccessResponse);
-			assert.strictEqual(results[0].response, "thread of 2");
+			assert.deepStrictEqual(results[0].response, [
+				"reply: First message",
+				"reply: Second message",
+			]);
 			assert.deepStrictEqual(results[1].response, [
-				"single: First message",
-				"single: Second message",
+				"single: First message\n\nSecond message",
 			]);
 		});
 
@@ -717,9 +748,8 @@ describe("Client", function () {
 
 			await client.postThread(entries, { signal: controller.signal });
 
-			assert.strictEqual(receivedOptions.length, 2);
+			assert.strictEqual(receivedOptions.length, 1);
 			assert.strictEqual(receivedOptions[0].signal, controller.signal);
-			assert.strictEqual(receivedOptions[1].signal, controller.signal);
 		});
 
 		it("should return failure response when strategy fails", async function () {
@@ -749,11 +779,8 @@ describe("Client", function () {
 				{
 					name: "Failing Strategy",
 					id: "fail",
-					post(message) {
-						if (message === "Second") {
-							return Promise.reject(new Error("Post failed"));
-						}
-						return Promise.resolve("success");
+					post() {
+						return Promise.reject(new Error("Post failed"));
 					},
 				},
 			];
@@ -768,33 +795,102 @@ describe("Client", function () {
 			assert.match(results[0].reason.message, /Post failed/);
 		});
 
-		it("should call getUrlFromResponse when available", async function () {
-			const url1 = "https://example.com/thread";
-
+		it("should return the URL of every post in the thread", async function () {
 			const strategies = [
 				{
 					name: "Strategy",
 					id: "strategy1",
-					postThread() {
-						return Promise.resolve({ id: "123" });
+					postThread(entries) {
+						return Promise.resolve(
+							entries.map((entry, index) => ({
+								id: String(index + 1),
+							})),
+						);
 					},
 					getUrlFromResponse(response) {
-						return `${url1}/${response.id}`;
+						return `https://example.com/thread/${response.id}`;
 					},
 				},
 			];
 
 			const client = new Client({ strategies });
-			const entries = [{ message: "Test" }];
+			const entries = [{ message: "First" }, { message: "Second" }];
 
 			const results = await client.postThread(entries);
 
 			assert.strictEqual(results.length, 1);
 			assert.ok(results[0] instanceof SuccessResponse);
-			assert.strictEqual(
-				results[0].url,
-				"https://example.com/thread/123",
-			);
+			assert.strictEqual(results[0].url, "https://example.com/thread/1");
+			assert.deepStrictEqual(results[0].urls, [
+				"https://example.com/thread/1",
+				"https://example.com/thread/2",
+			]);
+		});
+
+		it("should succeed without URLs when getUrlFromResponse throws", async function () {
+			const strategies = [
+				{
+					name: "Strategy",
+					id: "strategy1",
+					postThread() {
+						return Promise.resolve([{ id: "1" }]);
+					},
+					getUrlFromResponse() {
+						throw new Error("No URL");
+					},
+				},
+				{
+					name: "Other Strategy",
+					id: "strategy2",
+					post() {
+						return Promise.resolve("success");
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const results = await client.postThread([{ message: "Test" }]);
+
+			assert.strictEqual(results.length, 2);
+			assert.ok(results[0] instanceof SuccessResponse);
+			assert.deepStrictEqual(results[0].response, [{ id: "1" }]);
+			assert.strictEqual(results[0].url, undefined);
+			assert.strictEqual(results[0].urls, undefined);
+			assert.ok(results[1] instanceof SuccessResponse);
+		});
+
+		it("should return the URLs of posts published before a thread failed", async function () {
+			const strategies = [
+				{
+					name: "Strategy",
+					id: "strategy1",
+					postThread() {
+						return Promise.reject(
+							new ThreadError(
+								"Failed to post entry 2 of 2 in the thread: boom",
+								[{ id: "1" }],
+								new Error("boom"),
+							),
+						);
+					},
+					getUrlFromResponse(response) {
+						return `https://example.com/thread/${response.id}`;
+					},
+				},
+			];
+
+			const client = new Client({ strategies });
+			const results = await client.postThread([
+				{ message: "First" },
+				{ message: "Second" },
+			]);
+
+			assert.strictEqual(results.length, 1);
+			assert.ok(results[0] instanceof FailureResponse);
+			assert.ok(results[0].reason instanceof ThreadError);
+			assert.deepStrictEqual(results[0].urls, [
+				"https://example.com/thread/1",
+			]);
 		});
 	});
 });

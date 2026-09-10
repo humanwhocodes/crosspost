@@ -436,6 +436,83 @@ if (globalThis.WebSocket) {
 			});
 		});
 
+		describe("postThread", () => {
+			it("should mark each note as a reply according to NIP-10", async () => {
+				const relayUrl = validRelays[0];
+				const relay = ws.link(relayUrl);
+				const events = [];
+
+				server.use(
+					relay.addEventListener("connection", ({ client }) => {
+						client.addEventListener("message", event => {
+							const [, eventData] = JSON.parse(event.data);
+							events.push(eventData);
+							client.send(
+								JSON.stringify(["OK", eventData.id, true]),
+							);
+						});
+					}),
+				);
+
+				const strategy = new NostrStrategy({
+					privateKey: validPrivateKeyHex,
+					relays: [relayUrl],
+				});
+
+				const [first, second] = await strategy.postThread([
+					{ message: "First" },
+					{ message: "Second" },
+					{ message: "Third" },
+				]);
+
+				assert.deepStrictEqual(
+					events.map(event => event.content),
+					["First", "Second", "Third"],
+				);
+				assert.deepStrictEqual(events[0].tags, []);
+				assert.deepStrictEqual(events[1].tags, [
+					["e", first.id, relayUrl, "root"],
+				]);
+				assert.deepStrictEqual(events[2].tags, [
+					["e", first.id, relayUrl, "root"],
+					["e", second.id, relayUrl, "reply"],
+				]);
+			});
+
+			it("should throw an error without posting when an entry has images", async () => {
+				const strategy = new NostrStrategy({
+					privateKey: validPrivateKeyHex,
+					relays: validRelays,
+				});
+
+				await assert.rejects(
+					strategy.postThread([
+						{ message: "First" },
+						{
+							message: "Second",
+							images: [{ data: new Uint8Array([1, 2, 3]) }],
+						},
+					]),
+					/Images are not supported in Nostr text notes/u,
+				);
+			});
+
+			it("should throw a TypeError without posting when an entry is invalid", async () => {
+				const strategy = new NostrStrategy({
+					privateKey: validPrivateKeyHex,
+					relays: validRelays,
+				});
+
+				await assert.rejects(
+					strategy.postThread([
+						{ message: "First" },
+						{ message: "" },
+					]),
+					new TypeError("Missing message in thread entry 2."),
+				);
+			});
+		});
+
 		describe("getUrlFromResponse", () => {
 			it("should generate a note URL from response", () => {
 				const strategy = new NostrStrategy({

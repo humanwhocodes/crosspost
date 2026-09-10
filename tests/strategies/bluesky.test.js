@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 
 import { BlueskyStrategy } from "../../src/strategies/bluesky.js";
+import { ThreadError } from "../../src/util/threads.js";
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -712,6 +713,131 @@ describe("BlueskyStrategy", function () {
 
 			assert.strictEqual(result.uri, CREATE_RECORD_RESPONSE.uri);
 			assert.strictEqual(result.cid, CREATE_RECORD_RESPONSE.cid);
+		});
+	});
+
+	describe("postThread", function () {
+		let strategy;
+
+		/**
+		 * Creates a createRecord response for a post.
+		 * @param {string} id The record ID.
+		 * @returns {Object} The response.
+		 */
+		function createRecordResponse(id) {
+			return {
+				...CREATE_RECORD_RESPONSE,
+				uri: `at://did:plc:abcxyz/app.bsky.feed.post/${id}`,
+				cid: `cid-${id}`,
+			};
+		}
+
+		/**
+		 * Mocks a createRecord request for a post in a thread.
+		 * @param {Object} record The expected record fields.
+		 * @param {Object} response The response to return.
+		 * @param {number} [status] The response status.
+		 * @returns {void}
+		 */
+		function mockCreateRecord(record, response, status = 200) {
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					body: { record },
+				},
+				{
+					status,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: response,
+				},
+			);
+		}
+
+		beforeEach(function () {
+			strategy = new BlueskyStrategy(options);
+			fetchMocker.mockGlobal();
+
+			server.post(CREATE_SESSION_URL, {
+				status: 200,
+				headers: {
+					"content-type": "application/json",
+				},
+				body: CREATE_SESSION_RESPONSE,
+			});
+		});
+
+		afterEach(() => {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should post each message as a reply to the first and previous posts", async function () {
+			const first = createRecordResponse("1");
+			const second = createRecordResponse("2");
+			const third = createRecordResponse("3");
+
+			mockCreateRecord({ text: "First" }, first);
+			mockCreateRecord(
+				{
+					text: "Second",
+					reply: {
+						root: { uri: first.uri, cid: first.cid },
+						parent: { uri: first.uri, cid: first.cid },
+					},
+				},
+				second,
+			);
+			mockCreateRecord(
+				{
+					text: "Third",
+					reply: {
+						root: { uri: first.uri, cid: first.cid },
+						parent: { uri: second.uri, cid: second.cid },
+					},
+				},
+				third,
+			);
+
+			const responses = await strategy.postThread([
+				{ message: "First" },
+				{ message: "Second" },
+				{ message: "Third" },
+			]);
+
+			assert.deepStrictEqual(responses, [first, second, third]);
+		});
+
+		it("should throw a TypeError without posting when an entry is invalid", async function () {
+			await assert.rejects(
+				strategy.postThread([{ message: "First" }, { message: "" }]),
+				new TypeError("Missing message in thread entry 2."),
+			);
+		});
+
+		it("should throw a ThreadError with the published posts when a post fails", async function () {
+			const first = createRecordResponse("1");
+
+			mockCreateRecord({ text: "First" }, first);
+			mockCreateRecord(
+				{ text: "Second" },
+				{ error: "InvalidRequest", message: "Bad record" },
+				400,
+			);
+
+			await assert.rejects(
+				strategy.postThread([
+					{ message: "First" },
+					{ message: "Second" },
+				]),
+				error => {
+					assert.ok(error instanceof ThreadError);
+					assert.match(error.message, /entry 2 of 2/u);
+					assert.deepStrictEqual(error.responses, [first]);
+					return true;
+				},
+			);
 		});
 	});
 
