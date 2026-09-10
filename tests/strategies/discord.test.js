@@ -303,6 +303,81 @@ describe("DiscordStrategy", () => {
 		});
 	});
 
+	describe("postThread", () => {
+		let strategy;
+
+		/**
+		 * Mocks a create message request.
+		 * @param {Object} payload The expected message payload.
+		 * @param {string} id The ID of the created message.
+		 * @returns {void}
+		 */
+		function mockCreateMessage(payload, id) {
+			const formData = new FormData();
+			formData.append("payload_json", JSON.stringify(payload));
+
+			server.post(
+				{
+					url: `/api/v10/channels/${CHANNEL_ID}/messages`,
+					headers: {
+						authorization: `Bot ${BOT_TOKEN}`,
+					},
+					body: formData,
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: { ...MESSAGE_RESPONSE, id, content: payload.content },
+				},
+			);
+		}
+
+		beforeEach(() => {
+			strategy = new DiscordStrategy({
+				botToken: BOT_TOKEN,
+				channelId: CHANNEL_ID,
+			});
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(() => {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should post each message as a reply to the previous one", async () => {
+			mockCreateMessage({ content: "First" }, "1");
+			mockCreateMessage(
+				{ content: "Second", message_reference: { message_id: "1" } },
+				"2",
+			);
+			mockCreateMessage(
+				{ content: "Third", message_reference: { message_id: "2" } },
+				"3",
+			);
+
+			const responses = await strategy.postThread([
+				{ message: "First" },
+				{ message: "Second" },
+				{ message: "Third" },
+			]);
+
+			assert.deepStrictEqual(
+				responses.map(response => response.id),
+				["1", "2", "3"],
+			);
+		});
+
+		it("should throw a TypeError without posting when an entry is invalid", async () => {
+			await assert.rejects(
+				strategy.postThread([{ message: "First" }, { message: "" }]),
+				new TypeError("Missing message in thread entry 2."),
+			);
+		});
+	});
+
 	describe("MAX_MESSAGE_LENGTH", () => {
 		let strategy;
 		beforeEach(() => {

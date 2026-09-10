@@ -66,3 +66,4 @@ export {
 	NostrEventResponse,
 } from "./strategies/nostr.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
+export { ThreadError } from "./util/threads.js";

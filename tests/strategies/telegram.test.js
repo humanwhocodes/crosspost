@@ -265,6 +265,97 @@ describe("TelegramStrategy", () => {
 		});
 	});
 
+	describe("postThread", () => {
+		let strategy;
+
+		/**
+		 * Creates a sendMessage response.
+		 * @param {number} id The message ID.
+		 * @param {string} text The message text.
+		 * @returns {Object} The response.
+		 */
+		function messageResponse(id, text) {
+			return {
+				ok: true,
+				result: {
+					message_id: id,
+					chat: {
+						id: CHAT_ID,
+						type: "private",
+					},
+					text,
+				},
+			};
+		}
+
+		/**
+		 * Mocks a sendMessage request.
+		 * @param {Object} body The expected request body.
+		 * @param {Object} response The response to return.
+		 * @returns {void}
+		 */
+		function mockSendMessage(body, response) {
+			server.post(
+				{
+					url: `/bot${BOT_TOKEN}/sendMessage`,
+					body,
+				},
+				{
+					status: 200,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: response,
+				},
+			);
+		}
+
+		beforeEach(() => {
+			strategy = new TelegramStrategy({
+				botToken: BOT_TOKEN,
+				chatId: CHAT_ID,
+			});
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(() => {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should post each message as a reply to the previous one", async () => {
+			mockSendMessage(
+				{ chat_id: CHAT_ID, text: "First" },
+				messageResponse(1, "First"),
+			);
+			mockSendMessage(
+				{
+					chat_id: CHAT_ID,
+					text: "Second",
+					reply_parameters: { message_id: 1 },
+				},
+				messageResponse(2, "Second"),
+			);
+
+			const responses = await strategy.postThread([
+				{ message: "First" },
+				{ message: "Second" },
+			]);
+
+			assert.deepStrictEqual(responses, [
+				messageResponse(1, "First"),
+				messageResponse(2, "Second"),
+			]);
+		});
+
+		it("should throw a TypeError without posting when an entry is invalid", async () => {
+			await assert.rejects(
+				strategy.postThread([{ message: "First" }, { message: "" }]),
+				new TypeError("Missing message in thread entry 2."),
+			);
+		});
+	});
+
 	describe("getUrlFromResponse", function () {
 		let strategy;
 		const telegramOptions = { botToken: BOT_TOKEN, chatId: CHAT_ID };
