@@ -43,6 +43,29 @@ describe("validatePostOptions()", () => {
 		);
 	});
 
+	it("should throw error when image url is not a string", () => {
+		assert.throws(
+			() =>
+				validatePostOptions({
+					images: [{ data: new Uint8Array(), url: 123 }],
+				}),
+			new TypeError("Image url must be a string."),
+		);
+	});
+
+	it("should not throw error when image url is a string", () => {
+		assert.doesNotThrow(() =>
+			validatePostOptions({
+				images: [
+					{
+						data: new Uint8Array(),
+						url: "https://example.com/photo.png",
+					},
+				],
+			}),
+		);
+	});
+
 	it("should not throw error when options are valid", () => {
 		const options = {
 			images: [{ data: new Uint8Array() }],

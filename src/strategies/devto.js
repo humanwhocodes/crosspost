@@ -84,6 +84,34 @@ const API_URL = "https://dev.to/api";
 //-----------------------------------------------------------------------------
 
 /**
+ * Gets a Markdown-safe URL for an image that can be referenced remotely.
+ * @param {import("../types.js").ImageEmbed} image The image to check.
+ * @returns {string|undefined} The escaped URL, or undefined if the image
+ *      doesn't have an HTTP or HTTPS URL.
+ */
+function getRemoteImageUrl(image) {
+	if (!image.url) {
+		return undefined;
+	}
+
+	/** @type {URL} */
+	let url;
+
+	try {
+		url = new URL(image.url);
+	} catch {
+		return undefined;
+	}
+
+	if (url.protocol !== "http:" && url.protocol !== "https:") {
+		return undefined;
+	}
+
+	// URL#href encodes spaces but not parentheses, which end a Markdown link
+	return url.href.replace(/\(/g, "%28").replace(/\)/g, "%29");
+}
+
+/**
  * Posts an article to Dev.to.
  * @param {string} apiKey The Dev.to API key.
  * @param {string} content The content to post.
@@ -97,8 +125,10 @@ async function postArticle(apiKey, content, postOptions) {
 	if (postOptions?.images?.length) {
 		articleContent += "\n\n";
 		for (const image of postOptions.images) {
-			if (image.url) {
-				articleContent += `![${image.alt || ""}](${image.url})\n\n`;
+			const remoteUrl = getRemoteImageUrl(image);
+
+			if (remoteUrl) {
+				articleContent += `![${image.alt || ""}](${remoteUrl})\n\n`;
 			} else {
 				const base64 = Buffer.from(image.data).toString("base64");
 				const mimeType = getImageMimeType(image.data);

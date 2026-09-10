@@ -4,8 +4,6 @@
  * @author Nicholas C. Zakas
  */
 
-/* global fetch */
-
 //-----------------------------------------------------------------------------
 // Imports
 //-----------------------------------------------------------------------------
@@ -27,6 +25,7 @@ import {
 	NostrStrategy,
 } from "./index.js";
 import { CrosspostMcpServer } from "./mcp-server.js";
+import { downloadImage } from "./util/download-image.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 //-----------------------------------------------------------------------------
@@ -304,32 +303,15 @@ if (flags.mcp) {
 	// if an image URL is specified, download it and add to options
 	if (flags["image-url"]) {
 		try {
-			const imageUrl = flags["image-url"];
-			const response = await fetch(imageUrl);
-
-			if (!response.body) {
-				console.error("Error downloading image: The server returned an empty response.");
-				process.exit(1);
-			}
-
-			const contentType = response.headers.get("content-type") || "";
-			if (!contentType.startsWith("image/")) {
-				console.error(
-					`Error downloading image: URL did not return an image (content-type: ${contentType}).`,
-				);
-				process.exit(1);
-			}
-
-			const arrayBuffer = await response.arrayBuffer();
-			const imageData = new Uint8Array(arrayBuffer);
-			const imageFilename =
-				new URL(imageUrl).pathname.split("/").pop() || imageUrl;
+			const { data, url, filename } = await downloadImage(
+				flags["image-url"],
+			);
 
 			postOptions.images = [
 				{
-					data: imageData,
-					url: imageUrl,
-					alt: flags["image-alt"] || imageFilename,
+					data,
+					url,
+					alt: flags["image-alt"] || filename,
 				},
 			];
 		} catch (error) {

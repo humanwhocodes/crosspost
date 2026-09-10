@@ -189,9 +189,7 @@ describe("DevtoStrategy", () => {
 			const imageUrl = "https://example.com/photo.png";
 
 			const expectedContent =
-				content +
-				"\n\n" +
-				`![Test image](${imageUrl})\n\n`;
+				content + "\n\n" + `![Test image](${imageUrl})\n\n`;
 
 			server.post(
 				{
@@ -235,10 +233,7 @@ describe("DevtoStrategy", () => {
 			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
 			const imageUrl = "https://example.com/photo.png";
 
-			const expectedContent =
-				content +
-				"\n\n" +
-				`![](${imageUrl})\n\n`;
+			const expectedContent = content + "\n\n" + `![](${imageUrl})\n\n`;
 
 			server.post(
 				{
@@ -269,6 +264,98 @@ describe("DevtoStrategy", () => {
 					{
 						data: imageData,
 						url: imageUrl,
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+		});
+
+		it("should escape parentheses in the image url", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
+
+			const expectedContent =
+				content +
+				"\n\n" +
+				"![Test image](https://example.com/photo_%281%29.png)\n\n";
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: expectedContent,
+							published: true,
+						},
+					},
+				},
+				{
+					status: 201,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(content, {
+				images: [
+					{
+						alt: "Test image",
+						data: imageData,
+						url: "https://example.com/photo_(1).png",
+					},
+				],
+			});
+
+			assert.deepStrictEqual(response, CREATE_ARTICLE_RESPONSE);
+		});
+
+		it("should embed image data when the image url is not http or https", async () => {
+			const content = "Hello World\n\nThis is a test post.";
+			const imageData = new Uint8Array([137, 80, 78, 71]); // Example PNG header
+
+			const expectedContent =
+				content +
+				"\n\n" +
+				"![Test image](data:image/png;base64,iVBORw==)\n\n";
+
+			server.post(
+				{
+					url: "/api/articles",
+					headers: {
+						"content-type": "application/json",
+						"api-key": API_KEY,
+					},
+					body: {
+						article: {
+							title: "Hello World",
+							body_markdown: expectedContent,
+							published: true,
+						},
+					},
+				},
+				{
+					status: 201,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: CREATE_ARTICLE_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(content, {
+				images: [
+					{
+						alt: "Test image",
+						data: imageData,
+						url: "file:///home/user/photo.png",
 					},
 				],
 			});

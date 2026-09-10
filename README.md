@@ -127,6 +127,18 @@ await client.post("Hello world!", {
 	],
 });
 
+// include a public URL for the image so strategies that support remote
+// images (currently Dev.to) reference it instead of embedding the data
+await client.post("Hello world!", {
+	images: [
+		{
+			data: imageData, // Uint8Array of image data
+			url: "https://example.com/photo.jpg", // must be http: or https:
+			alt: "Description of the image",
+		},
+	],
+});
+
 // post to all services with an abort signal
 const controller = new AbortController();
 await client.post("Hello world!", { signal: controller.signal });
@@ -207,7 +219,7 @@ npx @humanwhocodes/crosspost -t -m -b --image ./photo.jpg --image-alt "A beautif
 npx @humanwhocodes/crosspost -t -m -b --image-url https://example.com/photo.jpg --image-alt "A beautiful sunset" "Check out this beach!"
 ```
 
-This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky with an attached image. You can choose to post to any combination by specifying the appropriate command line options.
+This posts the message `"Hello world!"` to Twitter, Mastodon, and Bluesky with an attached image. Images must be PNG, JPEG, or GIF. `--image-url` accepts only `http:` and `https:` URLs, downloads images up to 20MB, and can't be combined with `--image`. You can choose to post to any combination by specifying the appropriate command line options.
 
 You can also read the message from a file instead of from the command line:
 

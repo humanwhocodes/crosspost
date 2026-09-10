@@ -36,6 +36,9 @@ export function validatePostOptions(options) {
 			if (!(image.data instanceof Uint8Array)) {
 				throw new TypeError("Image data must be a Uint8Array.");
 			}
+			if (image.url !== undefined && typeof image.url !== "string") {
+				throw new TypeError("Image url must be a string.");
+			}
 		}
 	}
 }
