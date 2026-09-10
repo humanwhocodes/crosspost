@@ -120,4 +120,69 @@ describe("bin", function () {
 			});
 		});
 	});
+
+	describe("image flags", function () {
+		it("should exit with an error when --image and --image-url are both used", done => {
+			const child = fork(
+				builtExecutablePath,
+				[
+					"-t",
+					"--image",
+					"photo.png",
+					"--image-url",
+					"https://example.com/photo.png",
+					"Hello",
+				],
+				{
+					stdio: "pipe",
+				},
+			);
+
+			let errorOutput = "";
+
+			child.stderr.on("data", data => {
+				errorOutput += data.toString();
+			});
+
+			child.on("exit", code => {
+				assert.strictEqual(code, 1);
+				assert.match(
+					errorOutput,
+					/--image and --image-url cannot be used together/u,
+				);
+				done();
+			});
+		});
+
+		it("should exit with an error when --image-url is not an http or https URL", done => {
+			const child = fork(
+				builtExecutablePath,
+				["-t", "--image-url", "file:///etc/passwd", "Hello"],
+				{
+					env: {
+						TWITTER_API_CONSUMER_KEY: "foo",
+						TWITTER_API_CONSUMER_SECRET: "foo",
+						TWITTER_ACCESS_TOKEN_KEY: "foo",
+						TWITTER_ACCESS_TOKEN_SECRET: "foo",
+					},
+					stdio: "pipe",
+				},
+			);
+
+			let errorOutput = "";
+
+			child.stderr.on("data", data => {
+				errorOutput += data.toString();
+			});
+
+			child.on("exit", code => {
+				assert.strictEqual(code, 1);
+				assert.match(
+					errorOutput,
+					/Error downloading image: Unsupported URL protocol: file:/u,
+				);
+				done();
+			});
+		});
+	});
 });

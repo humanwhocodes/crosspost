@@ -11,6 +11,9 @@
  * @typedef {Object} ImageEmbed
  * @property {string} [alt] The alt text for the image.
  * @property {Uint8Array} data The image data.
+ * @property {string} [url] A public HTTP or HTTPS URL for the image. Strategies
+ *      that support remote images (currently Dev.to) reference this URL instead
+ *      of uploading `data`, so it must remain reachable after posting.
  */
 
 /**
