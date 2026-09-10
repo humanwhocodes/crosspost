@@ -100,8 +100,14 @@ describe("downloadImage()", () => {
 	});
 
 	after(done => {
+		/*
+		 * Stop listening, then drop the connection left open by the timeout
+		 * test so the close callback fires. Bun stops the server when its
+		 * connections are closed and then reports "Server is not running"
+		 * to the callback, so ignore any error.
+		 */
+		server.close(() => done());
 		server.closeAllConnections();
-		server.close(done);
 	});
 
 	it("should download a PNG image", async () => {
