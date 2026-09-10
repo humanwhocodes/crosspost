@@ -52,7 +52,7 @@ jobs:
             - run: npx @humanwhocodes/social-changelog --org humanwhocodes --repo crosspost --name Crosspost --tag ${{ steps.release.outputs.tag_name }} > social-post.txt
               if: ${{ steps.release.outputs.release_created }}
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
             # Tweets out release announcement
             - run: node dist/bin.js -t -b -m -l --file social-post.txt
