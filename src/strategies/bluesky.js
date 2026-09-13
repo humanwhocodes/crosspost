@@ -9,7 +9,7 @@
 // Imports
 //-----------------------------------------------------------------------------
 
-import { detectFacets } from "../util/bluesky-facets.js";
+import { detectFacets, BLUESKY_URL_FACET } from "../util/bluesky-facets.js";
 import { imageSize } from "image-size";
 import { validatePostOptions } from "../util/options.js";
 
@@ -57,6 +57,7 @@ import { validatePostOptions } from "../util/options.js";
  * @property {Object} [record.embed] The embedded content in the post.
  * @property {string} record.embed.$type The type of embedded content.
  * @property {Array<Object>} [record.embed.images] The images to embed.
+ * @property {Object} [record.embed.external] The external link card to embed.
  *
  */
 
@@ -94,6 +95,146 @@ import { validatePostOptions } from "../util/options.js";
 //-----------------------------------------------------------------------------
 // Helpers
 //-----------------------------------------------------------------------------
+
+/**
+ * Parses Open Graph metadata from an HTML string using regular expressions.
+ * @param {string} html The HTML string to parse.
+ * @returns {{title: string, description: string, image: string|null}} The extracted metadata.
+ */
+function parseOpenGraphData(html) {
+	const ogData = /** @type {Record<string, string>} */ ({});
+
+	// Match all <meta> tags
+	const metaTagRegex = /<meta\s[^>]+>/gi;
+	let metaMatch;
+
+	while ((metaMatch = metaTagRegex.exec(html)) !== null) {
+		const tag = metaMatch[0];
+
+		// Check for property="og:*" attribute (handles both quote styles)
+		const propertyMatch = /\bproperty=["'](og:[^"']+)["']/i.exec(tag);
+		if (!propertyMatch) {
+			continue;
+		}
+
+		// Extract the key after "og:" prefix
+		const key = propertyMatch[1].slice(3).toLowerCase();
+
+		// Extract content attribute value
+		const contentMatch = /\bcontent=["']([^"']*)["']/i.exec(tag);
+		if (!contentMatch) {
+			continue;
+		}
+
+		// Only keep the first value for each key
+		if (!ogData[key]) {
+			ogData[key] = contentMatch[1];
+		}
+	}
+
+	// Fall back to <title> tag if og:title is not present
+	if (!ogData.title) {
+		const titleMatch = /<title[^>]*>([^<]*)<\/title>/i.exec(html);
+		if (titleMatch) {
+			ogData.title = titleMatch[1].trim();
+		}
+	}
+
+	return {
+		title: ogData.title ?? "",
+		description: ogData.description ?? "",
+		image: ogData.image ?? null,
+	};
+}
+
+/**
+ * Fetches Open Graph metadata from a URL.
+ * @param {string} url The URL to fetch metadata from.
+ * @param {AbortSignal} [signal] An optional abort signal.
+ * @returns {Promise<{title: string, description: string, image: string|null}>} The extracted metadata.
+ */
+async function fetchOpenGraphData(url, signal) {
+	const response = await fetch(url, {
+		headers: { "User-Agent": "crosspost-bot/1.0" },
+		redirect: "follow",
+		signal,
+	});
+
+	if (!response.ok) {
+		throw new Error(
+			`Failed to fetch URL: ${response.status} ${response.statusText}`,
+		);
+	}
+
+	const html = await response.text();
+	return parseOpenGraphData(html);
+}
+
+/**
+ * Creates an external card embed from the first URL found in the post facets.
+ * Fetches Open Graph metadata and optionally uploads a thumbnail image.
+ * @param {BlueskyOptions} options The options for the strategy.
+ * @param {BlueskySession} session The session data.
+ * @param {Array<{index: Object, features: Array<{$type: string, uri?: string}>}>} facets The detected facets.
+ * @param {AbortSignal} [signal] The abort signal for the request.
+ * @returns {Promise<{$type: string, external: Object}|null>} The embed object, or null if no card could be generated.
+ */
+async function createCardEmbed(options, session, facets, signal) {
+	const firstUrlFeature =
+		/** @type {{uri: string, $type: string} | undefined} */ (
+			facets
+				.flatMap(f => f.features)
+				.find(feat => feat.$type === BLUESKY_URL_FACET)
+		);
+
+	if (!firstUrlFeature) {
+		return null;
+	}
+
+	try {
+		const ogData = await fetchOpenGraphData(firstUrlFeature.uri, signal);
+
+		if (!ogData.title) {
+			return null;
+		}
+
+		/** @type {{uri: string, title: string, description: string, thumb?: Object}} */
+		const external = {
+			uri: firstUrlFeature.uri,
+			title: ogData.title,
+			description: ogData.description,
+		};
+
+		if (ogData.image) {
+			try {
+				const imageResponse = await fetch(ogData.image, { signal });
+
+				if (imageResponse.ok) {
+					const imageBuffer = new Uint8Array(
+						await imageResponse.arrayBuffer(),
+					);
+					const result = await uploadImage(
+						options,
+						session,
+						imageBuffer,
+						signal,
+					);
+					external.thumb = result.blob;
+				}
+			} catch {
+				// Ignore image fetch failures
+			}
+		}
+
+		return {
+			$type: "app.bsky.embed.external",
+			external,
+		};
+	} catch {
+		// Silently ignore OG data fetch failures
+		return null;
+	}
+}
 
 /**
  * Gets the URL for creating a session.
@@ -345,6 +486,18 @@ async function postMessage(options, session, message, postOptions) {
 				$type: "app.bsky.embed.images",
 				images,
 			};
+		}
+	} else {
+		// Auto-generate card preview from the first URL in the post
+		const embed = await createCardEmbed(
+			options,
+			session,
+			rawFacets,
+			postOptions?.signal,
+		);
+
+		if (embed) {
+			body.record.embed = embed;
 		}
 	}
 
