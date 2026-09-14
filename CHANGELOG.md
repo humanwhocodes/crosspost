@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.4...crosspost-v1.1.0) (2026-09-10)
+
+
+### Features
+
+* add --image-url CLI option ([#173](https://github.com/humanwhocodes/crosspost/issues/173)) ([5331df7](https://github.com/humanwhocodes/crosspost/commit/5331df70b2801f999c51aca0ab0cab52c72637f0))
+
 ## [1.0.4](https://github.com/humanwhocodes/crosspost/compare/crosspost-v1.0.3...crosspost-v1.0.4) (2026-04-17)
 
 
