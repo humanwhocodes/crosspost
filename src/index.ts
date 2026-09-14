@@ -65,4 +65,10 @@ export {
 	NostrEvent,
 	NostrEventResponse,
 } from "./strategies/nostr.js";
+export {
+	RedditStrategy,
+	RedditOptions,
+	RedditErrorEntry,
+	RedditSubmitResponse,
+} from "./strategies/reddit.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
