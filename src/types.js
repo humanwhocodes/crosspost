@@ -39,10 +39,22 @@
  */
 
 /**
+ * @typedef {Object} PostThreadEntry
+ * @property {string} message The message to post.
+ * @property {ImageEmbedArray} [images] An array of images to include.
+ */
+
+/**
+ * @typedef {Object} PostThreadOptions
+ * @property {AbortSignal} [signal] Signal for aborting operations.
+ */
+
+/**
  * @typedef {Object} Strategy
  * @property {string} name The display name of the strategy.
  * @property {string} id A unique ID for the strategy.
  * @property {(message: string, options?: PostOptions) => Promise<any>} post A function that posts a message.
+ * @property {(entries: Array<PostThreadEntry>, options?: PostThreadOptions) => Promise<Array<any>>} [postThread] A function that posts a thread of messages, each replying to the previous one. Resolves with one response per entry. Rejects with a `ThreadError` containing the published responses if the thread stops partway through. Only implement this for services that can reply to posts.
  * @property {(response: any) => string} [getUrlFromResponse] A function that extracts or calculates a URL from the response.
  * @property {number} MAX_MESSAGE_LENGTH The maximum message length for the strategy.
  * @property {(message: string) => number} calculateMessageLength Calculates the message length according to the strategy's algorithm.

@@ -11,12 +11,15 @@
 
 import { validatePostOptions } from "../util/options.js";
 import { getImageMimeType } from "../util/images.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 /**
  * @typedef {Object} SlackOptions
@@ -336,12 +339,49 @@ export class SlackStrategy {
 
 		validatePostOptions(postOptions);
 
+		return this.#postMessage(message, postOptions);
+	}
+
+	/**
+	 * Posts a thread of messages to Slack. The first message is posted to the
+	 * channel and the rest are posted as replies in its thread.
+	 * @param {Array<PostThreadEntry>} entries The messages to post, in order.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<SlackMessageResponse>>} A promise that resolves with the data for each message.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a message fails to post.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		return postThreadEntries(entries, postOptions, (entry, previous) =>
+			this.#postMessage(
+				entry.message,
+				{ images: entry.images, signal: postOptions?.signal },
+				previous[0]?.ts,
+			),
+		);
+	}
+
+	/**
+	 * Posts a message to the channel.
+	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {string} [threadTs] The timestamp of the message to reply to in a thread.
+	 * @returns {Promise<SlackMessageResponse>} A promise that resolves with the message data.
+	 * @throws {Error} When the message fails to post.
+	 */
+	async #postMessage(message, postOptions, threadTs) {
 		const url = `${API_BASE}/chat.postMessage`;
 		/** @type {any} */
 		const payload = {
 			channel: this.#options.channel,
 			text: message,
 		};
+
+		if (threadTs) {
+			payload.thread_ts = threadTs;
+		}
 
 		// Handle images if provided
 		if (postOptions?.images?.length) {

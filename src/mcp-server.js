@@ -90,6 +90,11 @@ const socialMediaPostSchema = {
 	),
 };
 
+const threadPostSchema = {
+	messages: z.array(z.string()).min(1),
+	strategyIds: z.array(z.string()).optional(),
+};
+
 const strategyMessageSchema = {
 	strategyId: z.string(),
 	message: z.string(),
@@ -108,7 +113,9 @@ const shortenMessageSchema = {
  */
 function getSuccessMessage(response) {
 	let message = `Successfully posted to ${response.name}.`;
-	if (response.url) {
+	if (response.urls && response.urls.length > 1) {
+		message += ` Here are the URLs: ${response.urls.join(", ")}`;
+	} else if (response.url) {
 		message += ` Here's the URL: ${response.url}`;
 	}
 	return message;
@@ -128,7 +135,21 @@ function getFailureMessage(response) {
 				: JSON.stringify(response.reason);
 		message += ` Here's the server response: ${reason}`;
 	}
+	if (response.urls?.length) {
+		message += `\nThese posts in the thread were published before the failure: ${response.urls.join(", ")}`;
+	}
 	return message;
+}
+
+/**
+ * Generates a message for a response.
+ * @param {SuccessResponse|FailureResponse} response The response from a strategy.
+ * @returns {string} A formatted message.
+ */
+function getResultMessage(response) {
+	return response.ok
+		? getSuccessMessage(/** @type {SuccessResponse} */ (response))
+		: getFailureMessage(/** @type {FailureResponse} */ (response));
 }
 
 //-----------------------------------------------------------------------------
@@ -295,6 +316,81 @@ export class CrosspostMcpServer extends McpServer {
 				return {
 					content: content,
 				};
+			},
+		);
+
+		// tool to post a thread to social media services
+		const threadStrategyNames = this.#strategies
+			.filter(strategy => strategy.postThread)
+			.map(strategy => strategy.name);
+
+		this.registerTool(
+			"post-thread-to-social-media",
+			{
+				description: [
+					"Post a thread (a series of messages where each one replies to the previous one) to one or more social media services.",
+					"Provide the messages in order. To post to specific services, provide their IDs in strategyIds (use list-services to find them); otherwise the thread is posted to all services.",
+					threadStrategyNames.length
+						? `These services post each message as a reply: ${threadStrategyNames.join(", ")}.`
+						: "",
+					"Services that can't reply to posts receive all of the messages combined into a single post.",
+					"Before posting, use the check-message-length tool to check that every message fits within each service's character limit, and ask the user how to proceed if any don't.",
+				]
+					.filter(Boolean)
+					.join(" "),
+				inputSchema: threadPostSchema,
+			},
+			async ({ messages, strategyIds }) => {
+				let client = this.#client;
+
+				if (strategyIds?.length) {
+					/** @type {Array<Strategy>} */
+					const selected = [];
+
+					for (const strategyId of strategyIds) {
+						const strategy = this.#strategies.find(
+							s => s.id === strategyId,
+						);
+
+						if (!strategy) {
+							return {
+								content: [
+									{
+										type: "text",
+										text: `Error: Strategy with ID '${strategyId}' not found. Use the list-services tool to see available services.`,
+									},
+								],
+							};
+						}
+
+						selected.push(strategy);
+					}
+
+					client = new Client({ strategies: selected });
+				}
+
+				try {
+					const results = await client.postThread(
+						messages.map(message => ({ message })),
+					);
+
+					return {
+						content: results.map(result => ({
+							type: /** @type {const} */ ("text"),
+							text: getResultMessage(result),
+						})),
+					};
+				} catch (error) {
+					// invalid entries are rejected before anything is posted
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error: ${/** @type {Error} */ (error).message}`,
+							},
+						],
+					};
+				}
 			},
 		);
 

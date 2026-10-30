@@ -11,6 +11,7 @@ import assert from "node:assert";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { CrosspostMcpServer } from "../src/mcp-server.js";
+import { ThreadError } from "../src/util/threads.js";
 import {
 	ListPromptsResultSchema,
 	CallToolResultSchema,
@@ -53,6 +54,36 @@ class MockMastodonStrategy {
 
 	getUrlFromResponse() {
 		return "https://mastodon.social/@example/123";
+	}
+
+	calculateMessageLength(message) {
+		return [...message].length;
+	}
+}
+
+class MockBlueskyStrategy {
+	id = "bluesky";
+	name = "Bluesky";
+	MAX_MESSAGE_LENGTH = 300;
+
+	async post(message) {
+		return { id: "single", message };
+	}
+
+	async postThread(entries) {
+		if (entries.some(entry => entry.message === "fail")) {
+			throw new ThreadError(
+				"Failed to post entry 2 of 2 in the thread: Failed to post",
+				[{ id: "1" }],
+				new Error("Failed to post"),
+			);
+		}
+
+		return entries.map((entry, index) => ({ id: String(index + 1) }));
+	}
+
+	getUrlFromResponse(response) {
+		return `https://bsky.app/profile/example/post/${response.id}`;
 	}
 
 	calculateMessageLength(message) {
@@ -174,6 +205,7 @@ describe("CrossPostMcpServer", () => {
 					"crosspost",
 					"list-services",
 					"post-to-social-media",
+					"post-thread-to-social-media",
 					"check-message-length",
 					"calculate-message-length",
 					"resize-message",
@@ -327,6 +359,98 @@ describe("CrossPostMcpServer", () => {
 					"Post to Mastodon failed. Here's the server response: Failed to post",
 					"Should return human-readable error message for Mastodon",
 				);
+			});
+		});
+
+		describe("post-thread-to-social-media", () => {
+			/**
+			 * Calls the post-thread-to-social-media tool.
+			 * @param {Array<Object>} strategies The strategies for the server.
+			 * @param {Object} args The tool arguments.
+			 * @returns {Promise<Array<string>>} The text of each content item.
+			 */
+			async function callPostThread(strategies, args) {
+				const mcpServer = new CrosspostMcpServer({ strategies });
+
+				// Note: must connect server first or else client hangs
+				await mcpServer.server.connect(serverTransport);
+				await client.connect(clientTransport);
+
+				const result = await client.request(
+					{
+						method: "tools/call",
+						params: {
+							name: "post-thread-to-social-media",
+							arguments: args,
+						},
+					},
+					CallToolResultSchema,
+				);
+
+				return result.content.map(item => item.text);
+			}
+
+			it("should post a thread to all services", async () => {
+				const texts = await callPostThread(
+					[new MockBlueskyStrategy(), new MockMastodonStrategy()],
+					{ messages: ["First", "Second"] },
+				);
+
+				assert.deepStrictEqual(texts, [
+					"Successfully posted to Bluesky. Here are the URLs: https://bsky.app/profile/example/post/1, https://bsky.app/profile/example/post/2",
+					"Successfully posted to Mastodon. Here's the URL: https://mastodon.social/@example/123",
+				]);
+			});
+
+			it("should post only to the specified services", async () => {
+				const texts = await callPostThread(
+					[new MockBlueskyStrategy(), new MockMastodonStrategy()],
+					{ messages: ["First", "Second"], strategyIds: ["bluesky"] },
+				);
+
+				assert.deepStrictEqual(texts, [
+					"Successfully posted to Bluesky. Here are the URLs: https://bsky.app/profile/example/post/1, https://bsky.app/profile/example/post/2",
+				]);
+			});
+
+			it("should return an error for an unknown service", async () => {
+				const texts = await callPostThread(
+					[new MockBlueskyStrategy()],
+					{
+						messages: ["First"],
+						strategyIds: ["nope"],
+					},
+				);
+
+				assert.deepStrictEqual(texts, [
+					"Error: Strategy with ID 'nope' not found. Use the list-services tool to see available services.",
+				]);
+			});
+
+			it("should return an error without posting when a message is empty", async () => {
+				const texts = await callPostThread(
+					[new MockBlueskyStrategy()],
+					{
+						messages: ["First", ""],
+					},
+				);
+
+				assert.deepStrictEqual(texts, [
+					"Error: Missing message in thread entry 2.",
+				]);
+			});
+
+			it("should include the URLs of posts published before a failure", async () => {
+				const texts = await callPostThread(
+					[new MockBlueskyStrategy()],
+					{
+						messages: ["First", "fail"],
+					},
+				);
+
+				assert.deepStrictEqual(texts, [
+					"Post to Bluesky failed. Here's the server response: Failed to post entry 2 of 2 in the thread: Failed to post\nThese posts in the thread were published before the failure: https://bsky.app/profile/example/post/1",
+				]);
 			});
 		});
 

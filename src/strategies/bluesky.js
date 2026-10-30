@@ -12,12 +12,15 @@
 import { detectFacets } from "../util/bluesky-facets.js";
 import { imageSize } from "image-size";
 import { validatePostOptions } from "../util/options.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 /**
  * @typedef {Object} BlueskyOptions
@@ -57,6 +60,13 @@ import { validatePostOptions } from "../util/options.js";
  * @property {Object} [record.embed] The embedded content in the post.
  * @property {string} record.embed.$type The type of embedded content.
  * @property {Array<Object>} [record.embed.images] The images to embed.
+ * @property {Object} [record.reply] Reply information for threading.
+ * @property {Object} record.reply.root The root post of the thread.
+ * @property {string} record.reply.root.uri The URI of the root post.
+ * @property {string} record.reply.root.cid The CID of the root post.
+ * @property {Object} record.reply.parent The parent post in the thread.
+ * @property {string} record.reply.parent.uri The URI of the parent post.
+ * @property {string} record.reply.parent.cid The CID of the parent post.
  *
  */
 
@@ -292,9 +302,16 @@ async function createSession(options, signal) {
  * @param {BlueskySession} session The session data.
  * @param {string} message The message to post.
  * @param {PostOptions} [postOptions] Additional options for the post.
+ * @param {Object} [replyInfo] Reply information for threading.
+ * @param {Object} replyInfo.root The root post of the thread.
+ * @param {string} replyInfo.root.uri The URI of the root post.
+ * @param {string} replyInfo.root.cid The CID of the root post.
+ * @param {Object} replyInfo.parent The parent post in the thread.
+ * @param {string} replyInfo.parent.uri The URI of the parent post.
+ * @param {string} replyInfo.parent.cid The CID of the parent post.
  * @returns {Promise<BlueskyCreateRecordResponse>} A promise that resolves with the post data.
  */
-async function postMessage(options, session, message, postOptions) {
+async function postMessage(options, session, message, postOptions, replyInfo) {
 	const url = getPostMessageUrl(options);
 
 	// Detect facets from the truncated message; detectFacets now returns { facets, text }
@@ -318,6 +335,11 @@ async function postMessage(options, session, message, postOptions) {
 			createdAt: new Date().toISOString(),
 		},
 	};
+
+	// Add reply information if provided
+	if (replyInfo) {
+		body.record.reply = replyInfo;
+	}
 
 	// add image embeds if present
 	if (postOptions?.images?.length) {
@@ -482,5 +504,44 @@ export class BlueskyStrategy {
 		 * assume the web host is always bsky.app.
 		 */
 		return `https://bsky.app/profile/${this.#options.identifier}/post/${recordId}`;
+	}
+
+	/**
+	 * Posts a thread of messages to Bluesky.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<BlueskyCreateRecordResponse>>} A promise that resolves with an array of post data for each message in the thread.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a post fails to post.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		const session = await createSession(this.#options, postOptions?.signal);
+
+		return postThreadEntries(entries, postOptions, (entry, previous) => {
+			const root = previous[0];
+			const parent = previous.at(-1);
+
+			// every reply points to both the first post and the one before it
+			const replyInfo =
+				root && parent
+					? {
+							root: { uri: root.uri, cid: root.cid },
+							parent: { uri: parent.uri, cid: parent.cid },
+						}
+					: undefined;
+
+			return postMessage(
+				this.#options,
+				session,
+				entry.message,
+				{
+					images: entry.images,
+					signal: postOptions?.signal,
+				},
+				replyInfo,
+			);
+		});
 	}
 }

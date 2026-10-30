@@ -11,12 +11,15 @@
 
 import { validatePostOptions } from "../util/options.js";
 import { getImageMimeType } from "../util/images.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 /**
  * @typedef {Object} TelegramOptions
@@ -127,15 +130,23 @@ export class TelegramStrategy {
 	 * @param {string} chatId The chat ID to send to.
 	 * @param {string} text The text to send.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {number} [replyToMessageId] The ID of the message to reply to.
 	 * @returns {Promise<TelegramMessageResponse>} A promise that resolves with the message data.
 	 * @throws {Error} When the message fails to post.
 	 */
-	async #sendText(chatId, text, postOptions) {
+	async #sendText(chatId, text, postOptions, replyToMessageId) {
 		const url = `${API_BASE}${this.#options.botToken}/sendMessage`;
-		const body = JSON.stringify({
+		/** @type {Record<string, unknown>} */
+		const payload = {
 			chat_id: chatId,
 			text,
-		});
+		};
+
+		if (replyToMessageId) {
+			payload.reply_parameters = { message_id: replyToMessageId };
+		}
+
+		const body = JSON.stringify(payload);
 
 		const response = await fetch(url, {
 			method: "POST",
@@ -166,10 +177,17 @@ export class TelegramStrategy {
 	 * @param {Uint8Array} imageData The image data to send.
 	 * @param {string} caption The caption for the image.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {number} [replyToMessageId] The ID of the message to reply to.
 	 * @returns {Promise<TelegramMessageResponse>} A promise that resolves with the message data.
 	 * @throws {Error} When the image fails to post.
 	 */
-	async #sendImage(chatId, imageData, caption, postOptions) {
+	async #sendImage(
+		chatId,
+		imageData,
+		caption,
+		postOptions,
+		replyToMessageId,
+	) {
 		const url = `${API_BASE}${this.#options.botToken}/sendPhoto`;
 		const type = getImageMimeType(imageData);
 		const formData = new FormData();
@@ -183,6 +201,13 @@ export class TelegramStrategy {
 
 		if (caption) {
 			formData.append("caption", caption);
+		}
+
+		if (replyToMessageId) {
+			formData.append(
+				"reply_parameters",
+				JSON.stringify({ message_id: replyToMessageId }),
+			);
 		}
 
 		const response = await fetch(url, {
@@ -222,37 +247,60 @@ export class TelegramStrategy {
 
 		validatePostOptions(postOptions);
 
+		return this.#sendMessage(message, postOptions);
+	}
+
+	/**
+	 * Posts a thread of messages to Telegram. Each message is sent as a reply
+	 * to the previous one.
+	 * @param {Array<PostThreadEntry>} entries The messages to post, in order.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<TelegramMessageResponse>>} A promise that resolves with the text message data for each entry.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a message fails to post.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		return postThreadEntries(entries, postOptions, (entry, previous) =>
+			this.#sendMessage(
+				entry.message,
+				{ images: entry.images, signal: postOptions?.signal },
+				previous.at(-1)?.result.message_id,
+			),
+		);
+	}
+
+	/**
+	 * Sends a text message followed by one message per image.
+	 * @param {string} message The message to send.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {number} [replyToMessageId] The ID of the message to reply to.
+	 *      When set, the images reply to the text message so they stay in the
+	 *      thread.
+	 * @returns {Promise<TelegramMessageResponse>} A promise that resolves with the text message data.
+	 * @throws {Error} When a message fails to send.
+	 */
+	async #sendMessage(message, postOptions, replyToMessageId) {
 		const chatId = this.#options.chatId;
+		const textResult = await this.#sendText(
+			chatId,
+			message,
+			postOptions,
+			replyToMessageId,
+		);
 
-		// If there are images, send each as a separate message
-		if (postOptions?.images?.length) {
-			const results = [];
-
-			// First send the text message
-			const textResult = await this.#sendText(
+		for (const image of postOptions?.images ?? []) {
+			await this.#sendImage(
 				chatId,
-				message,
+				image.data,
+				image.alt || "Image",
 				postOptions,
+				replyToMessageId ? textResult.result.message_id : undefined,
 			);
-			results.push(textResult);
-
-			// Then send each image
-			for (const image of postOptions.images) {
-				const imageResult = await this.#sendImage(
-					chatId,
-					image.data,
-					image.alt || "Image",
-					postOptions,
-				);
-				results.push(imageResult);
-			}
-
-			// Return the text message response as the result
-			return textResult;
-		} else {
-			// Just send text
-			return this.#sendText(chatId, message, postOptions);
 		}
+
+		return textResult;
 	}
 
 	/**
