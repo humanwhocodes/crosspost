@@ -65,4 +65,12 @@ export {
 	NostrEvent,
 	NostrEventResponse,
 } from "./strategies/nostr.js";
+export {
+	InstagramStrategy,
+	InstagramOptions,
+	InstagramContainerResponse,
+	InstagramPublishResponse,
+	InstagramMediaResponse,
+	InstagramErrorResponse,
+} from "./strategies/instagram.js";
 export { Client, ClientOptions, Strategy } from "./client.js";
