@@ -68,8 +68,9 @@ const UPLOAD_BLOB_RESPONSE = {
 };
 
 const server = new MockServer(`https://${HOST}`);
+const externalServer = new MockServer("https://example.com");
 const fetchMocker = new FetchMocker({
-	servers: [server],
+	servers: [server, externalServer],
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -712,6 +713,418 @@ describe("BlueskyStrategy", function () {
 
 			assert.strictEqual(result.uri, CREATE_RECORD_RESPONSE.uri);
 			assert.strictEqual(result.cid, CREATE_RECORD_RESPONSE.cid);
+		});
+	});
+
+	describe("post with auto card preview", function () {
+		let strategy;
+
+		beforeEach(function () {
+			strategy = new BlueskyStrategy(options);
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(function () {
+			fetchMocker.unmockGlobal();
+			server.clear();
+			externalServer.clear();
+		});
+
+		it("should auto-generate a card preview from the first URL in the post", async function () {
+			const text = "Check this out https://example.com/article";
+
+			// Mock the OG data fetch
+			externalServer.get(
+				{ url: "/article" },
+				{
+					status: 200,
+					headers: { "content-type": "text/html" },
+					body: `<html><head>
+						<meta property="og:title" content="Example Article" />
+						<meta property="og:description" content="An interesting article" />
+					</head><body></body></html>`,
+				},
+			);
+
+			// Mock Bluesky session
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: { "content-type": "application/json" },
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock post creation with auto-generated embed
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 15,
+										byteEnd: 42,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: "https://example.com/article",
+										},
+									],
+								},
+							],
+							embed: {
+								$type: "app.bsky.embed.external",
+								external: {
+									uri: "https://example.com/article",
+									title: "Example Article",
+									description: "An interesting article",
+								},
+							},
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should auto-generate a card preview with thumbnail image", async function () {
+			const text = "Check this out https://example.com/article";
+
+			// Mock the OG data fetch
+			externalServer.get(
+				{ url: "/article" },
+				{
+					status: 200,
+					headers: { "content-type": "text/html" },
+					body: `<html><head>
+						<meta property="og:title" content="Example Article" />
+						<meta property="og:description" content="An interesting article" />
+						<meta property="og:image" content="https://example.com/image.png" />
+					</head><body></body></html>`,
+				},
+			);
+
+			// Mock the image fetch
+			externalServer.get(
+				{ url: "/image.png" },
+				{
+					status: 200,
+					headers: { "content-type": "image/png" },
+					body: new Uint8Array([0x89, 0x50, 0x4e, 0x47]).buffer,
+				},
+			);
+
+			// Mock Bluesky session
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: { "content-type": "application/json" },
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock image upload
+			server.post(
+				{
+					url: UPLOAD_BLOB_URL,
+					headers: {
+						"content-type": "*/*",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: UPLOAD_BLOB_RESPONSE,
+				},
+			);
+
+			// Mock post creation with auto-generated embed including thumb
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 15,
+										byteEnd: 42,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: "https://example.com/article",
+										},
+									],
+								},
+							],
+							embed: {
+								$type: "app.bsky.embed.external",
+								external: {
+									uri: "https://example.com/article",
+									title: "Example Article",
+									description: "An interesting article",
+									thumb: UPLOAD_BLOB_RESPONSE.blob,
+								},
+							},
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should not auto-generate a card preview when OG fetch fails", async function () {
+			const text = "Check this out https://example.com/broken";
+
+			// Mock OG data fetch failure
+			externalServer.get(
+				{ url: "/broken" },
+				{
+					status: 500,
+					headers: { "content-type": "text/plain" },
+					body: "Internal Server Error",
+				},
+			);
+
+			// Mock Bluesky session
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: { "content-type": "application/json" },
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock post creation without embed
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 15,
+										byteEnd: 41,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: "https://example.com/broken",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should not auto-generate a card preview when no URLs in post", async function () {
+			const text = "Hello, world!";
+
+			// Mock Bluesky session
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: { "content-type": "application/json" },
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock post creation without embed
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
+		});
+
+		it("should use <title> as fallback when og:title is not present", async function () {
+			const text = "Check this out https://example.com/article";
+
+			// Mock the OG data fetch - page has <title> but no og:title
+			externalServer.get(
+				{ url: "/article" },
+				{
+					status: 200,
+					headers: { "content-type": "text/html" },
+					body: `<html><head>
+						<title>Page Title Fallback</title>
+						<meta property="og:description" content="An interesting article" />
+					</head><body></body></html>`,
+				},
+			);
+
+			// Mock Bluesky session
+			server.post(
+				{
+					url: CREATE_SESSION_URL,
+					headers: { "content-type": "application/json" },
+					body: {
+						identifier: options.identifier,
+						password: options.password,
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_SESSION_RESPONSE,
+				},
+			);
+
+			// Mock post creation with embed using <title> as title
+			server.post(
+				{
+					url: CREATE_RECORD_URL,
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${CREATE_SESSION_RESPONSE.accessJwt}`,
+					},
+					body: {
+						repo: CREATE_SESSION_RESPONSE.did,
+						collection: "app.bsky.feed.post",
+						record: {
+							$type: "app.bsky.feed.post",
+							text,
+							facets: [
+								{
+									index: {
+										byteStart: 15,
+										byteEnd: 42,
+									},
+									features: [
+										{
+											$type: "app.bsky.richtext.facet#link",
+											uri: "https://example.com/article",
+										},
+									],
+								},
+							],
+							embed: {
+								$type: "app.bsky.embed.external",
+								external: {
+									uri: "https://example.com/article",
+									title: "Page Title Fallback",
+									description: "An interesting article",
+								},
+							},
+						},
+					},
+				},
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+					body: CREATE_RECORD_RESPONSE,
+				},
+			);
+
+			const response = await strategy.post(text);
+			assert.deepStrictEqual(response, CREATE_RECORD_RESPONSE);
 		});
 	});
 
