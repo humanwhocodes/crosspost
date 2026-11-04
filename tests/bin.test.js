@@ -185,4 +185,62 @@ describe("bin", function () {
 			});
 		});
 	});
+
+	describe("thread flag", function () {
+		it("should exit with an error when --thread is used with --mcp", done => {
+			const child = fork(
+				builtExecutablePath,
+				["--mcp", "--thread", "-t"],
+				{
+					stdio: "pipe",
+				},
+			);
+
+			let errorOutput = "";
+
+			child.stderr.on("data", data => {
+				errorOutput += data.toString();
+			});
+
+			child.on("exit", code => {
+				assert.strictEqual(code, 1);
+				assert.match(
+					errorOutput,
+					/--thread cannot be used with --mcp/u,
+				);
+				done();
+			});
+		});
+
+		it("should exit with an error when the thread has no messages", done => {
+			const child = fork(
+				builtExecutablePath,
+				["-t", "--thread", " --- "],
+				{
+					env: {
+						TWITTER_API_CONSUMER_KEY: "foo",
+						TWITTER_API_CONSUMER_SECRET: "foo",
+						TWITTER_ACCESS_TOKEN_KEY: "foo",
+						TWITTER_ACCESS_TOKEN_SECRET: "foo",
+					},
+					stdio: "pipe",
+				},
+			);
+
+			let errorOutput = "";
+
+			child.stderr.on("data", data => {
+				errorOutput += data.toString();
+			});
+
+			child.on("exit", code => {
+				assert.strictEqual(code, 1);
+				assert.match(
+					errorOutput,
+					/The thread doesn't contain any messages/u,
+				);
+				done();
+			});
+		});
+	});
 });

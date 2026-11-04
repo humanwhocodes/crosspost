@@ -11,6 +11,7 @@
 import { TwitterApi } from "twitter-api-v2";
 import { validatePostOptions } from "../util/options.js";
 import { getImageMimeType } from "../util/images.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -27,12 +28,14 @@ import { getImageMimeType } from "../util/images.js";
  * @property {Object} data The data of the posted tweet.
  * @property {string} data.id The ID of the tweet.
  * @property {string} data.text The text content of the tweet.
- * @property {string[]} data.edit_history_tweet_ids The edit history tweet IDs.
+ * @property {string[]} [data.edit_history_tweet_ids] The edit history tweet IDs.
  */
 
 /** @typedef {[string]|[string,string]|[string,string,string]|[string,string,string,string]} TwitterMediaIdArray */
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 //-----------------------------------------------------------------------------
 // Exports
@@ -95,10 +98,109 @@ export class TwitterStrategy {
 	}
 
 	/**
+	 * Creates a Twitter API client.
+	 * @returns {TwitterApi} A Twitter API client instance.
+	 */
+	#createClient() {
+		const {
+			accessTokenKey,
+			accessTokenSecret,
+			apiConsumerKey,
+			apiConsumerSecret,
+		} = this.#options;
+
+		return new TwitterApi({
+			appKey: apiConsumerKey,
+			appSecret: apiConsumerSecret,
+			accessToken: accessTokenKey,
+			accessSecret: accessTokenSecret,
+		});
+	}
+
+	/**
+	 * Uploads images and returns media IDs.
+	 * @param {TwitterApi} client The Twitter API client.
+	 * @param {Array<import("../types.js").ImageEmbed>} images The images to upload.
+	 * @param {AbortSignal} [signal] The abort signal.
+	 * @returns {Promise<Array<string>>} A promise that resolves with media IDs.
+	 */
+	async #uploadImages(client, images, signal) {
+		const mediaIds = await Promise.all(
+			images.map(image =>
+				client.v2
+					.uploadMedia(Buffer.from(image.data), {
+						media_type: getImageMimeType(image.data),
+					})
+					.then(mediaId => {
+						if (image.alt) {
+							// https://docs.x.com/x-api/media/metadata-create
+							return client.v2
+								.post("media/metadata", {
+									id: mediaId,
+									metadata: {
+										alt_text: {
+											text: image.alt,
+										},
+									},
+								})
+								.then(() => mediaId);
+						}
+
+						return mediaId;
+					}),
+			),
+		);
+
+		signal?.throwIfAborted();
+
+		return mediaIds;
+	}
+
+	/**
+	 * Posts a single tweet with optional reply information.
+	 * @param {TwitterApi} client The Twitter API client.
+	 * @param {string} message The message to tweet.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {string} [replyToTweetId] The ID of the tweet to reply to.
+	 * @returns {Promise<TwitterPostResponse>} A promise that resolves with the tweet data.
+	 */
+	async #postTweet(client, message, postOptions, replyToTweetId) {
+		postOptions?.signal?.throwIfAborted();
+
+		/** @type {Object<string, any>} */
+		const tweetOptions = {};
+
+		// Add reply information if provided
+		if (replyToTweetId) {
+			tweetOptions.reply = {
+				in_reply_to_tweet_id: replyToTweetId,
+			};
+		}
+
+		// if there are images, upload them first
+		if (postOptions?.images?.length) {
+			const mediaIds = await this.#uploadImages(
+				client,
+				postOptions.images,
+				postOptions?.signal,
+			);
+
+			tweetOptions.media = {
+				media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
+			};
+		}
+
+		return client.v2.tweet(
+			message,
+			Object.keys(tweetOptions).length > 0 ? tweetOptions : undefined,
+		);
+	}
+
+	/**
 	 * Posts a message to Twitter.
 	 * @param {string} message The message to tweet.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<object>} A promise that resolves with the tweet data.
+	 * @returns {Promise<TwitterPostResponse>} A promise that resolves with the tweet data.
 	 */
 	async post(message, postOptions) {
 		if (!message) {
@@ -107,60 +209,9 @@ export class TwitterStrategy {
 
 		validatePostOptions(postOptions);
 
-		const {
-			accessTokenKey,
-			accessTokenSecret,
-			apiConsumerKey,
-			apiConsumerSecret,
-		} = this.#options;
+		const client = this.#createClient();
 
-		const client = new TwitterApi({
-			appKey: apiConsumerKey,
-			appSecret: apiConsumerSecret,
-			accessToken: accessTokenKey,
-			accessSecret: accessTokenSecret,
-		});
-
-		postOptions?.signal?.throwIfAborted();
-
-		// if there are images, upload them first
-		if (postOptions?.images?.length) {
-			const mediaIds = await Promise.all(
-				postOptions.images.map(image =>
-					client.v2
-						.uploadMedia(Buffer.from(image.data), {
-							media_type: getImageMimeType(image.data),
-						})
-						.then(mediaId => {
-							if (image.alt) {
-								// https://docs.x.com/x-api/media/metadata-create
-								return client.v2
-									.post("media/metadata", {
-										id: mediaId,
-										metadata: {
-											alt_text: {
-												text: image.alt,
-											},
-										},
-									})
-									.then(() => mediaId);
-							}
-
-							return mediaId;
-						}),
-				),
-			);
-
-			postOptions?.signal?.throwIfAborted();
-
-			return client.v2.tweet(message, {
-				media: {
-					media_ids: /** @type {TwitterMediaIdArray} */ (mediaIds),
-				},
-			});
-		}
-
-		return client.v2.tweet(message);
+		return this.#postTweet(client, message, postOptions);
 	}
 
 	/**
@@ -175,6 +226,32 @@ export class TwitterStrategy {
 
 		// This format works without knowing the username - Twitter will redirect appropriately
 		return `https://x.com/i/web/status/${response.data.id}`;
+	}
+
+	/**
+	 * Posts a thread of messages to Twitter.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<TwitterPostResponse>>} A promise that resolves with an array of tweet data for each message in the thread.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a tweet fails to post.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		const client = this.#createClient();
+
+		return postThreadEntries(entries, postOptions, (entry, previous) =>
+			this.#postTweet(
+				client,
+				entry.message,
+				{
+					images: entry.images,
+					signal: postOptions?.signal,
+				},
+				previous.at(-1)?.data.id,
+			),
+		);
 	}
 
 	/**

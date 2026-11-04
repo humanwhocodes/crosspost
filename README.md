@@ -179,7 +179,33 @@ await client.postTo(
 	],
 	{ signal: controller.signal },
 );
+
+// post a thread to all services
+await client.postThread([
+	{ message: "Here's a thread about crossposting. 🧵" },
+	{
+		message: "Each message replies to the one before it.",
+		images: [
+			{
+				data: imageData, // Uint8Array of image data
+				alt: "Description of the image",
+			},
+		],
+	},
+	{ message: "The end!" },
+]);
 ```
+
+#### Posting Threads
+
+The `postThread()` method posts a series of messages where each one replies to the previous one. Every entry is validated first, so nothing is posted if any entry is invalid. Each message still has to fit within each service's character limit.
+
+- **Posted as replies:** Bluesky, Mastodon, Twitter, Nostr, Telegram, Discord (bot), and Slack. On Slack, the replies go in the first message's thread.
+- **Posted as one message:** LinkedIn, Dev.to, and Discord (webhook) can't reply to posts, so they receive all of the messages combined into a single post, separated by blank lines.
+
+For each successful thread, `response` is an array with one response per post, `url` is the URL of the first post, and `urls` has the URL of every post. If a thread stops partway through, `reason` is a `ThreadError` whose `responses` property contains the posts that were already published, and `urls` has their URLs so you can link to or clean up the partial thread.
+
+The strategies for services that support replies also have their own `postThread()` method that accepts the same entries.
 
 ### CLI Usage
 
@@ -202,6 +228,7 @@ Usage: crosspost [options] ["Message to post."]
 --image         The image file to upload with the message.
 --image-url     The URL of an image to upload with the message.
 --image-alt     Alt text for the image (default: filename).
+--thread        Post a thread. Each message argument is a post, and a line containing only --- starts a new post.
 --help, -h      Show this message.
 --version, -v   Show version number.
 ```
@@ -230,6 +257,28 @@ npx @humanwhocodes/crosspost -t -m -b -f message.txt
 # Post a message with an image to multiple services
 npx @humanwhocodes/crosspost -t -m -b -f message.txt -i path/to/image.jpg
 ```
+
+To post a thread, add `--thread`. Each message argument becomes a post in the thread:
+
+```shell
+npx @humanwhocodes/crosspost -t -m -b --thread "Here's a thread. 🧵" "This is the second post." "The end!"
+```
+
+When reading from a file, separate the posts with a line that contains only `---`:
+
+```shell
+npx @humanwhocodes/crosspost -t -m -b --thread --file thread.txt
+```
+
+```
+Here's a thread. 🧵
+---
+This is the second post.
+---
+The end!
+```
+
+An image specified with `--image` or `--image-url` is attached to the first post. Services that can't reply to posts (LinkedIn, Dev.to, and Discord webhook) receive the whole thread as a single post. If a thread stops partway through, the URLs of the posts that were already published are printed.
 
 Each strategy requires a set of environment variables in order to execute:
 
@@ -332,6 +381,7 @@ Here are some prompts you can try:
 - "Crosspost this message: Hello world!" (posts to all available services)
 - "Post this to Twitter: Hello X!" (posts just to Twitter)
 - "Post this to Mastodon and Bluesky: Hello friends!" (posts to Mastodon and Bluesky)
+- "Turn this blog post into a thread and post it to Bluesky and Mastodon: ..." (posts a thread using the `post-thread-to-social-media` tool)
 
 ## Setting up Strategies
 

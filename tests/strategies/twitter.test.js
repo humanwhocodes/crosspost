@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 
 import { TwitterStrategy } from "../../src/strategies/twitter.js";
+import { ThreadError } from "../../src/util/threads.js";
 import nock from "nock";
 import assert from "node:assert";
 import path from "node:path";
@@ -206,6 +207,100 @@ describe("TwitterStrategy", () => {
 			await assert.rejects(async () => {
 				await strategy.post("Hello, world!", { signal });
 			}, /Aborted/);
+		});
+
+		describe("postThread", () => {
+			const credentials = {
+				accessTokenKey: "foo",
+				accessTokenSecret: "bar",
+				apiConsumerKey: "baz",
+				apiConsumerSecret: "bar",
+			};
+
+			// the abort test above can leave an unused interceptor behind
+			beforeEach(() => {
+				nock.cleanAll();
+			});
+
+			afterEach(() => {
+				nock.cleanAll();
+			});
+
+			it("should post each tweet as a reply to the previous one", async () => {
+				const bodies = [];
+
+				nock("https://api.x.com")
+					.post("/2/tweets")
+					.times(3)
+					.reply((uri, body) => {
+						bodies.push(body);
+						return [
+							200,
+							{
+								data: {
+									id: String(bodies.length),
+									text: body.text,
+								},
+							},
+						];
+					});
+
+				const strategy = new TwitterStrategy(credentials);
+				const responses = await strategy.postThread([
+					{ message: "First" },
+					{ message: "Second" },
+					{ message: "Third" },
+				]);
+
+				assert.deepStrictEqual(bodies, [
+					{ text: "First" },
+					{ text: "Second", reply: { in_reply_to_tweet_id: "1" } },
+					{ text: "Third", reply: { in_reply_to_tweet_id: "2" } },
+				]);
+				assert.deepStrictEqual(
+					responses.map(response => response.data.id),
+					["1", "2", "3"],
+				);
+			});
+
+			it("should throw a TypeError without posting when an entry is invalid", async () => {
+				const strategy = new TwitterStrategy(credentials);
+
+				await assert.rejects(
+					strategy.postThread([
+						{ message: "First" },
+						{ message: "" },
+					]),
+					new TypeError("Missing message in thread entry 2."),
+				);
+			});
+
+			it("should throw a ThreadError with the published tweets when a tweet fails", async () => {
+				nock("https://api.x.com")
+					.post("/2/tweets")
+					.reply(200, { data: { id: "1", text: "First" } });
+
+				nock("https://api.x.com")
+					.post("/2/tweets")
+					.reply(403, { title: "Forbidden", detail: "Nope" });
+
+				const strategy = new TwitterStrategy(credentials);
+
+				await assert.rejects(
+					strategy.postThread([
+						{ message: "First" },
+						{ message: "Second" },
+					]),
+					error => {
+						assert.ok(error instanceof ThreadError);
+						assert.match(error.message, /entry 2 of 2/u);
+						assert.deepStrictEqual(error.responses, [
+							{ data: { id: "1", text: "First" } },
+						]);
+						return true;
+					},
+				);
+			});
 		});
 
 		describe("getUrlFromResponse", function () {

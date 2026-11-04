@@ -10,6 +10,8 @@
 //-----------------------------------------------------------------------------
 
 import { getImageMimeType } from "../util/images.js";
+import { validatePostOptions } from "../util/options.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
@@ -17,6 +19,8 @@ import { getImageMimeType } from "../util/images.js";
 
 /**
  * @typedef {import("../types.js").PostOptions} PostOptions
+ * @typedef {import("../types.js").PostThreadEntry} PostThreadEntry
+ * @typedef {import("../types.js").PostThreadOptions} PostThreadOptions
  */
 
 /**
@@ -187,38 +191,22 @@ export class MastodonStrategy {
 	}
 
 	/**
-	 * Posts a message to Mastodon.
+	 * Posts a message to Mastodon with optional reply information.
 	 * @param {string} message The message to post.
 	 * @param {PostOptions} [postOptions] Additional options for the post.
-	 * @returns {Promise<Object>} A promise that resolves with the post data.
+	 * @param {string} [inReplyToId] The ID of the status to reply to.
+	 * @returns {Promise<MastodonPostResponse>} A promise that resolves with the post data.
 	 */
-	async post(message, postOptions) {
-		if (!message) {
-			throw new Error("Missing message to toot.");
-		}
-
-		// Validate postOptions if provided
-		if (postOptions) {
-			if (postOptions.images && !Array.isArray(postOptions.images)) {
-				throw new TypeError("images must be an array.");
-			}
-
-			if (postOptions.images) {
-				for (const image of postOptions.images) {
-					if (!image.data) {
-						throw new TypeError("Image must have data.");
-					}
-					if (!(image.data instanceof Uint8Array)) {
-						throw new TypeError("Image data must be a Uint8Array.");
-					}
-				}
-			}
-		}
-
+	async #postStatus(message, postOptions, inReplyToId) {
 		const { accessToken, host } = this.#options;
 		const url = `https://${host}/api/v1/statuses`;
 		const data = new FormData();
 		data.append("status", message);
+
+		// Add reply information if provided
+		if (inReplyToId) {
+			data.append("in_reply_to_id", inReplyToId);
+		}
 
 		// Upload images first if present
 		if (postOptions?.images?.length) {
@@ -249,7 +237,23 @@ export class MastodonStrategy {
 			);
 		}
 
-		return /**@type {Object} */ (await response.json());
+		return /**@type {MastodonPostResponse} */ (await response.json());
+	}
+
+	/**
+	 * Posts a message to Mastodon.
+	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Object>} A promise that resolves with the post data.
+	 */
+	async post(message, postOptions) {
+		if (!message) {
+			throw new Error("Missing message to toot.");
+		}
+
+		validatePostOptions(postOptions);
+
+		return this.#postStatus(message, postOptions);
 	}
 
 	/**
@@ -274,5 +278,28 @@ export class MastodonStrategy {
 		const statusId = uriParts[uriParts.length - 1]; // Extract status ID from URI
 
 		return `https://${this.#options.host}/@${username}/${statusId}`;
+	}
+
+	/**
+	 * Posts a thread of messages to Mastodon.
+	 * @param {Array<PostThreadEntry>} entries An array of messages to post as a thread.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<MastodonPostResponse>>} A promise that resolves with an array of post data for each message in the thread.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a status fails to post.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		return postThreadEntries(entries, postOptions, (entry, previous) =>
+			this.#postStatus(
+				entry.message,
+				{
+					images: entry.images,
+					signal: postOptions?.signal,
+				},
+				previous.at(-1)?.id,
+			),
+		);
 	}
 }

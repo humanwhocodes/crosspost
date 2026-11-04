@@ -26,6 +26,7 @@ import {
 } from "./index.js";
 import { CrosspostMcpServer } from "./mcp-server.js";
 import { downloadImage } from "./util/download-image.js";
+import { splitThread } from "./util/threads.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 //-----------------------------------------------------------------------------
@@ -72,6 +73,7 @@ const options = {
 	image: { type: stringType },
 	"image-url": { type: stringType },
 	"image-alt": { type: stringType },
+	thread: { type: booleanType },
 	help: { type: booleanType, short: "h" },
 	version: { type: booleanType, short: "v" },
 };
@@ -90,6 +92,11 @@ if (flags.version) {
 
 if (flags.mcp && flags.file) {
 	console.error("Error: --file cannot be used with --mcp");
+	process.exit(1);
+}
+
+if (flags.mcp && flags.thread) {
+	console.error("Error: --thread cannot be used with --mcp");
 	process.exit(1);
 }
 
@@ -129,6 +136,9 @@ if (
 	console.log("--image		The image file to upload with the message.");
 	console.log("--image-url	The URL of an image to upload with the message.");
 	console.log("--image-alt	Alt text for the image (default: filename).");
+	console.log(
+		"--thread	Post a thread. Each message argument is a post, and a line containing only --- starts a new post.",
+	);
 	console.log("--help, -h	Show this message.");
 	console.log("--version, -v	Show version number.");
 	process.exit(1);
@@ -325,24 +335,54 @@ if (flags.mcp) {
 	 * Command line arguments will escape \n as \\n, which isn't what we want.
 	 * Remove the extra escapes so newlines can be entered on the command line.
 	 */
-	const message = flags.file
-		? fs.readFileSync(flags.file, "utf8")
-		: positionals[0].replace(/\\n/g, "\n");
+	const messages = flags.file
+		? [fs.readFileSync(flags.file, "utf8")]
+		: positionals.map(positional => positional.replace(/\\n/g, "\n"));
 
 	// normal CLI operation
 	const client = new Client({ strategies });
-	const responses = await client.post(message, postOptions);
+	let responses;
+
+	if (flags.thread) {
+		/** @type {Array<import("./types.js").PostThreadEntry>} */
+		const entries = messages
+			.flatMap(splitThread)
+			.map(message => ({ message }));
+
+		if (entries.length === 0) {
+			console.error("Error: The thread doesn't contain any messages.");
+			process.exit(1);
+		}
+
+		// images are attached to the first post in the thread
+		if (postOptions.images) {
+			entries[0].images = postOptions.images;
+		}
+
+		responses = await client.postThread(entries);
+	} else {
+		responses = await client.post(messages[0], postOptions);
+	}
+
 	let exitCode = 0;
 
 	responses.forEach((response, index) => {
 		if (isSuccessResponse(response)) {
 			console.log(`✅ ${strategies[index].name} succeeded.`);
-			console.log(response.url ?? response.response);
+			console.log(
+				response.urls?.join("\n") ?? response.url ?? response.response,
+			);
 			console.log("");
 		} else {
 			exitCode = 1;
 			console.log(`❌ ${strategies[index].name} failed.`);
 			console.error(response.reason);
+
+			if (response.urls?.length) {
+				console.log("These posts were published before the failure:");
+				console.log(response.urls.join("\n"));
+			}
+
 			console.log("");
 		}
 	});
