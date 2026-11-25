@@ -406,6 +406,74 @@ describe("SlackStrategy", function () {
 		});
 	});
 
+	describe("postThread", function () {
+		let strategy;
+
+		/**
+		 * Mocks a chat.postMessage request.
+		 * @param {Object} body The expected request body.
+		 * @param {string} ts The timestamp of the posted message.
+		 * @returns {void}
+		 */
+		function mockPostMessage(body, ts) {
+			server.post(
+				{
+					url: "/api/chat.postMessage",
+					body: { channel: CHANNEL_ID, ...body },
+				},
+				{
+					status: 200,
+					body: {
+						...MESSAGE_RESPONSE,
+						ts,
+						message: {
+							...MESSAGE_RESPONSE.message,
+							text: body.text,
+							ts,
+						},
+					},
+				},
+			);
+		}
+
+		beforeEach(function () {
+			strategy = new SlackStrategy({
+				botToken: BOT_TOKEN,
+				channel: CHANNEL_ID,
+			});
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(function () {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should post the rest of the messages in the first message's thread", async function () {
+			mockPostMessage({ text: "First" }, "1.1");
+			mockPostMessage({ text: "Second", thread_ts: "1.1" }, "1.2");
+			mockPostMessage({ text: "Third", thread_ts: "1.1" }, "1.3");
+
+			const responses = await strategy.postThread([
+				{ message: "First" },
+				{ message: "Second" },
+				{ message: "Third" },
+			]);
+
+			assert.deepStrictEqual(
+				responses.map(response => response.ts),
+				["1.1", "1.2", "1.3"],
+			);
+		});
+
+		it("should throw a TypeError without posting when an entry is invalid", async function () {
+			await assert.rejects(
+				strategy.postThread([{ message: "First" }, { message: "" }]),
+				new TypeError("Missing message in thread entry 2."),
+			);
+		});
+	});
+
 	describe("getUrlFromResponse", function () {
 		it("should generate the correct URL from a response", function () {
 			const strategy = new SlackStrategy({

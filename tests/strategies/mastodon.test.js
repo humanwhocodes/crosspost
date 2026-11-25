@@ -8,6 +8,7 @@
 //-----------------------------------------------------------------------------
 
 import { MastodonStrategy } from "../../src/strategies/mastodon.js";
+import { ThreadError } from "../../src/util/threads.js";
 import assert from "node:assert";
 import { FetchMocker, MockServer } from "mentoss";
 import path from "node:path";
@@ -340,6 +341,118 @@ describe("MastodonStrategy", () => {
 			await assert.rejects(async () => {
 				await instance.post(message, { signal: controller.signal });
 			}, /AbortError/);
+		});
+	});
+
+	describe("postThread", () => {
+		/* global FormData */
+
+		const server = new MockServer("https://mastodon.social");
+		const fetchMocker = new FetchMocker({
+			servers: [server],
+		});
+		const options = { accessToken: "token", host: "mastodon.social" };
+
+		/**
+		 * Creates the form data for a status.
+		 * @param {string} status The status text.
+		 * @param {string} [inReplyToId] The ID of the status being replied to.
+		 * @returns {FormData} The form data.
+		 */
+		function statusForm(status, inReplyToId) {
+			const data = new FormData();
+			data.append("status", status);
+
+			if (inReplyToId) {
+				data.append("in_reply_to_id", inReplyToId);
+			}
+
+			return data;
+		}
+
+		/**
+		 * Mocks a status request.
+		 * @param {FormData} body The expected form data.
+		 * @param {Object} response The response to return.
+		 * @param {number} [status] The response status.
+		 * @returns {void}
+		 */
+		function mockStatus(body, response, status = 200) {
+			server.post(
+				{
+					url: "/api/v1/statuses",
+					headers: {
+						authorization: "Bearer token",
+					},
+					body,
+				},
+				{
+					status,
+					headers: {
+						"content-type": "application/json",
+					},
+					body: response,
+				},
+			);
+		}
+
+		beforeEach(() => {
+			fetchMocker.mockGlobal();
+		});
+
+		afterEach(() => {
+			fetchMocker.unmockGlobal();
+			server.clear();
+		});
+
+		it("should post each status as a reply to the previous one", async () => {
+			mockStatus(statusForm("First"), { id: "1" });
+			mockStatus(statusForm("Second", "1"), { id: "2" });
+			mockStatus(statusForm("Third", "2"), { id: "3" });
+
+			const responses = await new MastodonStrategy(options).postThread([
+				{ message: "First" },
+				{ message: "Second" },
+				{ message: "Third" },
+			]);
+
+			assert.deepStrictEqual(responses, [
+				{ id: "1" },
+				{ id: "2" },
+				{ id: "3" },
+			]);
+		});
+
+		it("should throw a TypeError without posting when an entry is invalid", async () => {
+			await assert.rejects(
+				new MastodonStrategy(options).postThread([
+					{ message: "First" },
+					{ message: "Second", images: [{ data: "nope" }] },
+				]),
+				new TypeError("Image data must be a Uint8Array."),
+			);
+		});
+
+		it("should throw a ThreadError with the published statuses when a status fails", async () => {
+			mockStatus(statusForm("First"), { id: "1" });
+			mockStatus(
+				statusForm("Second", "1"),
+				{ error: "Validation failed" },
+				422,
+			);
+
+			await assert.rejects(
+				new MastodonStrategy(options).postThread([
+					{ message: "First" },
+					{ message: "Second" },
+				]),
+				error => {
+					assert.ok(error instanceof ThreadError);
+					assert.match(error.message, /Validation failed/u);
+					assert.deepStrictEqual(error.responses, [{ id: "1" }]);
+					return true;
+				},
+			);
 		});
 	});
 

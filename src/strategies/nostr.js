@@ -13,12 +13,15 @@ import { schnorr, hashes } from "@noble/secp256k1";
 import { bech32 } from "bech32";
 import { createHash, createHmac } from "node:crypto";
 import { validatePostOptions } from "../util/options.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 /**
  * @typedef {Object} NostrOptions
@@ -104,9 +107,10 @@ function normalizePrivateKey(privateKey) {
  * Creates a Nostr event.
  * @param {string} privateKeyHex The private key in hex format.
  * @param {string} content The content of the event.
+ * @param {string[][]} [tags] The tags for the event.
  * @returns {NostrEvent} The signed Nostr event.
  */
-function createNostrEvent(privateKeyHex, content) {
+function createNostrEvent(privateKeyHex, content, tags = []) {
 	const privateKeyBytes = new Uint8Array(Buffer.from(privateKeyHex, "hex"));
 
 	// Get the Schnorr public key (x-only, 32 bytes)
@@ -117,7 +121,7 @@ function createNostrEvent(privateKeyHex, content) {
 		pubkey,
 		created_at: Math.floor(Date.now() / 1000),
 		kind: 1,
-		tags: [],
+		tags,
 		content,
 	};
 
@@ -356,13 +360,64 @@ export class NostrStrategy {
 			throw new Error("Images are not supported in Nostr text notes.");
 		}
 
-		// Create the Nostr event
-		const event = createNostrEvent(this.#options.privateKeyHex, message);
+		return this.#publish(message, [], postOptions?.signal);
+	}
+
+	/**
+	 * Posts a thread of messages to Nostr relays. Each message is a reply to
+	 * the previous one, marked according to NIP-10.
+	 * @param {Array<PostThreadEntry>} entries The messages to post, in order.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<NostrEventResponse>>} A promise that resolves with the response for each event.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {Error} When an entry has images. Nothing is posted in that case.
+	 * @throws {ThreadError} When an event fails to publish to all relays.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		if (entries.some(entry => entry.images?.length)) {
+			throw new Error("Images are not supported in Nostr text notes.");
+		}
+
+		return postThreadEntries(entries, postOptions, (entry, previous) => {
+			const root = previous[0];
+			const parent = previous.at(-1);
+			/** @type {string[][]} */
+			const tags = [];
+
+			// a direct reply to the root has only a "root" tag (NIP-10)
+			if (root && parent) {
+				tags.push(["e", root.id, root.relays[0], "root"]);
+
+				if (parent !== root) {
+					tags.push(["e", parent.id, parent.relays[0], "reply"]);
+				}
+			}
+
+			return this.#publish(entry.message, tags, postOptions?.signal);
+		});
+	}
+
+	/**
+	 * Signs an event and publishes it to all relays.
+	 * @param {string} message The content of the event.
+	 * @param {string[][]} tags The tags for the event.
+	 * @param {AbortSignal} [signal] The abort signal.
+	 * @returns {Promise<NostrEventResponse>} A promise that resolves with the event response.
+	 * @throws {Error} When the event fails to publish to all relays.
+	 */
+	async #publish(message, tags, signal) {
+		const event = createNostrEvent(
+			this.#options.privateKeyHex,
+			message,
+			tags,
+		);
 
 		// Publish to all relays
 		const results = await Promise.allSettled(
 			this.#options.relays.map(relay =>
-				publishToRelay(relay, event, postOptions?.signal),
+				publishToRelay(relay, event, signal),
 			),
 		);
 

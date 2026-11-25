@@ -11,12 +11,15 @@
 
 import { validatePostOptions } from "../util/options.js";
 import { getImageMimeType } from "../util/images.js";
+import { postThreadEntries, validateThreadEntries } from "../util/threads.js";
 
 //-----------------------------------------------------------------------------
 // Type Definitions
 //-----------------------------------------------------------------------------
 
 /** @typedef {import("../types.js").PostOptions} PostOptions */
+/** @typedef {import("../types.js").PostThreadEntry} PostThreadEntry */
+/** @typedef {import("../types.js").PostThreadOptions} PostThreadOptions */
 
 /**
  * @typedef {Object} DiscordOptions
@@ -41,7 +44,13 @@ import { getImageMimeType } from "../util/images.js";
  * @typedef {Object} DiscordPayload
  * @property {string} content The text content of the message
  * @property {DiscordEmbed[]} [embeds] Array of embedded messages
+ * @property {DiscordMessageReference} [message_reference] Reference to the message being replied to
  * @property {DiscordAttachment[]} [attachments] Array of file attachments
+ */
+
+/**
+ * @typedef {Object} DiscordMessageReference
+ * @property {string} message_id The ID of the message being referenced
  */
 
 /**
@@ -146,6 +155,39 @@ export class DiscordStrategy {
 
 		validatePostOptions(postOptions);
 
+		return this.#createMessage(message, postOptions);
+	}
+
+	/**
+	 * Posts a thread of messages to Discord. Each message is sent as a reply
+	 * to the previous one.
+	 * @param {Array<PostThreadEntry>} entries The messages to post, in order.
+	 * @param {PostThreadOptions} [postOptions] Additional options for the post.
+	 * @returns {Promise<Array<DiscordMessageResponse>>} A promise that resolves with the data for each message.
+	 * @throws {TypeError} When an entry is invalid. Nothing is posted in that case.
+	 * @throws {ThreadError} When a message fails to post.
+	 */
+	async postThread(entries, postOptions) {
+		validateThreadEntries(entries);
+
+		return postThreadEntries(entries, postOptions, (entry, previous) =>
+			this.#createMessage(
+				entry.message,
+				{ images: entry.images, signal: postOptions?.signal },
+				previous.at(-1)?.id,
+			),
+		);
+	}
+
+	/**
+	 * Creates a message in the channel.
+	 * @param {string} message The message to post.
+	 * @param {PostOptions} [postOptions] Additional options for the post.
+	 * @param {string} [replyToMessageId] The ID of the message to reply to.
+	 * @returns {Promise<DiscordMessageResponse>} A promise that resolves with the message data.
+	 * @throws {Error} When the message fails to post.
+	 */
+	async #createMessage(message, postOptions, replyToMessageId) {
 		const url = `${API_BASE}/channels/${this.#options.channelId}/messages`;
 		const formData = new FormData();
 
@@ -153,6 +195,10 @@ export class DiscordStrategy {
 		const payload = {
 			content: message,
 		};
+
+		if (replyToMessageId) {
+			payload.message_reference = { message_id: replyToMessageId };
+		}
 
 		if (postOptions?.images?.length) {
 			payload.embeds = [];
