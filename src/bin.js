@@ -23,6 +23,7 @@ import {
 	TelegramStrategy,
 	SlackStrategy,
 	NostrStrategy,
+	InstagramStrategy,
 } from "./index.js";
 import { CrosspostMcpServer } from "./mcp-server.js";
 import { downloadImage } from "./util/download-image.js";
@@ -67,6 +68,7 @@ const options = {
 	telegram: { type: booleanType },
 	slack: { type: booleanType, short: "s" },
 	nostr: { type: booleanType, short: "n" },
+	instagram: { type: booleanType, short: "i" },
 	mcp: { type: booleanType },
 	file: { type: stringType },
 	image: { type: stringType },
@@ -111,6 +113,7 @@ if (
 		!flags.telegram &&
 		!flags.slack &&
 		!flags.nostr &&
+		!flags.instagram &&
 		!flags.mcp)
 ) {
 	console.log('Usage: crosspost [options] ["Message to post."]');
@@ -124,6 +127,7 @@ if (
 	console.log("--telegram	Post to Telegram.");
 	console.log("--slack, -s	Post to Slack.");
 	console.log("--nostr, -n	Post to Nostr.");
+	console.log("--instagram, -i	Post to Instagram.");
 	console.log("--mcp		Start MCP server.");
 	console.log("--file		The file to read the message from.");
 	console.log("--image		The image file to upload with the message.");
@@ -262,6 +266,15 @@ if (flags.nostr) {
 		new NostrStrategy({
 			privateKey: env.require("NOSTR_PRIVATE_KEY"),
 			relays,
+		}),
+	);
+}
+
+if (flags.instagram) {
+	strategies.push(
+		new InstagramStrategy({
+			accessToken: env.require("INSTAGRAM_ACCESS_TOKEN"),
+			accountId: env.require("INSTAGRAM_ACCOUNT_ID"),
 		}),
 	);
 }
